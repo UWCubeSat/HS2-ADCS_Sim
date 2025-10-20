@@ -39,3 +39,9 @@
 
 # debug information files
 *.dwo
+
+# idk
+build/
+scripts/.venv/
+*.pyc
+__pycache__/
