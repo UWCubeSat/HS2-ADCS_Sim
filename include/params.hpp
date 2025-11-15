@@ -5,6 +5,7 @@
 namespace params{
     // general parameters
     constexpr double pi = 3.141592653589793;
+    constexpr int timeStep = 1;
 
     // satellite/orbit parameters
     constexpr int mass = 3; // kg

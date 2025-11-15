@@ -1,23 +1,33 @@
 #pragma once
 #include<iostream>
+#include<fstream>
 #include<cmath>
 #include "params.hpp"
 #include<imumaths/imumaths.hpp>
+#include "satellite.hpp"
 
 
 int main(){
+    std::ofstream file("../output/test.txt");
+    if (!file) {                       // Check if file opened
+        std::cerr << "Error opening file!" << std::endl;
+        return 1;
+    }
+
     std::cout << "Simulation Started." << '\n';
+
+    Satellite sat = Satellite(params::mass);
     int numberOfOrbits = 1;
     
 
     imu::Vector<6> state = imu::Vector<6>();
     state[0] = params::R + params::altitude;
-    state[1] = 0.0f;
-    state[2] = 0.0f;
+    state[1] = 0.0;
+    state[2] = 0.0;
 
     double semimajor = std::sqrt(state[0]*state[0] + state[1]*state[1] + state[2]*state[3]);
     double vCircular = std::sqrt(params::mu / semimajor);
-    state[3] = 0.0f;
+    state[3] = 0.0;
     state[4] = vCircular * std::cos(params::inclination);
     state[5] = vCircular * std::sin(params::inclination);
 
@@ -29,8 +39,23 @@ int main(){
      * current idea: create dStateDt in a similar fashion to the python one
      * use the actual vector (from lib) to be able to actually perform math
      * do as you would with a numpy vector
-     * possible issues: at the end the vector will have 13 values. Is that ok?
      */
+    double tFinal = period * numberOfOrbits;
+    for(int t = 0; t < tFinal; t += params::timeStep){
+        if(t % 100 == 0){
+            std::cout << "Time is " << t << '\n';
+        }
+        file << "" << t << "," << state[0]<< "," << state[1]<< "," << state[2]<< "," << state[3]<< "," << state[4]<< "," << state[5] <<'\n';
 
+        imu::Vector<6> k1 = sat.dStateDt(state);
+        imu::Vector<6> k2 = sat.dStateDt(state + k1 * (params::timeStep / 2));
+        imu::Vector<6> k3 = sat.dStateDt(state + k2 * (params::timeStep / 2));
+        imu::Vector<6> k4 = sat.dStateDt(state + k3 * (params::timeStep));
+        imu::Vector<6> k = k1 + k2*2 + k3*2 + k4;
+        k.scale(1/6.0);
+
+        state = state + k * params::timeStep;
+    }
+    file << std::endl;
     std::cout << "Simulation Completed." << '\n';
 }

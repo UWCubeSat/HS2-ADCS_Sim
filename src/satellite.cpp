@@ -1,4 +1,3 @@
-#pragma once
 #include "../include/satellite.hpp"
 #include "params.hpp"
 
