@@ -14,9 +14,10 @@ imu::Vector<6> Satellite::dStateDt(const imu::Vector<6> &state){
 
     double rho = position.magnitude();
     imu::Vector<3> rhat = position / rho;
-    imu::Vector<3> FGrav = rhat * (-1 * (params::G * params::M * mass / (rho * rho)));
+    // imu::Vector<3> FGrav = rhat * (-1 * (params::G * params::M * mass / (rho * rho)));
 
-    imu::Vector<3> acceleration = FGrav / mass;
+    // imu::Vector<3> acceleration = FGrav / mass;
+    imu::Vector<3> acceleration = rhat * (-1 * (params::G * params::M / (rho * rho)));
 
     imu::Vector<6> stateOut = imu::Vector<6>();
 
