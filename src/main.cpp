@@ -14,6 +14,13 @@ int main(){
         return 1;
     }
 
+    
+    std::ofstream bfile("../output/bfield.txt");
+    if (!bfile) {                      // magnetic field output
+        std::cerr << "Error opening bfield.txt!" << std::endl;
+        return 1;
+    }
+
     std::cout << "Simulation Started." << '\n';
 
     Satellite sat = Satellite(params::mass);
@@ -50,7 +57,13 @@ int main(){
 
         state = state + k * params::timeStep;
         file << "" << t << "," << state[0]<< "," << state[1]<< "," << state[2]<< "," << state[3]<< "," << state[4]<< "," << state[5] <<'\n';
+
+        imu::Vector<3> B = sat.getLastBFieldNED();          // magnetic field log (N, E, D in tesla)
+        bfile << t << "," << B[0] << "," << B[1] << "," << B[2] << '\n';
     }
     // file << std::endl;
     std::cout << "Simulation Completed." << '\n';
 }
+
+// code to run everything: 
+// cd C:\Users\chipc\HS2-ADCS_Sim\build; cmake --build .; .\MyProject.exe; cd ../scripts; python plotter.py; python plot_B.py

@@ -5,7 +5,7 @@ times = []
 positions = []
 velocities = []
 
-with open("C:/Users/zaids/HS2-ADCS_Sim/output/test.txt", "r") as f:
+with open("../output/test.txt", "r") as f:
     for line in f:
         vals = [float(x) for x in line.strip().split(",")]
         times.append(vals[0])
