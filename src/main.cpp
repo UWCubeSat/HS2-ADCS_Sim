@@ -2,9 +2,9 @@
 #include<iostream>
 #include<fstream>
 #include<cmath>
-#include "params.hpp"
-#include<imumaths/imumaths.hpp>
-#include "satellite.hpp"
+#include "../include/params.hpp"
+#include "../include/imumaths/imumaths.hpp"
+#include "../include/satellite.hpp"
 
 
 int main(){
