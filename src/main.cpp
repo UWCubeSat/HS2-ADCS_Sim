@@ -1,69 +1,146 @@
-#pragma once
-#include<iostream>
-#include<fstream>
-#include<cmath>
+#include "modules.hpp"
 #include "params.hpp"
-#include<imumaths/imumaths.hpp>
-#include "satellite.hpp"
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 
-
-int main(){
-    std::ofstream file("../output/test.txt");
-    if (!file) {                       // Check if file opened
-        std::cerr << "Error opening file!" << std::endl;
-        return 1;
-    }
-
-    
-    std::ofstream bfile("../output/bfield.txt");
-    if (!bfile) {                      // magnetic field output
-        std::cerr << "Error opening bfield.txt!" << std::endl;
-        return 1;
-    }
-
-    std::cout << "Simulation Started." << '\n';
-
-    Satellite sat = Satellite(params::mass);
-    int numberOfOrbits = 1;
-    
-
-    imu::Vector<6> state = imu::Vector<6>();
-    state[0] = params::R + params::altitude;
-    state[1] = 0.0;
-    state[2] = 0.0;
-
-    double semimajor = std::sqrt(state[0]*state[0] + state[1]*state[1] + state[2]*state[2]);
-    double vCircular = std::sqrt(params::mu / semimajor);
-    std::cout << "" << vCircular << '\n';
-    state[3] = 0.0;
-    state[4] = vCircular * std::cos(params::inclination);
-    state[5] = vCircular * std::sin(params::inclination);
-
-
-    double period = 2 * params::pi * std::sqrt(semimajor*semimajor*semimajor / params::mu);
-
-    double tFinal = period * numberOfOrbits;
-    double t = 0.0;
-    file << "" << t << "," << state[0]<< "," << state[1]<< "," << state[2]<< "," << state[3]<< "," << state[4]<< "," << state[5] <<'\n';
-    for(; t < tFinal; t += params::timeStep){
-        if(static_cast<int>(t) % 100 == 0){
-            std::cout << "Time is " << t << '\n';
-        }
-        imu::Vector<6> k1 = sat.dStateDt(state);
-        imu::Vector<6> k2 = sat.dStateDt(state + k1 * (params::timeStep / 2));
-        imu::Vector<6> k3 = sat.dStateDt(state + k2 * (params::timeStep / 2));
-        imu::Vector<6> k4 = sat.dStateDt(state + k3 * (params::timeStep));
-        imu::Vector<6> k = (k1 + k2*2 + k3*2 + k4).scale(1/6.0);
-
-        state = state + k * params::timeStep;
-        file << "" << t << "," << state[0]<< "," << state[1]<< "," << state[2]<< "," << state[3]<< "," << state[4]<< "," << state[5] <<'\n';
-
-        imu::Vector<3> B = sat.getLastBFieldNED();          // magnetic field log (N, E, D in tesla)
-        bfile << t << "," << B[0] << "," << B[1] << "," << B[2] << '\n';
-    }
-    // file << std::endl;
-    std::cout << "Simulation Completed." << '\n';
+// Add two state vectors component-by-component.
+static State13 add(const State13& a, const State13& b) {
+  State13 c{};
+  for (int i = 0; i < 13; ++i) {
+    c[i] = a[i] + b[i];
+  }
+  return c;
 }
 
-// code to run everything: 
-// cd C:\Users\chipc\HS2-ADCS_Sim\build; cmake --build .; .\MyProject.exe; cd ../scripts; python plotter.py; python plot_B.py
+// Multiply a state vector by a scalar.
+static State13 scale(const State13& a, double s) {
+  State13 c{};
+  for (int i = 0; i < 13; ++i) {
+    c[i] = a[i] * s;
+  }
+  return c;
+}
+
+int main() {
+  // Fixed seed makes debugging repeatable.
+  SimContext ctx(/*seed=*/1);
+
+  // Start in a 600 km orbit.
+  const double altitude_m = 600.0 * 1000.0;
+
+  // Set the Earth constants here so we can build the starting orbit right away.
+  // We do not call the full dynamics function on a zero state because that would
+  // divide by zero in the orbit math and pollute the nav state before the run starts.
+  ctx.R = 6.371e6;
+  ctx.M = 5.972e24;
+  ctx.G = 6.67e-11;
+  ctx.mu = ctx.G * ctx.M;
+
+  // Circular orbit initial condition in the inertial frame.
+  const double x0 = ctx.R + altitude_m;
+  const double y0 = 0.0;
+  const double z0 = 0.0;
+  const double xdot0 = 0.0;
+
+  const double inclination = 56.0 * M_PI / 180.0;
+  const double semi_major = std::sqrt(x0 * x0 + y0 * y0 + z0 * z0);
+  const double vcircular = std::sqrt(ctx.mu / semi_major);
+  const double ydot0 = vcircular * std::cos(inclination);
+  const double zdot0 = vcircular * std::sin(inclination);
+
+  // Start with level attitude but some body-rate tumble.
+  const Vec3 ptp0{0.0, 0.0, 0.0};
+  const Quat q0 = euler321_to_quat(ptp0);
+  const double p0 = 0.8;
+  const double q00 = -0.2;
+  const double r0 = 0.3;
+
+  State13 state{};
+  state[0] = x0;      state[1] = y0;      state[2] = z0;
+  state[3] = xdot0;   state[4] = ydot0;   state[5] = zdot0;
+  state[6] = q0.q0;   state[7] = q0.q1;   state[8] = q0.q2;   state[9] = q0.q3;
+  state[10] = p0;     state[11] = q00;    state[12] = r0;
+
+  // Run for one orbit.
+  const double period = 2.0 * M_PI / std::sqrt(ctx.mu) * std::pow(semi_major, 1.5);
+  const double tfinal = period;
+  const double dt = SimParams::timestep;
+
+  // Initial update settings.
+  ctx.lastSensorUpdate = 0.0;
+  ctx.lastMagUpdate = 0.0;
+  ctx.nextMagUpdate = 1.0;
+  ctx.nextSensorUpdate = 1.0;
+
+  // Prime the truth/sensor/nav states before the first log line.
+  satellite_derivatives(0.0, state, ctx);
+
+  // Controller update period.
+  double lastControl = -dt;
+  const double nextControl = 0.1;
+
+  std::ofstream csv("adcs_output.csv");
+  csv << std::setprecision(17);
+
+  // CSV header.
+  csv << "t,"
+      << "x,y,z,xdot,ydot,zdot,q0,q1,q2,q3,p,q,r,"
+      << "BBx,BBy,BBz,Bmx,Bmy,Bmz,BNx,BNy,BNz,"
+      << "pqrm_x,pqrm_y,pqrm_z,pqrN_x,pqrN_y,pqrN_z,"
+      << "ptpm_phi,ptpm_theta,ptpm_psi,ptpN_phi,ptpN_theta,ptpN_psi,"
+      << "ix,iy,iz\n";
+
+  for (double t = 0.0; t <= tfinal + 1e-12; t += dt) {
+    // Log the state and the main internal signals.
+    csv << t << ",";
+    for (int i = 0; i < 13; ++i) {
+      csv << state[i] << ",";
+    }
+
+    csv << ctx.BB_truth.x << "," << ctx.BB_truth.y << "," << ctx.BB_truth.z << ","
+        << ctx.BfieldMeasured.x << "," << ctx.BfieldMeasured.y << "," << ctx.BfieldMeasured.z << ","
+        << ctx.BfieldNav.x << "," << ctx.BfieldNav.y << "," << ctx.BfieldNav.z << ","
+        << ctx.pqrMeasured.x << "," << ctx.pqrMeasured.y << "," << ctx.pqrMeasured.z << ","
+        << ctx.pqrNav.x << "," << ctx.pqrNav.y << "," << ctx.pqrNav.z << ","
+        << ctx.ptpMeasured.x << "," << ctx.ptpMeasured.y << "," << ctx.ptpMeasured.z << ","
+        << ctx.ptpNav.x << "," << ctx.ptpNav.y << "," << ctx.ptpNav.z << ","
+        << ctx.current.x << "," << ctx.current.y << "," << ctx.current.z
+        << "\n";
+
+    // Update the controller on its own schedule.
+    if (t > lastControl) {
+      Vec3 current{};
+      control_compute(ctx.BfieldNav, ctx.pqrNav, ctx.ptpNav, ctx, current);
+      ctx.current = current;
+      lastControl += nextControl;
+    }
+
+    // RK4 integration step.
+    const State13 k1 = satellite_derivatives(t, state, ctx);
+    const State13 k2 = satellite_derivatives(t + dt / 2.0, add(state, scale(k1, dt / 2.0)), ctx);
+    const State13 k3 = satellite_derivatives(t + dt / 2.0, add(state, scale(k2, dt / 2.0)), ctx);
+    const State13 k4 = satellite_derivatives(t + dt, add(state, scale(k3, dt)), ctx);
+
+    State13 incr{};
+    for (int i = 0; i < 13; ++i) {
+      incr[i] = (1.0 / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+    }
+
+    for (int i = 0; i < 13; ++i) {
+      state[i] += dt * incr[i];
+    }
+
+    // Keep the quaternion from drifting numerically.
+    Quat q{state[6], state[7], state[8], state[9]};
+    q = normalize(q);
+    state[6] = q.q0;
+    state[7] = q.q1;
+    state[8] = q.q2;
+    state[9] = q.q3;
+  }
+
+  std::cout << "Done. Wrote adcs_output.csv\n";
+  return 0;
+}

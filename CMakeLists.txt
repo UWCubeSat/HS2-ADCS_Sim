@@ -1,16 +1,22 @@
-cmake_minimum_required(VERSION 3.10)
-project(MyProject LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.16)
 
+# Small C++ project for the ADCS simulation.
+project(adcs_faithful LANGUAGES CXX)
+
+# Keep the compiler settings simple and explicit.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(GeographicLib REQUIRED) # required for magentic field model
+# Build one executable from the core simulation modules.
+add_executable(adcs
+  src/main.cpp
+  src/satellite.cpp
+  src/control.cpp
+  src/sensor.cpp
+  src/navigation.cpp
+  src/disturbance.cpp
+  src/wmm.cpp
+)
 
-# Source files
-file(GLOB SOURCES "src/*.cpp")
-
-add_executable(${PROJECT_NAME} ${SOURCES})
-
-target_include_directories(${PROJECT_NAME} PRIVATE include)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE GeographicLib::GeographicLib)  # required for magentic field model
+# All headers live in the local include folder.
+target_include_directories(adcs PRIVATE include)
