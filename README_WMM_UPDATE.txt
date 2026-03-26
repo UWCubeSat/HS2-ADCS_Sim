@@ -26,3 +26,18 @@ Notes
 - This is a much better magnetic environment model than the old placeholder, but it is still not a full flight-quality simulator.
 - The disturbance and sensor models are still simple.
 - The navigation block is still just a smoothing filter, not a real estimator.
+
+If you get an error, run 
+Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+cmake -S . -B build -G "MinGW Makefiles"
+cmake --build build
+if (Test-Path .\build\adcs.exe) {
+    .\build\adcs.exe
+} elseif (Test-Path .\build\Debug\adcs.exe) {
+    .\build\Debug\adcs.exe
+} elseif (Test-Path .\build\Release\adcs.exe) {
+    .\build\Release\adcs.exe
+} else {
+    Write-Host "adcs.exe not found after build"
+}
+python .\plot_all.py
