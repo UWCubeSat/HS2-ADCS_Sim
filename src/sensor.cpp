@@ -1,45 +1,40 @@
 #include "modules.hpp"
 
-// Pick bias values once at the start of the run.
-// That is much closer to a real sensor than changing the bias every time the nav filter runs.
-static void sensor_params(SimContext& ctx) {
-  ctx.nextSensorUpdate = 1.0;
-  ctx.fsensor = 1.0;
+namespace {
 
-  const double MagscaleBias = (4e-7) * ctx.fsensor;
-  ctx.MagFieldBias = MagscaleBias * ctx.rng.rand_m11();
+Vec3 draw_uniform_noise(Rng& rng, double scale) {
+  return {
+    scale * rng.rand_m11(),
+    scale * rng.rand_m11(),
+    scale * rng.rand_m11()
+  };
+}
 
-  const double AngscaleBias = 0.01 * ctx.fsensor;
-  ctx.AngFieldBias = AngscaleBias * ctx.rng.rand_m11();
-
-  const double EulerScaleBias = (2.0 * M_PI / 180.0) * ctx.fsensor;
-  ctx.EulerBias = EulerScaleBias * ctx.rng.rand_m11();
+void initialize_sensor_model(SimContext& ctx) {
+  // Fixed per-axis biases. These stay constant for the whole run.
+  ctx.magBias_T = draw_uniform_noise(ctx.rng, 4e-7);
+  ctx.gyroBias_rad_s = draw_uniform_noise(ctx.rng, 0.01);
+  ctx.angleBias_rad = draw_uniform_noise(ctx.rng, 2.0 * M_PI / 180.0);
 
   ctx.sensorModelInitialized = true;
 }
 
-// Noise gets re-drawn every sample, which is what we want.
-static void sensor_noise(SimContext& ctx) {
-  const double MagscaleNoise = (1e-5) * ctx.fsensor;
-  ctx.MagFieldNoise = MagscaleNoise * ctx.rng.rand_m11();
+} // namespace
 
-  const double AngscaleNoise = 0.001 * ctx.fsensor;
-  ctx.AngFieldNoise = AngscaleNoise * ctx.rng.rand_m11();
-
-  const double EulerScaleNoise = (1.0 * M_PI / 180.0) * ctx.fsensor;
-  ctx.EulerNoise = EulerScaleNoise * ctx.rng.rand_m11();
-}
-
-// Apply the sensor model to the truth signals.
-void sensor_update(Vec3& BB, Vec3& pqr, Vec3& ptp, SimContext& ctx) {
+void sensor_update_from_truth(const State13& truth_state, const Vec3& Btruth_body_T, SimContext& ctx) {
   if (!ctx.sensorModelInitialized) {
-    sensor_params(ctx);
+    initialize_sensor_model(ctx);
   }
 
-  for (int idx = 0; idx < 3; ++idx) {
-    sensor_noise(ctx);
-    BB[idx]  = BB[idx]  + ctx.MagFieldBias + ctx.MagFieldNoise;
-    pqr[idx] = pqr[idx] + ctx.AngFieldBias + ctx.AngFieldNoise;
-    ptp[idx] = ptp[idx] + ctx.EulerBias    + ctx.EulerNoise;
-  }
+  // Draw fresh white-noise samples.
+  ctx.magNoise_T = draw_uniform_noise(ctx.rng, 1e-5);
+  ctx.gyroNoise_rad_s = draw_uniform_noise(ctx.rng, 0.001);
+  ctx.angleNoise_rad = draw_uniform_noise(ctx.rng, 1.0 * M_PI / 180.0);
+
+  const Vec3 truthRates = state_body_rates_rad_s(truth_state);
+  const Vec3 truthAngles = state_euler321_rad(truth_state);
+
+  ctx.BfieldMeasured_body_T = Btruth_body_T + ctx.magBias_T + ctx.magNoise_T;
+  ctx.pqrMeasured_rad_s = truthRates + ctx.gyroBias_rad_s + ctx.gyroNoise_rad_s;
+  ctx.ptpMeasured_rad = truthAngles + ctx.angleBias_rad + ctx.angleNoise_rad;
 }

@@ -1,26 +1,31 @@
 #include "modules.hpp"
 #include <cmath>
 
-// Keep the actuator constants in one place.
-static void magtorquer_params(SimContext& ctx) {
-  ctx.n_turns = 84.0;
-  ctx.A_turn = 0.02;
-  ctx.maxCurrent_mA = 120.0;
-}
+// This is intentionally a placeholder controller.
+// The real magnetorquer team code should replace this file once their interface is ready.
+// For now the controller takes the smoothed body-rate and magnetic-field estimate and returns
+// a coil-current command in body axes.
+void control_compute(const SimContext& ctx, Vec3& current_cmd_A) {
+  const Vec3 B_body_T = ctx.BfieldNav_T;
+  const Vec3 w_body_rad_s = ctx.pqrNav_rad_s;
 
-// Simple magnetic detumble control law.
-// This is not a full flight-quality controller, but it is a common first closed-loop test.
-void control_compute(const Vec3& BfieldNav,
-                     const Vec3& pqrNav,
-                     const Vec3& ptpNav,
-                     SimContext& ctx,
-                     Vec3& current_out) {
-  (void)ptpNav;
+  const double Bmag = norm(B_body_T);
+  if (Bmag < 1e-12) {
+    current_cmd_A = {0.0, 0.0, 0.0};
+    return;
+  }
 
-  const double k = 67200.0;
-  magtorquer_params(ctx);
+  // This is a simple rate-cross-field damping law.
+  // It is useful for closed-loop bring-up, but it is not the final flight controller.
+  const double gain = 67200.0;
+  const Vec3 rawCurrent = (gain / (ctx.coilTurns * ctx.coilArea_m2)) * cross(w_body_rad_s, B_body_T);
 
-  // Command current from the rate-field cross product.
-  const Vec3 c = cross(pqrNav, BfieldNav);
-  current_out = (k / (ctx.n_turns * ctx.A_turn)) * c;
+  // Clamp each axis separately because each coil has its own current limit.
+  auto clamp = [](double v, double lo, double hi) {
+    return (v < lo) ? lo : ((v > hi) ? hi : v);
+  };
+
+  current_cmd_A.x = clamp(rawCurrent.x, -ctx.maxCurrent_A, ctx.maxCurrent_A);
+  current_cmd_A.y = clamp(rawCurrent.y, -ctx.maxCurrent_A, ctx.maxCurrent_A);
+  current_cmd_A.z = clamp(rawCurrent.z, -ctx.maxCurrent_A, ctx.maxCurrent_A);
 }

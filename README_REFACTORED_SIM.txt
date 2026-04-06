@@ -1,0 +1,20 @@
+This package is the refactored version of the WMM2025 magnetorquer-only ADCS simulation.
+
+What changed in the refactor
+- The truth dynamics were made pure. The derivative function now only computes state derivatives.
+- Truth field update, sensor sampling, navigation, controller update, and logging now happen explicitly in main.cpp.
+- The temporary controller is clearly separated from the physics so the magnetorquer team can replace it later.
+- The disturbance model was simplified on purpose. Drag force remains, but questionable disturbance torques were removed.
+- The sensor model now uses fixed per-axis bias plus fresh per-axis white noise each sample.
+- Navigation is still only a smoothing block, but it is isolated cleanly and named honestly.
+
+What this simulation is for right now
+- Closed-loop detumble development with magnetorquers only.
+- WMM2025 field validation in a coherent orbit / attitude loop.
+- Debugging controller interfaces before the real team control code is dropped in.
+
+What this simulation is not yet
+- A flight-quality environment model.
+- A flight estimator.
+- A full actuator electronics model.
+- A final verification environment for hardware acceptance.

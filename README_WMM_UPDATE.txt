@@ -15,6 +15,20 @@ Field pipeline
 5. That local field is turned into an ECEF vector, then rotated back to ECI, then into the body frame.
 6. The body-frame field is stored in Tesla for torque calculations.
 
+Prerequisites
+- Before running this simulation, make sure the following tools are installed and working on your system:
+- CMake (used to configure and build the C++ code)
+- https://cmake.org/download/
+- MSYS2 with UCRT64 toolchain (provides the C++ compiler on Windows)
+- https://www.msys2.org/
+
+- After installing MSYS2, open the UCRT64 terminal and run:
+- pacman -S mingw-w64-ucrt-x86_64-gcc
+- Python 3
+- https://www.python.org/downloads/
+- Required Python packages (used for plotting results):
+- pip install numpy matplotlib pandas
+
 Build
 - Open a terminal in the folder that contains CMakeLists.txt.
 - Run: cmake -S . -B build
@@ -26,18 +40,3 @@ Notes
 - This is a much better magnetic environment model than the old placeholder, but it is still not a full flight-quality simulator.
 - The disturbance and sensor models are still simple.
 - The navigation block is still just a smoothing filter, not a real estimator.
-
-If you get an error, run 
-Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
-cmake -S . -B build -G "MinGW Makefiles"
-cmake --build build
-if (Test-Path .\build\adcs.exe) {
-    .\build\adcs.exe
-} elseif (Test-Path .\build\Debug\adcs.exe) {
-    .\build\Debug\adcs.exe
-} elseif (Test-Path .\build\Release\adcs.exe) {
-    .\build\Release\adcs.exe
-} else {
-    Write-Host "adcs.exe not found after build"
-}
-python .\plot_all.py

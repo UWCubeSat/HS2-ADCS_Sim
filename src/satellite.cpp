@@ -1,191 +1,163 @@
 #include "modules.hpp"
 #include "frames.hpp"
-#include "math.hpp"
 #include "quaternion.hpp"
 #include "wmm.hpp"
 #include <cmath>
 
 namespace {
 
-// Earth constants used by the orbit model.
-void planet(SimContext& ctx) {
-  ctx.R = 6.371e6;
-  ctx.M = 5.972e24;
-  ctx.G = 6.67e-11;
-  ctx.mu = ctx.G * ctx.M;
+Vec3 state_position_eci_m(const State13& state) {
+  return {state[0], state[1], state[2]};
 }
 
-// Basic spacecraft dimensions and mass.
-void satellite_params(SimContext& ctx) {
-  ctx.ms = 2.6;
-  ctx.lx = 0.10;
-  ctx.ly = 0.10;
-  ctx.lz = 0.20;
-  ctx.Amax = ctx.lx * ctx.ly;
-  ctx.lmax = ctx.lz / 2.0;
-  ctx.CD = 1.0;
-  ctx.m = ctx.ms;
-}
-
-// Box inertia model for the spacecraft bus.
-void inertia_params(SimContext& ctx) {
-  Mat3 Is{};
-  Is[0][0] = (ctx.ms / 12.0) * (ctx.ly * ctx.ly + ctx.lz * ctx.lz);
-  Is[1][1] = (ctx.ms / 12.0) * (ctx.lx * ctx.lx + ctx.lz * ctx.lz);
-  Is[2][2] = (ctx.ms / 12.0) * (ctx.lx * ctx.lx + ctx.ly * ctx.ly);
-
-  ctx.Is = Is;
-  ctx.I = Is;
-  ctx.invI = inv3(ctx.I);
-}
-
-// Coil parameters used by the magnetorquer model.
-void magtorquer_params(SimContext& ctx) {
-  ctx.n_turns = 84.0;
-  ctx.A_turn = 0.02;
-  ctx.maxCurrent_mA = 120.0;
-}
-
-Quat state_to_quat(const State13& s) {
-  return {s[6], s[7], s[8], s[9]};
-}
-
-Vec3 state_to_pqr(const State13& s) {
-  return {s[10], s[11], s[12]};
-}
-
-// Convert seconds since t=0 into decimal year.
-double decimal_year_from_seconds(double year0, double t_seconds) {
-  const double seconds_per_year = 365.25 * 24.0 * 3600.0;
-  return year0 + t_seconds / seconds_per_year;
+Vec3 state_velocity_eci_m_s(const State13& state) {
+  return {state[3], state[4], state[5]};
 }
 
 } // namespace
 
-State13 satellite_derivatives(double t, const State13& state, SimContext& ctx) {
-  planet(ctx);
-  satellite_params(ctx);
-  inertia_params(ctx);
-  magtorquer_params(ctx);
+void initialize_simulation(SimContext& ctx) {
+  // Earth constants.
+  ctx.earthRadius_m = 6.371e6;
+  ctx.earthMass_kg = 5.972e24;
+  ctx.gravConst_SI = 6.67e-11;
+  ctx.mu_m3_s2 = ctx.gravConst_SI * ctx.earthMass_kg;
 
-  const Vec3 r_eci{state[0], state[1], state[2]};
-  const Vec3 v_eci{state[3], state[4], state[5]};
-  const Quat q = state_to_quat(state);
-  const Vec3 pqr_body = state_to_pqr(state);
+  // Spacecraft box geometry.
+  ctx.mass_kg = 2.6;
+  ctx.lx_m = 0.10;
+  ctx.ly_m = 0.10;
+  ctx.lz_m = 0.20;
+  ctx.maxArea_m2 = ctx.lx_m * ctx.ly_m;
+  ctx.maxMomentArm_m = ctx.lz_m / 2.0;
+  ctx.dragCoeff = 1.0;
 
-  const double rho = norm(r_eci);
-  const Vec3 rhat = (rho > 0.0) ? (r_eci / rho) : Vec3{0.0, 0.0, 0.0};
+  // Box inertia in the body frame.
+  Mat3 I{};
+  I[0][0] = (ctx.mass_kg / 12.0) * (ctx.ly_m * ctx.ly_m + ctx.lz_m * ctx.lz_m);
+  I[1][1] = (ctx.mass_kg / 12.0) * (ctx.lx_m * ctx.lx_m + ctx.lz_m * ctx.lz_m);
+  I[2][2] = (ctx.mass_kg / 12.0) * (ctx.lx_m * ctx.lx_m + ctx.ly_m * ctx.ly_m);
+  ctx.inertia_body_kgm2 = I;
+  ctx.inertiaInv_body_kgm2 = inv3(I);
 
-  // Central gravity only.
-  const Vec3 Fg = (-(ctx.mu * ctx.m) / (rho * rho)) * rhat;
+  // Magnetorquer values.
+  ctx.coilTurns = 84.0;
+  ctx.coilArea_m2 = 0.02;
+  ctx.maxCurrent_A = 0.120;
+  ctx.commandedCurrent_A = {0.0, 0.0, 0.0};
+
+  // Sensor/nav defaults.
+  ctx.sensorPeriod_s = 1.0;
+  ctx.sensorModelInitialized = false;
+  ctx.navInitialized = false;
+  ctx.navBlend = 0.3;
+
+  ctx.BfieldTruth_body_T = {0.0, 0.0, 0.0};
+  ctx.BfieldMeasured_body_T = {0.0, 0.0, 0.0};
+  ctx.pqrMeasured_rad_s = {0.0, 0.0, 0.0};
+  ctx.ptpMeasured_rad = {0.0, 0.0, 0.0};
+}
+
+Quat state_quaternion(const State13& state) {
+  return {state[6], state[7], state[8], state[9]};
+}
+
+Vec3 state_body_rates_rad_s(const State13& state) {
+  return {state[10], state[11], state[12]};
+}
+
+Vec3 state_euler321_rad(const State13& state) {
+  return quat_to_euler321(state_quaternion(state));
+}
+
+Vec3 truth_magnetic_field_body_T(double t_s, const State13& state, const SimContext& ctx) {
+  const Vec3 r_eci_m = state_position_eci_m(state);
+  const Quat q = state_quaternion(state);
+
+  // 1) Move the orbit position from inertial to Earth-fixed coordinates.
+  const double earthAngle = ctx.greenwichAngle0_rad + ctx.earthRotationRate_rad_s * t_s;
+  const Vec3 r_ecef_m = eci_to_ecef(r_eci_m, earthAngle);
+
+  // 2) Convert Earth-fixed position to geodetic latitude, longitude, and altitude.
+  const GeodeticLLA lla = ecef_to_geodetic_wgs84(r_ecef_m);
+
+  // 3) Ask WMM for the local North/East/Down field in nT.
+  const double decimalYear = ctx.decimalYear0 + t_s / (365.25 * 86400.0);
+  double X_nT = 0.0;
+  double Y_nT = 0.0;
+  double Z_nT = 0.0;
+  wmm2025_geodetic_ned_nT(lla.lat_rad * 180.0 / M_PI,
+                          lla.lon_rad * 180.0 / M_PI,
+                          lla.alt_m / 1000.0,
+                          decimalYear,
+                          X_nT,
+                          Y_nT,
+                          Z_nT);
+
+  // 4) Convert the local NED vector to ECEF, then to ECI, then to body.
+  const Mat3 C_ecef_ned = ned_basis_ecef(lla.lat_rad, lla.lon_rad);
+  const Vec3 B_ned_nT{X_nT, Y_nT, Z_nT};
+  const Vec3 B_ecef_nT = mul(C_ecef_ned, B_ned_nT);
+  const Vec3 B_eci_nT = ecef_to_eci(B_ecef_nT, earthAngle);
+
+  const Mat3 C_IB = TIBquat(q);
+  const Vec3 B_body_nT = mul(transpose(C_IB), B_eci_nT);
+
+  // 5) Convert nT to Tesla before using the field in any torque calculation.
+  return 1e-9 * B_body_nT;
+}
+
+State13 satellite_derivatives(double t_s, const State13& state, const SimContext& ctx) {
+  const Vec3 r_eci_m = state_position_eci_m(state);
+  const Vec3 v_eci_m_s = state_velocity_eci_m_s(state);
+  const Quat q = state_quaternion(state);
+  const Vec3 w_body_rad_s = state_body_rates_rad_s(state);
+
+  const double radius_m = norm(r_eci_m);
+  const Vec3 rhat_eci = (radius_m > 0.0) ? (r_eci_m / radius_m) : Vec3{0.0, 0.0, 0.0};
+  const double altitude_m = radius_m - ctx.earthRadius_m;
+
+  // Central gravity in the inertial frame.
+  const Vec3 gravityForce_eci_N = (-(ctx.mu_m3_s2 * ctx.mass_kg) / (radius_m * radius_m)) * rhat_eci;
+
+  // Compute the truth field directly from the current truth state.
+  const Vec3 B_body_T = truth_magnetic_field_body_T(t_s, state, ctx);
 
   // Simple disturbance model.
-  const double altitude_m = rho - ctx.R;
-  Vec3 XYZD{0.0, 0.0, 0.0};
-  Vec3 LMND{0.0, 0.0, 0.0};
-  disturbance(altitude_m, ctx.Amax, ctx.lmax, v_eci, ctx.CD, ctx.BB_truth, XYZD, LMND);
+  Vec3 disturbanceForce_eci_N{0.0, 0.0, 0.0};
+  Vec3 disturbanceTorque_body_Nm{0.0, 0.0, 0.0};
+  disturbance(altitude_m, v_eci_m_s, B_body_T, ctx, disturbanceForce_eci_N, disturbanceTorque_body_Nm);
 
-  const Vec3 accel_eci = (1.0 / ctx.m) * (Fg + XYZD);
+  // Magnetorquer torque in the body frame.
+  const Vec3 dipole_body_Am2 = (ctx.coilTurns * ctx.coilArea_m2) * ctx.commandedCurrent_A;
+  const Vec3 controlTorque_body_Nm = cross(dipole_body_Am2, B_body_T);
 
-  // Attitude kinematics and human-readable angles.
-  const Quat qdot = quat_derivative(q, pqr_body);
-  const Vec3 ptp = quat_to_euler321(q);
+  // Translational dynamics.
+  const Vec3 accel_eci_m_s2 = (gravityForce_eci_N + disturbanceForce_eci_N) / ctx.mass_kg;
 
-  // Update the truth magnetic field at the requested sample rate.
-  if (t >= ctx.lastMagUpdate) {
-    ctx.lastMagUpdate += ctx.nextMagUpdate;
-
-    // Step 1: move from the inertial orbit frame into Earth-fixed coordinates.
-    const double earth_angle = ctx.greenwichAngle0 + ctx.omegaE * t;
-    const Vec3 r_ecef = eci_to_ecef(r_eci, earth_angle);
-
-    // Step 2: get the geodetic point needed by WMM.
-    const GeodeticLLA lla = ecef_to_geodetic_wgs84(r_ecef);
-    const double decimal_year = decimal_year_from_seconds(ctx.decimalYear0, t);
-
-    // Step 3: ask WMM for the local North/East/Down field in nanoTesla.
-    double X_nT = 0.0;
-    double Y_nT = 0.0;
-    double Z_nT = 0.0;
-    wmm2025_geodetic_ned_nT(lla.lat_rad * 180.0 / M_PI,
-                            lla.lon_rad * 180.0 / M_PI,
-                            lla.alt_m / 1000.0,
-                            decimal_year,
-                            X_nT,
-                            Y_nT,
-                            Z_nT);
-
-    // Step 4: turn local NED into an ECEF vector.
-    const Mat3 C_ecef_ned = ned_basis_ecef(lla.lat_rad, lla.lon_rad);
-    const Vec3 B_ned_nT{X_nT, Y_nT, Z_nT};
-    const Vec3 B_ecef_nT = mul(C_ecef_ned, B_ned_nT);
-
-    // Step 5: move ECEF -> ECI -> body frame.
-    const Vec3 B_eci_nT = ecef_to_eci(B_ecef_nT, earth_angle);
-    const Mat3 C_IB = TIBquat(q);
-    const Vec3 B_body_nT = mul(transpose(C_IB), B_eci_nT);
-
-    // Store truth field in Tesla, because that keeps the torque math in SI units.
-    ctx.BB_truth = 1e-9 * B_body_nT;
-  }
-
-  // Push truth through the sensor and nav models.
-  if (t >= ctx.lastSensorUpdate) {
-    ctx.lastSensorUpdate += ctx.nextSensorUpdate;
-
-    Vec3 BBm = ctx.BB_truth;
-    Vec3 pqrm = pqr_body;
-    Vec3 ptpm = ptp;
-
-    sensor_update(BBm, pqrm, ptpm, ctx);
-    ctx.BfieldMeasured = BBm;
-    ctx.pqrMeasured = pqrm;
-    ctx.ptpMeasured = ptpm;
-
-    navigation_update(ctx.BfieldMeasured, ctx.pqrMeasured, ctx.ptpMeasured, ctx);
-  }
-
-  // Clamp each coil current separately.
-  const double Imax_A = ctx.maxCurrent_mA * 1e-3;
-  auto clamp = [](double v, double lo, double hi) {
-    return (v < lo) ? lo : ((v > hi) ? hi : v);
-  };
-  ctx.current.x = clamp(ctx.current.x, -Imax_A, Imax_A);
-  ctx.current.y = clamp(ctx.current.y, -Imax_A, Imax_A);
-  ctx.current.z = clamp(ctx.current.z, -Imax_A, Imax_A);
-
-  // Magnetic dipole and magnetic torque in the body frame.
-  const Vec3 dipole_body = (ctx.n_turns * ctx.A_turn) * ctx.current;
-  const Vec3 LMN_mag = cross(dipole_body, ctx.BB_truth);
-
-  const Vec3 LMN_total = LMN_mag + LMND;
-
-  // Rigid-body rotational dynamics in the body frame.
-  const Vec3 H = mul(ctx.I, pqr_body);
-  const Vec3 pqrdot = mul(ctx.invI, (LMN_total - cross(pqr_body, H)));
+  // Rotational dynamics.
+  const Quat qdot = quat_derivative(q, w_body_rad_s);
+  const Vec3 H_body = mul(ctx.inertia_body_kgm2, w_body_rad_s);
+  const Vec3 totalTorque_body_Nm = controlTorque_body_Nm + disturbanceTorque_body_Nm;
+  const Vec3 wdot_body_rad_s2 = mul(ctx.inertiaInv_body_kgm2, totalTorque_body_Nm - cross(w_body_rad_s, H_body));
 
   State13 dst{};
+  dst[0] = v_eci_m_s.x;
+  dst[1] = v_eci_m_s.y;
+  dst[2] = v_eci_m_s.z;
 
-  // Position derivative is velocity.
-  dst[0] = v_eci.x;
-  dst[1] = v_eci.y;
-  dst[2] = v_eci.z;
+  dst[3] = accel_eci_m_s2.x;
+  dst[4] = accel_eci_m_s2.y;
+  dst[5] = accel_eci_m_s2.z;
 
-  // Velocity derivative is acceleration.
-  dst[3] = accel_eci.x;
-  dst[4] = accel_eci.y;
-  dst[5] = accel_eci.z;
-
-  // Quaternion derivative.
   dst[6] = qdot.q0;
   dst[7] = qdot.q1;
   dst[8] = qdot.q2;
   dst[9] = qdot.q3;
 
-  // Body-rate derivative.
-  dst[10] = pqrdot.x;
-  dst[11] = pqrdot.y;
-  dst[12] = pqrdot.z;
+  dst[10] = wdot_body_rad_s2.x;
+  dst[11] = wdot_body_rad_s2.y;
+  dst[12] = wdot_body_rad_s2.z;
 
   return dst;
 }

@@ -3,77 +3,80 @@
 #include "quaternion.hpp"
 #include "rng.hpp"
 
-// All long-lived simulation state that needs to be shared between modules lives here.
-// It is not the prettiest pattern, but it keeps this small codebase easy to move around.
+// This struct holds the long-lived simulation configuration and latched signals.
+// The goal is not to mimic flight software structure exactly.
+// The goal is to keep one clear place for constants, truth values, measurements,
+// nav estimates, and actuator commands so the rest of the code is easy to follow.
 struct SimContext {
-  // Earth constants used by the orbit model.
-  double R{6.371e6};
-  double M{5.972e24};
-  double G{6.67e-11};
-  double mu{0.0};
+  // ----- Planet model -----
+  // Earth constants used by the orbit and magnetic field models.
+  double earthRadius_m{6.371e6};
+  double earthMass_kg{5.972e24};
+  double gravConst_SI{6.67e-11};
+  double mu_m3_s2{0.0};
 
-  // Earth rotation used for the ECI <-> ECEF conversion.
-  double omegaE{7.2921150e-5};
-  double greenwichAngle0{0.0};
+  // Earth rotation for ECI <-> ECEF conversion.
+  double earthRotationRate_rad_s{7.2921150e-5};
+  double greenwichAngle0_rad{0.0};
 
-  // Start date for the geomagnetic model.
-  // One orbit is only a few hours, so the decimal year barely changes, but it is still handled correctly.
+  // Start date for WMM. One orbit is only a few hours, so the decimal year hardly changes,
+  // but the code still carries time correctly.
   double decimalYear0{2026.0};
 
-  // Spacecraft geometry and mass.
-  double ms{2.6};
-  double lx{0.10};
-  double ly{0.10};
-  double lz{0.20};
-  double Amax{0.0};
-  double lmax{0.0};
-  double CD{1.0};
-  double m{0.0};
+  // ----- Spacecraft geometry and mass -----
+  double mass_kg{2.6};
+  double lx_m{0.10};
+  double ly_m{0.10};
+  double lz_m{0.20};
+  double maxArea_m2{0.0};
+  double maxMomentArm_m{0.0};
+  double dragCoeff{1.0};
 
-  // Spacecraft inertia.
-  Mat3 Is{};
-  Mat3 I{};
-  Mat3 invI{};
+  // Principal inertia model for the simple box spacecraft.
+  Mat3 inertia_body_kgm2{};
+  Mat3 inertiaInv_body_kgm2{};
 
-  // Magnetorquer settings.
-  double n_turns{84.0};
-  double A_turn{0.02};
-  double maxCurrent_mA{120.0};
-  Vec3 current{0.0, 0.0, 0.0};
+  // ----- Actuator model -----
+  // Magnetorquer constants. The placeholder controller commands coil current in amps.
+  double coilTurns{84.0};
+  double coilArea_m2{0.02};
+  double maxCurrent_A{0.120};
+  Vec3 commandedCurrent_A{0.0, 0.0, 0.0};
 
-  // Update timing for field, sensor, and nav logic.
-  double nextMagUpdate{1.0};
-  double lastMagUpdate{0.0};
-  double nextSensorUpdate{1.0};
-  double lastSensorUpdate{0.0};
-
-  // Sensor model settings and one-time bias values.
+  // ----- Sensor model -----
+  // Sensor sample period. Truth is continuous; measurements are discrete.
+  double sensorPeriod_s{1.0};
   bool sensorModelInitialized{false};
-  double fsensor{1.0};
-  double MagFieldBias{0.0};
-  double AngFieldBias{0.0};
-  double EulerBias{0.0};
-  double MagFieldNoise{0.0};
-  double AngFieldNoise{0.0};
-  double EulerNoise{0.0};
 
-  // Navigation filter state.
+  // One fixed bias per axis plus fresh white noise each sample.
+  Vec3 magBias_T{0.0, 0.0, 0.0};
+  Vec3 gyroBias_rad_s{0.0, 0.0, 0.0};
+  Vec3 angleBias_rad{0.0, 0.0, 0.0};
+
+  Vec3 magNoise_T{0.0, 0.0, 0.0};
+  Vec3 gyroNoise_rad_s{0.0, 0.0, 0.0};
+  Vec3 angleNoise_rad{0.0, 0.0, 0.0};
+
+  // ----- Navigation filter -----
+  // This is only a smoothing filter for now. It is not a flight estimator.
   bool navInitialized{false};
-  Vec3 BfieldNav{0.0, 0.0, 0.0};
-  Vec3 BfieldNavPrev{0.0, 0.0, 0.0};
-  Vec3 pqrNav{0.0, 0.0, 0.0};
-  Vec3 pqrNavPrev{0.0, 0.0, 0.0};
-  Vec3 ptpNav{0.0, 0.0, 0.0};
-  Vec3 ptpNavPrev{0.0, 0.0, 0.0};
-  Vec3 Bdot{0.0, 0.0, 0.0};
+  double navBlend{0.3};
 
-  // Truth and measured signals.
-  Vec3 BB_truth{0.0, 0.0, 0.0};
-  Vec3 BfieldMeasured{0.0, 0.0, 0.0};
-  Vec3 pqrMeasured{0.0, 0.0, 0.0};
-  Vec3 ptpMeasured{0.0, 0.0, 0.0};
+  Vec3 BfieldNav_T{0.0, 0.0, 0.0};
+  Vec3 BfieldNavPrev_T{0.0, 0.0, 0.0};
+  Vec3 pqrNav_rad_s{0.0, 0.0, 0.0};
+  Vec3 pqrNavPrev_rad_s{0.0, 0.0, 0.0};
+  Vec3 ptpNav_rad{0.0, 0.0, 0.0};
+  Vec3 ptpNavPrev_rad{0.0, 0.0, 0.0};
+  Vec3 BdotNav_T_s{0.0, 0.0, 0.0};
 
-  // Random number generator used by the noise model.
+  // ----- Latched truth and measured signals -----
+  Vec3 BfieldTruth_body_T{0.0, 0.0, 0.0};
+  Vec3 BfieldMeasured_body_T{0.0, 0.0, 0.0};
+  Vec3 pqrMeasured_rad_s{0.0, 0.0, 0.0};
+  Vec3 ptpMeasured_rad{0.0, 0.0, 0.0};
+
+  // Random number generator used by the sensor noise model.
   Rng rng;
 
   explicit SimContext(uint64_t seed = 1) : rng(seed) {}
