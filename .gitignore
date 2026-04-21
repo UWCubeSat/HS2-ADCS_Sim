@@ -1,0 +1,9 @@
+build/
+adcs_output.csv
+output_plots/
+*.exe
+*.obj
+*.o
+*.dll
+*.pyc
+__pycache__/
