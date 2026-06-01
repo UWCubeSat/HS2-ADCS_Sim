@@ -20,3 +20,6 @@ add_executable(adcs
 
 # All headers live in the local include folder.
 target_include_directories(adcs PRIVATE include)
+
+# MSVC does not expose M_PI from <cmath> unless this is defined before including cmath.
+target_compile_definitions(adcs PRIVATE _USE_MATH_DEFINES)
