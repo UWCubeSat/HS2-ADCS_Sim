@@ -1,49 +1,46 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# debug information files
-*.dwo
-
-# idk
-build/
-scripts/.venv/
-*.pyc
+# Python / virtual environments
+.venv/
 __pycache__/
-output/
-.vscode/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# CMake / binary build products
+build/
+dist/
+dist3/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.exe
+*.obj
+*.o
+*.lib
+*.dll
+*.pyd
+*.a
+*.so
+
+# Generated simulation outputs
+*.csv
+*.png
+*.npz
+*.pkl
+output_data/
+output_plots/
+basilisk_runner/output_data/
+basilisk_runner/output_plots/
+reference_standalone/adcs_output.csv
+reference_standalone/output_plots/
+
+# Local editor state; keep intentional VS Code tasks tracked
+.vscode/*
+!.vscode/tasks.json
+
+# Misc temporary files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+archive/

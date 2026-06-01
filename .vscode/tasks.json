@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build ADCS core",
+      "type": "shell",
+      "command": "cmake -S cpp_adcs_core -B build -DCMAKE_BUILD_TYPE=Release; cmake --build build --parallel",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run standalone reference",
+      "type": "shell",
+      "command": "cmake -S . -B build; cmake --build build; .\\build\\adcs.exe; python .\\plot_all.py",
+      "options": { "cwd": "${workspaceFolder}\\reference_standalone\\original_project" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Basilisk minimal",
+      "type": "shell",
+      "command": "python .\\basilisk_runner\\scenario_huskysat2_minimal.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Basilisk detumble",
+      "type": "shell",
+      "command": "python .\\basilisk_runner\\scenario_huskysat2_detumble.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Plot Basilisk results",
+      "type": "shell",
+      "command": "python .\\basilisk_runner\\plot_results.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Compare reference vs Basilisk",
+      "type": "shell",
+      "command": "python .\\basilisk_runner\\compare_reference_vs_basilisk.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}
