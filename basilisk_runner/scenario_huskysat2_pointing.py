@@ -16,6 +16,7 @@ Fast workflow properties:
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import math
 
 import matplotlib.pyplot as plt
@@ -227,6 +228,79 @@ def plot_pointing(df: pd.DataFrame):
     print(f"Saved {path}")
 
 
+def _check(name: str, passed: bool, value=None, limit=None):
+    return name, {"passed": bool(passed), "value": value, "limit": limit}
+
+
+def write_pointing_metrics(df: pd.DataFrame) -> dict:
+    """Write pass/fail validation metrics for the pointing proof-of-concept.
+
+    These are engineering sanity checks for the direct-torque pointing bring-up.
+    They are not a claim that the final magnetorquer-limited controller is done.
+    """
+    numeric = df.select_dtypes(include=[np.number])
+    finite_numeric = bool(np.isfinite(numeric.to_numpy()).all())
+
+    initial_error = float(df["pointing_error_deg"].iloc[0])
+    final_error = float(df["pointing_error_deg"].iloc[-1])
+    initial_rate = float(df["omega_mag_rad_s"].iloc[0])
+    final_rate = float(df["omega_mag_rad_s"].iloc[-1])
+    peak_torque = float(df["torque_B_mag_Nm"].max())
+    saturation_fraction = float(df["saturated"].astype(bool).mean()) if "saturated" in df else float("nan")
+
+    omega = df[["omega_B_x_rad_s", "omega_B_y_rad_s", "omega_B_z_rad_s"]].to_numpy(dtype=float)
+    inertia_diag = np.array([IXX, IYY, IZZ], dtype=float)
+    rotational_energy = 0.5 * np.sum((omega ** 2) * inertia_diag[None, :], axis=1)
+    initial_energy = float(rotational_energy[0])
+    final_energy = float(rotational_energy[-1])
+
+    checks = dict([
+        _check("numeric_finite", finite_numeric, None, None),
+        _check("final_pointing_error_less_than_initial", final_error < initial_error, final_error, f"< {initial_error}"),
+        _check("final_pointing_error_below_1_deg", final_error < 1.0, final_error, "< 1 deg"),
+        _check("final_omega_less_than_initial", final_rate < initial_rate, final_rate, f"< {initial_rate}"),
+        _check("final_omega_below_1e_minus_4_rad_s", final_rate < 1.0e-4, final_rate, "< 1e-4 rad/s"),
+        _check("final_rotational_energy_less_than_initial", final_energy < initial_energy, final_energy, f"< {initial_energy}"),
+        _check("peak_torque_within_limit", peak_torque <= MAX_TORQUE_NM * 1.000001, peak_torque, f"<= {MAX_TORQUE_NM} N m"),
+        _check("saturation_fraction_small", saturation_fraction <= 0.05, saturation_fraction, "<= 0.05"),
+    ])
+
+    passed = bool(all(item["passed"] for item in checks.values()))
+    metrics = {
+        "pointing_file": str(OUT_DATA / "pointing_output.csv"),
+        "scenario": "direct_torque_pointing_proof_of_concept",
+        "duration_s": float(df["time_s"].iloc[-1] - df["time_s"].iloc[0]),
+        "initial_pointing_error_deg": initial_error,
+        "final_pointing_error_deg": final_error,
+        "pointing_error_reduction_deg": initial_error - final_error,
+        "initial_omega_mag_rad_s": initial_rate,
+        "final_omega_mag_rad_s": final_rate,
+        "initial_rotational_energy_J": initial_energy,
+        "final_rotational_energy_J": final_energy,
+        "peak_direct_torque_Nm": peak_torque,
+        "torque_saturation_fraction": saturation_fraction,
+        "validation": {
+            "passed": passed,
+            "checks": checks,
+        },
+        "notes": [
+            "This validates the direct-torque pointing proof-of-concept only.",
+            "It does not validate final magnetorquer-only pointing or native MtbEffector integration.",
+        ],
+    }
+
+    out_json = OUT_DATA / "pointing_metrics.json"
+    out_json.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    print(f"Wrote {out_json}")
+    print(f"Pointing validation passed?: {passed}")
+    if not passed:
+        print("Failed pointing checks:")
+        for name, item in checks.items():
+            if not item["passed"]:
+                print(f"  - {name}")
+    return metrics
+
+
 def run(duration_s: float = SIM_DURATION_S):
     sim = SimulationBaseClass.SimBaseClass()
     proc = sim.CreateNewProcess("PointingProcess")
@@ -294,6 +368,7 @@ def run(duration_s: float = SIM_DURATION_S):
         "omega_B_y_rad_s": omega[:, 1],
         "omega_B_z_rad_s": omega[:, 2],
         "omega_mag_rad_s": np.linalg.norm(omega, axis=1),
+        "rotational_energy_J": 0.5 * (IXX * omega[:, 0]**2 + IYY * omega[:, 1]**2 + IZZ * omega[:, 2]**2),
     })
 
     for col in [
@@ -323,6 +398,7 @@ def run(duration_s: float = SIM_DURATION_S):
     print(f"Torque saturation fraction: {saturated_fraction:.6g}")
 
     plot_pointing(df)
+    write_pointing_metrics(df)
     return df
 
 
