@@ -66,6 +66,32 @@ def find_wmm2025_path() -> str:
     )
 
 
+def mrp_to_dcm(sigma):
+    """Convert an MRP attitude vector to the associated direction cosine matrix.
+
+    This is used only for diagnostic Euler-angle output.  Basilisk internally
+    propagates MRPs, which remain the preferred attitude representation for
+    simulation and control.
+    """
+    s = np.asarray(sigma, dtype=float)
+    s2 = float(np.dot(s, s))
+    sx = np.array([
+        [0.0, -s[2], s[1]],
+        [s[2], 0.0, -s[0]],
+        [-s[1], s[0], 0.0],
+    ])
+    return np.eye(3) + (8.0 * sx @ sx - 4.0 * (1.0 - s2) * sx) / (1.0 + s2) ** 2
+
+
+def dcm_to_euler321(C):
+    """Return 3-2-1 Euler angles [phi, theta, psi] from a DCM."""
+    C = np.asarray(C, dtype=float)
+    phi = math.atan2(C[1, 2], C[2, 2])
+    theta = -math.asin(float(np.clip(C[0, 2], -1.0, 1.0)))
+    psi = math.atan2(C[0, 1], C[0, 0])
+    return np.array([phi, theta, psi])
+
+
 def configure_spacecraft():
     sc = spacecraft.Spacecraft()
     sc.ModelTag = "HuskySat2_detumble"
@@ -204,6 +230,7 @@ def run():
     sigma = np.asarray(sc_log.sigma_BN, dtype=float)
     omega = np.asarray(sc_log.omega_BN_B, dtype=float)
     omega_mag = np.linalg.norm(omega, axis=1)
+    euler = np.array([dcm_to_euler321(mrp_to_dcm(s)) for s in sigma])
 
     B_N = np.asarray(mag_log.magField_N, dtype=float)
     B_B = np.asarray(tam_log.tam_S, dtype=float)
@@ -256,6 +283,12 @@ def run():
         "r_N_x_m": r[:, 0], "r_N_y_m": r[:, 1], "r_N_z_m": r[:, 2],
         "v_N_x_m_s": v[:, 0], "v_N_y_m_s": v[:, 1], "v_N_z_m_s": v[:, 2],
         "sigma_BN_1": sigma[:, 0], "sigma_BN_2": sigma[:, 1], "sigma_BN_3": sigma[:, 2],
+        "euler321_phi_rad": euler[:, 0],
+        "euler321_theta_rad": euler[:, 1],
+        "euler321_psi_rad": euler[:, 2],
+        "euler321_phi_deg": np.degrees(euler[:, 0]),
+        "euler321_theta_deg": np.degrees(euler[:, 1]),
+        "euler321_psi_deg": np.degrees(euler[:, 2]),
         "omega_B_x_rad_s": omega[:, 0], "omega_B_y_rad_s": omega[:, 1], "omega_B_z_rad_s": omega[:, 2],
         "omega_mag_rad_s": omega_mag,
         "B_N_x_T": B_N[:, 0], "B_N_y_T": B_N[:, 1], "B_N_z_T": B_N[:, 2],
