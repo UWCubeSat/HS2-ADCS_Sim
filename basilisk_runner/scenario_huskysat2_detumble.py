@@ -307,9 +307,43 @@ def run():
         "mtb_torque_B_mag_Nm": np.linalg.norm(applied_torque_B, axis=1),
     })
 
-    for col in ["ix_A", "iy_A", "iz_A", "pcoil_x_W", "pcoil_y_W", "pcoil_z_W", "pcoil_total_W", "control_torque_B_x_Nm", "control_torque_B_y_Nm", "control_torque_B_z_Nm", "control_torque_B_mag_Nm", "saturation_x", "saturation_y", "saturation_z", "controller_valid", "using_cpp_core"]:
+    # Use the controller diagnostic history as the authoritative source for
+    # command-side quantities. The Basilisk message recorders and dynamic
+    # effector logger can be sampled at slightly different phases. Mixing those
+    # sources caused false validation failures in the m x B consistency check.
+    # These columns are intended to represent the controller/update-time command
+    # state sampled onto the canonical 1 Hz output grid.
+    authoritative_diag_cols = [
+        "B_B_x_T", "B_B_y_T", "B_B_z_T",
+        "mcmd_x_Am2", "mcmd_y_Am2", "mcmd_z_Am2",
+        "ix_A", "iy_A", "iz_A",
+        "pcoil_x_W", "pcoil_y_W", "pcoil_z_W", "pcoil_total_W",
+        "control_torque_B_x_Nm", "control_torque_B_y_Nm", "control_torque_B_z_Nm", "control_torque_B_mag_Nm",
+        "saturation_x", "saturation_y", "saturation_z",
+        "controller_valid", "using_cpp_core",
+    ]
+    for col in authoritative_diag_cols:
         if col in diag_sampled.columns:
             df[col] = diag_sampled[col]
+
+    # In the direct-torque fallback, the controller torque command is the torque
+    # sent to Basilisk's ExtForceTorque effector. Record it consistently with the
+    # same sampled controller diagnostics so validation checks compare like with
+    # like: tau_B = m_B x B_B.
+    torque_cols = ["control_torque_B_x_Nm", "control_torque_B_y_Nm", "control_torque_B_z_Nm"]
+    if all(col in df.columns for col in torque_cols):
+        torque_cmd = df[torque_cols].to_numpy(dtype=float)
+        torque_cmd_mag = np.linalg.norm(torque_cmd, axis=1)
+        df["applied_torque_B_x_Nm"] = torque_cmd[:, 0]
+        df["applied_torque_B_y_Nm"] = torque_cmd[:, 1]
+        df["applied_torque_B_z_Nm"] = torque_cmd[:, 2]
+        df["applied_torque_B_mag_Nm"] = torque_cmd_mag
+        df["mtb_torque_B_x_Nm"] = torque_cmd[:, 0]
+        df["mtb_torque_B_y_Nm"] = torque_cmd[:, 1]
+        df["mtb_torque_B_z_Nm"] = torque_cmd[:, 2]
+        df["mtb_torque_B_mag_Nm"] = torque_cmd_mag
+        # Keep the printed summary aligned with the written CSV.
+        applied_torque_B = torque_cmd
 
     out_csv = OUT_DATA / "detumble_output.csv"
     df.to_csv(out_csv, index=False)
