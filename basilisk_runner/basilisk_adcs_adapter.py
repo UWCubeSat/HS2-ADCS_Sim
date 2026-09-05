@@ -8,12 +8,40 @@ built pybind module named ``adcs_core`` if it is importable.
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Sequence
+from importlib import import_module
+from typing import Any, Dict, List, Protocol, Sequence, TypedDict, cast
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from hs2_sim_config import DEFAULT_CONFIG, HS2SimConfig
 
+
+VectorInput = Sequence[float] | NDArray[np.float64]
+
+
+class ControllerResult(TypedDict):
+    """Shared Python/optional pybind result, before Basilisk message publication."""
+
+    commanded_magnetic_dipole_B_Am2: list[float]
+    commanded_coil_current_A: list[float]
+    commanded_control_torque_B_Nm: list[float]
+    coil_power_W: list[float]
+    coil_power_total_W: float
+    saturation_flags: list[bool | np.bool_]
+    valid: bool
+
+
+class _OptionalADCSCore(Protocol):
+    """Only the separately built cpp_adcs_core API used by this adapter."""
+
+    def step(self, time_s: float, omega: list[float], mag: list[float],
+             config: dict[str, Any], /) -> ControllerResult: ...
+
+
+_adcs_core: _OptionalADCSCore | None
 try:
-    import adcs_core as _adcs_core  # optional pybind module from cpp_adcs_core
+    # Runtime discovery is intentional: this optional pybind module need not be
+    # built for the Python controller. Preserve the existing import/fallback policy.
+    _adcs_core = cast(_OptionalADCSCore, import_module("adcs_core"))
 except Exception:  # pragma: no cover - local optional dependency
     _adcs_core = None
 
@@ -47,15 +75,15 @@ class ADCSConfig:
                    control.minimum_field.value, control.use_cpp_core_if_available.value)
 
 
-def _cross(a: Sequence[float], b: Sequence[float]) -> np.ndarray:
+def _cross(a: ArrayLike, b: ArrayLike) -> NDArray[np.float64]:
     return np.cross(np.asarray(a, dtype=float), np.asarray(b, dtype=float))
 
 
-def _controller_step_python(time_s: float, omega_B_rad_s: Sequence[float], mag_B_T: Sequence[float], cfg: ADCSConfig) -> Dict[str, object]:
+def _controller_step_python(time_s: float, omega_B_rad_s: VectorInput, mag_B_T: VectorInput, cfg: ADCSConfig) -> ControllerResult:
     omega = np.asarray(omega_B_rad_s, dtype=float)
     mag = np.asarray(mag_B_T, dtype=float)
 
-    result = {
+    result: ControllerResult = {
         "commanded_magnetic_dipole_B_Am2": [0.0, 0.0, 0.0],
         "commanded_coil_current_A": [0.0, 0.0, 0.0],
         "commanded_control_torque_B_Nm": [0.0, 0.0, 0.0],
@@ -82,7 +110,7 @@ def _controller_step_python(time_s: float, omega_B_rad_s: Sequence[float], mag_B
     currents = np.zeros(3)
     dipoles = np.zeros(3)
     powers = np.zeros(3)
-    flags = [False, False, False]
+    flags: list[bool | np.bool_] = [False, False, False]
 
     for i in range(3):
         if gains[i] <= 0.0 or current_limits[i] <= 0.0 or dipole_limits[i] <= 0.0 or resist[i] < 0.0:
@@ -109,7 +137,7 @@ def _controller_step_python(time_s: float, omega_B_rad_s: Sequence[float], mag_B
     return result
 
 
-def controller_step(time_s: float, omega_B_rad_s: Sequence[float], mag_B_T: Sequence[float], cfg: ADCSConfig | None = None) -> Dict[str, object]:
+def controller_step(time_s: float, omega_B_rad_s: VectorInput, mag_B_T: VectorInput, cfg: ADCSConfig | None = None) -> ControllerResult:
     cfg = cfg or ADCSConfig()
     if cfg.use_cpp_core_if_available and _adcs_core is not None:
         try:

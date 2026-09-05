@@ -6,6 +6,7 @@ All existing Phase 2A/2B regressions remain in their original test modules.
 import contextlib
 import io
 import unittest
+from typing import Callable, Sequence, TypedDict, cast
 
 import numpy as np
 from Basilisk.architecture import messaging, sysModel
@@ -81,8 +82,16 @@ class BenchInputs(sysModel.SysModel):
         self.torque.write(payload, tick)
 
 
-def bench_trajectory(mode, dt=0.1, duration=2.0, omega=(0.8, -0.2, 0.3),
-                     field=(1e-5, -2e-5, 3e-5), command_function=None, integrator="rk4"):
+class BenchOptions(TypedDict, total=False):
+    omega: Sequence[float]
+    field: Sequence[float]
+    command_function: Callable[[float], Sequence[float]]
+    duration: float
+
+
+def bench_trajectory(mode, dt=0.1, duration=2.0, omega: Sequence[float] = (0.8, -0.2, 0.3),
+                     field: Sequence[float] = (1e-5, -2e-5, 3e-5),
+                     command_function: Callable[[float], Sequence[float]] | None = None, integrator="rk4"):
     """Controlled ExtForceTorque/native A/B; no WMM/controller feedback changes.
 
     At dt=0.1 direct mode has the legacy hold semantics. Smaller dt evaluates
@@ -210,7 +219,7 @@ class NativeMagneticActuationTests(unittest.TestCase):
         self.assertLess(errors[3], errors[2]*0.3)
         self.assertLess(errors[3], 3e-6)
         # When B_B remains fixed, both actuator laws must give the same trajectory.
-        options = dict(omega=(0, 0, 0), field=(0, 0, 4e-5), command_function=lambda t: [0, 0, 0.5])
+        options = BenchOptions(omega=(0, 0, 0), field=(0, 0, 4e-5), command_function=lambda t: [0, 0, 0.5])
         np.testing.assert_allclose(bench_trajectory("native", **options)["omega"],
                                    bench_trajectory("direct", **options)["omega"], atol=1e-15, rtol=0)
         # Nonzero first step from rest: tiny rotation makes the hold error higher
@@ -243,9 +252,12 @@ class NativeMagneticActuationTests(unittest.TestCase):
         for which in (3, 4):
             for time in (0, 200_000_000):
                 objects = native_fixture([0.1, 0, 0], [0, 0, 4e-5])
-                for msg in objects[3:5]:
+                # Index only the message pair, not the heterogeneous keepalive tuple.
+                messages = objects[3:5]
+                for msg in messages:
                     msg.write(msg.read(), 100_000_000)
-                objects[which].write(objects[which].read(), time)
+                selected_msg = messages[which - 3]
+                selected_msg.write(selected_msg.read(), time)
                 guard = MagneticInputGuard(objects[2], 100_000_000)
                 with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(ValueError):
                     guard.UpdateState(200_000_000)
@@ -265,11 +277,13 @@ class NativeMagneticActuationTests(unittest.TestCase):
                 # Corrupt BOTH native exports: transport still passes, physics must fail.
                 bad[[f"{p}_{a}_Nm" for p in ("applied_torque_B", "native_mtbNetTorque_B") for a in "xyz"]] = 0
             elif corruption == "rate":
-                bad.loc[1, "omega_B_x_rad_s"] += 1e-5
+                # Scalar casts describe the known numeric telemetry columns; they
+                # do not coerce the values used by these failure-detection tests.
+                bad.loc[1, "omega_B_x_rad_s"] = cast(float, bad.loc[1, "omega_B_x_rad_s"]) + 1e-5
             elif corruption == "epoch":
-                bad.loc[1, "native_input_field_time_ns"] += 100_000_000
+                bad.loc[1, "native_input_field_time_ns"] = cast(int, bad.loc[1, "native_input_field_time_ns"]) + 100_000_000
             elif corruption == "field_direction":
-                bad.loc[1, "held_B_N_x_T"] *= -1
+                bad.loc[1, "held_B_N_x_T"] = cast(float, bad.loc[1, "held_B_N_x_T"]) * -1
             else:
                 bad["applied_torque_evaluation"] = "constant_body_hold"
             with self.subTest(corruption=corruption):

@@ -18,7 +18,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -171,6 +171,13 @@ class InitialConditionConfig:
     sigma_BN: Parameter = assumed((0.0, 0.0, 0.0), "1", "MRP B relative N", "C_BN maps N components into B.")
 
 
+# Every section is a dataclass with explicit Parameter defaults; none uses
+# dataclasses.MISSING. Keep reflection at this narrowly typed schema boundary.
+ConfigSection = (SpacecraftConfig | OrbitConfig | EnvironmentConfig | TimingConfig
+                 | MagnetorquerConfig | SensorConfig | DetumbleControllerConfig
+                 | InitialConditionConfig)
+
+
 @dataclass(frozen=True)
 class HS2SimConfig:
     spacecraft: SpacecraftConfig = SpacecraftConfig()
@@ -214,7 +221,7 @@ class HS2SimConfig:
             if not condition:
                 raise ValueError(message)
 
-        def numeric(parameter, shape=(), positive=False):
+        def numeric(parameter: Parameter, shape: tuple[int, ...] = (), positive: bool = False):
             array = np.asarray(parameter.value)
             require(array.shape == shape and array.dtype.kind in "fiu" and np.isfinite(array).all(),
                     f"Expected finite numeric shape {shape} for {parameter.frame}")
@@ -228,7 +235,8 @@ class HS2SimConfig:
                 p = getattr(section, f.name)
                 require(isinstance(p, Parameter), f"{section_field.name}.{f.name} requires Parameter metadata")
                 p.__post_init__()
-                require(p.units == f.default.units and p.frame == f.default.frame,
+                default = cast(Parameter, f.default)
+                require(p.units == default.units and p.frame == default.frame,
                         f"Units/frame contract mismatch for {section_field.name}.{f.name}")
 
         numeric(self.spacecraft.mass, positive=True)
@@ -318,9 +326,11 @@ class HS2SimConfig:
             return tuple(immutable(x) for x in value) if isinstance(value, list) else value
         if set(data) != {f.name for f in fields(cls)}:
             raise ValueError("Configuration must contain exactly the eight runtime sections")
-        sections = {}
+        # JSON keys select heterogeneous sections; validate their exact keys and
+        # Parameter metadata below before passing them to the dataclass constructor.
+        sections: dict[str, Any] = {}
         for f in fields(cls):
-            schema = type(f.default)
+            schema = type(cast(ConfigSection, f.default))
             if set(data[f.name]) != {p.name for p in fields(schema)}:
                 raise ValueError(f"Missing/unknown parameter in {f.name}")
             try:

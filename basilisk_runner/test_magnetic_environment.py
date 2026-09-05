@@ -2,6 +2,7 @@
 import contextlib
 import io
 import unittest
+from typing import TypedDict, cast
 
 import numpy as np
 from Basilisk.architecture import messaging
@@ -13,8 +14,15 @@ from test_detumble_telemetry import analytic_telemetry, validate
 import compare_reference_vs_basilisk as comparison
 
 
+class InputOptions(TypedDict, total=False):
+    state_tick: int
+    earth_tick: int
+    link_earth: bool
+
+
 class MagneticEnvironmentTests(unittest.TestCase):
-    def make_inputs(self, tick=100_000_000, state_tick=None, earth_tick=None, link_earth=True):
+    def make_inputs(self, tick: int = 100_000_000, state_tick: int | None = None,
+                    earth_tick: int | None = None, link_earth: bool = True):
         wmm = magneticFieldWMM.MagneticFieldWMM()
         state = messaging.SCStatesMsgPayload()
         state.r_BN_N = [6971000.0, 0.0, 0.0]  # synthetic test position, no model change
@@ -29,7 +37,8 @@ class MagneticEnvironmentTests(unittest.TestCase):
     def test_guard_accepts_current_and_rejects_stale_or_missing_inputs(self):
         objects = self.make_inputs()
         objects[-1].UpdateState(100_000_000)
-        for options in ({"state_tick": 0}, {"earth_tick": 0}, {"link_earth": False}):
+        cases = (InputOptions(state_tick=0), InputOptions(earth_tick=0), InputOptions(link_earth=False))
+        for options in cases:
             with self.subTest(options=options), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(ValueError):
                 objects = self.make_inputs(**options)
                 objects[-1].UpdateState(100_000_000)
@@ -91,7 +100,8 @@ class MagneticEnvironmentTests(unittest.TestCase):
         for column in ("wmm_state_time_ns", "earth_orientation_time_ns", "field_evaluation_time_ns"):
             with self.subTest(column=column):
                 df = analytic_telemetry()
-                df.loc[1, column] -= 100_000_000
+                # Known numeric fixture columns; casts leave their runtime values intact.
+                df.loc[1, column] = cast(int, df.loc[1, column]) - 100_000_000
                 self.assertFalse(validate(df)["checks"]["telemetry_epochs_aligned"]["passed"])
         for corruption in ("transpose", "stale_matrix", "disabled", "stale_tdb"):
             with self.subTest(corruption=corruption):
@@ -104,7 +114,7 @@ class MagneticEnvironmentTests(unittest.TestCase):
                 elif corruption == "disabled":
                     df.loc[1, "earth_orientation_enabled"] = 0
                 else:
-                    df.loc[1, "earth_orientation_tdb_s"] -= 0.1
+                    df.loc[1, "earth_orientation_tdb_s"] = cast(float, df.loc[1, "earth_orientation_tdb_s"]) - 0.1
                 self.assertFalse(validate(df)["passed"])
         df = analytic_telemetry()
         # Inverse body rotation preserves |B| but sends +Z the wrong direction.

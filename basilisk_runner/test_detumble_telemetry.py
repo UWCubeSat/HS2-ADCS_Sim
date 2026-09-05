@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -133,7 +134,9 @@ class TelemetryRegressionTests(unittest.TestCase):
         for col in ["sensor_state_time_ns", "tam_message_time_ns", "applied_torque_time_ns"]:
             with self.subTest(column=col):
                 df = analytic_telemetry()
-                df.loc[1, col] += 1
+                # The fixture defines this column as integer nanoseconds. A cast
+                # narrows Pandas Scalar without converting/rounding the evidence.
+                df.loc[1, col] = cast(int, df.loc[1, col]) + 1
                 self.assertFalse(validate(df)["checks"]["telemetry_epochs_aligned"]["passed"])
 
     def test_zero_applied_torque_cannot_pass_using_expected_torque(self):

@@ -56,6 +56,7 @@ from __future__ import annotations
 from pathlib import Path
 import math
 import json
+from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -295,7 +296,10 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         # UpdateState publishes the most recent dynamics torque; it does not
         # calculate torque or latch inputs. Publish before environment/commands change.
         sim.AddModelToTask("DynamicsTask", effector, ModelPriority=980)
-        native_output_log = effector.mtbOutMsg.recorder(rec_dt)
+        # The factory above creates MtbEffector exactly when actuator == "native".
+        # Narrow that relationship without altering actuator selection or scheduling.
+        native_effector = cast(MtbEffector.MtbEffector, effector)
+        native_output_log = native_effector.mtbOutMsg.recorder(rec_dt)
         sim.AddModelToTask("DynamicsTask", native_output_log, ModelPriority=975)
     effector_log = effector.logger(["torqueExternalPntB_B"])
     sim.AddModelToTask("DynamicsTask", effector_log, ModelPriority=975)

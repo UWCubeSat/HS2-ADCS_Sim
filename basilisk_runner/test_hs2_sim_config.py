@@ -85,7 +85,8 @@ class HS2ConfigurationTests(unittest.TestCase):
 
     def test_immutable_and_json_round_trip(self):
         with self.assertRaises(FrozenInstanceError):
-            DEFAULT_CONFIG.spacecraft.mass.value = 3
+            # Deliberate invalid write: exercise the runtime frozen-dataclass guard.
+            setattr(DEFAULT_CONFIG.spacecraft.mass, "value", 3)
         with self.assertRaises(TypeError):
             DEFAULT_CONFIG.magnetorquers.axes_B.value[0][0] = 2
         with tempfile.TemporaryDirectory() as directory:
