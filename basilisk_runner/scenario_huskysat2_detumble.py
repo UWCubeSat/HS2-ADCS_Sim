@@ -6,33 +6,39 @@ This is the fast workflow path:
 - no Basilisk.ExternalModules import
 - Python Basilisk controller module with optional separate pybind core
 
-Telemetry contract (schema 2; seconds/nanoseconds from simulation start):
+Telemetry contract (schema 3; seconds/nanoseconds from 2026-01-01 00:00 UTC):
+N is Earth-centered ICRF/J2000; P is the low-order IAU Earth-fixed frame
+defined in magnetic_environment.py; B is the unchanged simulated body frame
+(physical HS-2 axis mapping remains unresolved). sigma_BN represents B relative
+to N: C_BN maps inertial components into body components, v_B = C_BN v_N.
+WMM consumes r_BN_N [m], forms r_P = C_PN r_N, evaluates the field in P, and
+returns B_N = C_PN.T B_P [T]. TAM uses B_S = C_SB C_BN B_N; C_SB = identity
+in this ideal baseline, hence saved tam_S is B_B. No silent frame transpose.
+
 * time_s/time_ns is the recorder task tick, after spacecraft propagation.
   r_N, v_N, sigma_BN, Euler angles and omega_B describe state_time_ns.
-* sensor_state_* is an additional, pre-environment snapshot of scStateOutMsg.
-  sensor_state_time_ns is its actual message write time, normally one 0.1 s
-  integration step earlier (both states have epoch zero on the initial row).
-  WMM, SimpleNav and TAM all consume this state; their task order is unchanged.
-* B_N is WMM's field evaluated at field_evaluation_time_ns using the POSITION
-  in sensor_state_*. B_B is the recorded TAM tam_S output (S=B only because
-  dcm_SB is identity here), using the ATTITUDE in that same sensor state.
-  The WMM evaluation epoch and input position epoch are deliberately separate.
-* nav_* comes from SimpleNav; nav_time_tag_s is its output/update tag, NOT
-  the consumed spacecraft state's epoch. *_message_time_ns are message headers.
-* mcmd is MTBArrayCmdMsg.mtbDipoleCmds[0:3]. control_torque is the independent
-  recording of CmdTorqueBodyMsg.torqueRequestBody, the controller's expected
-  m x B torque. Both commands are published at their respective *_time_ns.
+* sensor_state_* is a snapshot AFTER propagation and BEFORE environment/nav/TAM.
+  Its epoch, the WMM input position epoch, Earth orientation epoch, WMM output
+  epoch and sensor/nav/controller input epoch ALL equal the current tick.
+  Earth absolute time is also saved as seconds past J2000 TDB. WMM internally
+  rounds its secular-variation time to a whole second (wmm_coefficient_time_ns);
+  geometry and message times retain the full task-clock precision.
+* mcmd is MTBArrayCmdMsg.mtbDipoleCmds[0:3]; control_torque is the recorded
+  CmdTorqueBodyMsg.torqueRequestBody, expected m x B at the CURRENT epoch.
+  The command is loaded after the controller and held over [t, t+0.1 s].
 * applied_torque is ExtForceTorque.torqueExternalPntB_B sampled AFTER the plant
-  update, at applied_torque_time_ns. It is the combined dynamic-effector torque,
-  not a command alias and not native MtbEffector output. In this constant-body-
-  torque bridge it is held over [sensor_state_time_ns, state_time_ns]; the zero
-  row is initialization, with no elapsed integration interval.
+  update but BEFORE loading the new command. It was held over [t-0.1 s, t].
+  held_* are actual message/state recordings taken before propagation, including
+  the PRIOR dipole, field, expected torque and state that generated that torque.
+  Validate applied torque against these held records, not the current command.
+  At t=0 the plant is initialized; there is no completed application interval
+  or previous field/command. Application checks explicitly exclude that row.
 * Currents, coil powers, saturation/validity and core-availability flags remain
   controller diagnostics at diagnostic_time_ns; they are not hardware readings.
 
 All sources are matched on exact integer task ticks, never nearest-time joined.
-Use sensor_state_sigma_BN with B_N/B_B for frame checks, and pre/post omega for
-the applied-torque dynamics check. Do not pair B_B with post-step sigma_BN.
+Use sensor_state_sigma_BN with B_N/B_B for frame checks, and held/post omega for
+the applied-torque dynamics check. No interpolation or time relabeling is used.
 These are CONFIRMED software scheduling/source semantics for this development
 configuration, not confirmed HS-2 hardware or flight timing requirements.
 """
@@ -57,6 +63,7 @@ except ImportError as exc:
     ) from exc
 
 from basilisk_adcs_adapter import ADCSConfig, PythonBdotMTQController, MAX_EFF_CNT
+from magnetic_environment import EarthOrientation, WMMInputGuard, MODEL_NAME
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -187,7 +194,7 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
     return values[indices]
 
 
-def run():
+def run(stop_time_s=None, write_outputs=True):
     sim = SimulationBaseClass.SimBaseClass()
     proc = sim.CreateNewProcess("DynamicsProcess")
     proc.addTask(sim.CreateNewTask("DynamicsTask", macros.sec2nano(CONTROL_DT_S)))
@@ -200,6 +207,14 @@ def run():
     mag.epochDateFractionalYear = EPOCH_FRACTIONAL_YEAR
     mag.planetRadius = 6371.2e3
     mag.addSpacecraftToModel(sc.scStateOutMsg)
+    # Initialize only the pre-run field sentinel. The t=0 row has no preceding
+    # application interval; actual current-epoch WMM output is computed at t=0.
+    mag.envOutMsgs[0].write(messaging.MagneticFieldMsgPayload(), 0)
+    earth_orientation = EarthOrientation(EPOCH_FRACTIONAL_YEAR)
+    earth_orientation.ModelTag = "EarthOrientation"
+    mag.planetPosInMsg.subscribeTo(earth_orientation.planetOutMsg)
+    wmm_guard = WMMInputGuard(mag)
+    wmm_guard.ModelTag = "WMMInputGuard"
 
     nav = simpleNav.SimpleNav()
     nav.ModelTag = "SimpleNav"
@@ -242,36 +257,50 @@ def run():
     mtb.magInMsg.subscribeTo(mag.envOutMsgs[0])
     mtb.mtbParamsInMsg.subscribeTo(mtb_cfg_msg)
 
-    # Observe the exact state consumed by WMM/nav/TAM, before any model updates.
-    # This recorder is passive: preserve all original physics/control priorities.
+    # Capture the previous command/field/state before propagation. These are
+    # evidence for the torque held during the integration interval ending now.
     rec_dt = macros.sec2nano(RECORD_DT_S)
-    sensor_state_log = sc.scStateOutMsg.recorder(rec_dt)
-    sim.AddModelToTask("DynamicsTask", sensor_state_log, ModelPriority=1000)
+    held_state_log = sc.scStateOutMsg.recorder(rec_dt)
+    held_mag_log = mag.envOutMsgs[0].recorder(rec_dt)
+    held_cmd_log = ctrl.mtbCmdOutMsg.recorder(rec_dt)
+    held_torque_log = ctrl.cmdTorqueOutMsg.recorder(rec_dt)
+    for recorder in [held_state_log, held_mag_log, held_cmd_log, held_torque_log]:
+        sim.AddModelToTask("DynamicsTask", recorder, ModelPriority=1100)
 
-    # Higher priority runs earlier. Controller writes command before torque/dynamics updates.
+    # Plant first: the effector buffer already holds the preceding tick's command.
+    sim.AddModelToTask("DynamicsTask", sc, ModelPriority=1000)
+    direct_torque_log = direct_torque.logger(["torqueExternalPntB_B"])
+    sim.AddModelToTask("DynamicsTask", direct_torque_log, ModelPriority=975)
+    sensor_state_log = sc.scStateOutMsg.recorder(rec_dt)
+    sim.AddModelToTask("DynamicsTask", sensor_state_log, ModelPriority=950)
+
+    # All environment and sensor inputs now represent this same propagated epoch.
+    sim.AddModelToTask("DynamicsTask", earth_orientation, ModelPriority=925)
+    sim.AddModelToTask("DynamicsTask", wmm_guard, ModelPriority=910)
     sim.AddModelToTask("DynamicsTask", mag, ModelPriority=900)
     sim.AddModelToTask("DynamicsTask", nav, ModelPriority=800)
     sim.AddModelToTask("DynamicsTask", tam, ModelPriority=700)
     sim.AddModelToTask("DynamicsTask", ctrl, ModelPriority=600)
     sim.AddModelToTask("DynamicsTask", direct_torque, ModelPriority=500)
-    sim.AddModelToTask("DynamicsTask", sc, ModelPriority=100)
+    # ExtForceTorque UpdateState above loads the NEW command for the NEXT step.
 
     sc_log = sc.scStateOutMsg.recorder(rec_dt)
     mag_log = mag.envOutMsgs[0].recorder(rec_dt)
     tam_log = tam.tamDataOutMsg.recorder(rec_dt)
     cmd_log = ctrl.mtbCmdOutMsg.recorder(rec_dt)
     expected_torque_log = ctrl.cmdTorqueOutMsg.recorder(rec_dt)
-    direct_torque_log = direct_torque.logger(["torqueExternalPntB_B"])
     nav_log = nav.attOutMsg.recorder(rec_dt)
-    for recorder in [sc_log, mag_log, tam_log, cmd_log, expected_torque_log, direct_torque_log, nav_log]:
+    earth_log = earth_orientation.planetOutMsg.recorder(rec_dt)
+    for recorder in [sc_log, mag_log, tam_log, cmd_log, expected_torque_log, nav_log, earth_log]:
         sim.AddModelToTask("DynamicsTask", recorder)
 
     r0 = EARTH_RADIUS_M + ALTITUDE_M
     orbit_period_s = 2.0 * math.pi * math.sqrt(r0**3 / MU_EARTH)
-    print(f"Running detumble scenario for one orbit: {orbit_period_s:.2f} s")
+    duration_s = orbit_period_s if stop_time_s is None else float(stop_time_s)
+    print(f"Running detumble scenario: {duration_s:.2f} s")
 
     sim.InitializeSimulation()
-    sim.ConfigureStopTime(macros.sec2nano(orbit_period_s))
+    sim.ConfigureStopTime(macros.sec2nano(duration_s))
     sim.ExecuteSimulation()
 
     ticks = np.asarray(sc_log.times(), dtype=np.int64)
@@ -302,15 +331,28 @@ def run():
     diag_ticks = np.rint(diag["time_s"].to_numpy() * 1e9).astype(np.int64)
     diag_sampled = pd.DataFrame(sample_at_ticks(ticks, diag_ticks, diag.to_numpy(), "controller history"),
                                 columns=diag.columns)
+    guard_data = pd.DataFrame(wmm_guard.history)
+    guard_ticks = guard_data["time_ns"].to_numpy(dtype=np.int64)
 
     df = pd.DataFrame({
-        "telemetry_schema_version": 2,
+        "telemetry_schema_version": 3,
         "time_s": t,
         "time_ns": ticks,
         "control_step_ns": macros.sec2nano(CONTROL_DT_S),
+        "application_interval_valid": ticks > 0,
         "state_time_ns": written(sc_log),
         "sensor_state_time_ns": written(sensor_state_log),
+        "wmm_state_time_ns": sample_at_ticks(ticks, guard_ticks, guard_data["wmm_state_time_ns"], "WMM input epoch"),
+        "earth_orientation_time_ns": sample_at_ticks(ticks, guard_ticks, guard_data["earth_orientation_time_ns"], "Earth input epoch"),
+        "earth_orientation_tdb_s": sampled(earth_log, "J2000Current"),
+        "earth_orientation_enabled": sampled(earth_log, "computeOrient"),
+        "earth_orientation_model": MODEL_NAME,
         "field_evaluation_time_ns": written(mag_log),
+        "wmm_coefficient_time_ns": ((ticks + 500_000_000) // 1_000_000_000) * 1_000_000_000,
+        "held_state_time_ns": written(held_state_log),
+        "held_field_time_ns": written(held_mag_log),
+        "held_dipole_time_ns": written(held_cmd_log),
+        "held_expected_torque_time_ns": written(held_torque_log),
         "tam_message_time_ns": written(tam_log),
         "nav_message_time_ns": written(nav_log),
         "nav_time_tag_s": sampled(nav_log, "timeTag"),
@@ -347,6 +389,11 @@ def run():
     })
 
     for prefix, log, field, suffixes in [
+        ("held_omega_B", held_state_log, "omega_BN_B", ["x_rad_s", "y_rad_s", "z_rad_s"]),
+        ("held_sigma_BN", held_state_log, "sigma_BN", ["1", "2", "3"]),
+        ("held_B_N", held_mag_log, "magField_N", ["x_T", "y_T", "z_T"]),
+        ("held_mcmd", held_cmd_log, "mtbDipoleCmds", ["x_Am2", "y_Am2", "z_Am2"]),
+        ("held_control_torque_B", held_torque_log, "torqueRequestBody", ["x_Nm", "y_Nm", "z_Nm"]),
         ("sensor_state_r_N", sensor_state_log, "r_BN_N", ["x_m", "y_m", "z_m"]),
         ("sensor_state_v_N", sensor_state_log, "v_BN_N", ["x_m_s", "y_m_s", "z_m_s"]),
         ("sensor_state_sigma_BN", sensor_state_log, "sigma_BN", ["1", "2", "3"]),
@@ -357,6 +404,10 @@ def run():
         values = sampled(log, field)
         for i, suffix in enumerate(suffixes):
             df[f"{prefix}_{suffix}"] = values[:, i]
+    earth_matrix = sampled(earth_log, "J20002Pfix").reshape(-1, 3, 3)
+    for i in range(3):
+        for j in range(3):
+            df[f"earth_C_PN_{i+1}{j+1}"] = earth_matrix[:, i, j]
 
     diagnostic_cols = [
         "ix_A", "iy_A", "iz_A",
@@ -368,15 +419,17 @@ def run():
         df[col] = diag_sampled[col].to_numpy(dtype=float)
 
     out_csv = OUT_DATA / "detumble_output.csv"
-    df.to_csv(out_csv, index=False)
-    print(f"Wrote {out_csv}")
+    if write_outputs:
+        df.to_csv(out_csv, index=False)
+        print(f"Wrote {out_csv}")
     print(f"Initial |omega| [rad/s]: {omega_mag[0]:.12g}")
     print(f"Final   |omega| [rad/s]: {omega_mag[-1]:.12g}")
     print(f"Mean |applied magnetic torque| [N m]: {np.linalg.norm(applied_torque_B, axis=1).mean():.12g}")
     print(f"Peak |applied magnetic torque| [N m]: {np.linalg.norm(applied_torque_B, axis=1).max():.12g}")
 
-    from plot_results import plot_all
-    plot_all(df, OUT_PLOTS)
+    if write_outputs:
+        from plot_results import plot_all
+        plot_all(df, OUT_PLOTS)
     return df
 
 

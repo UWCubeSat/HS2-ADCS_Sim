@@ -20,6 +20,7 @@ from Basilisk.utilities import SimulationBaseClass, macros
 import compare_reference_vs_basilisk as comparison
 from scenario_huskysat2_detumble import sample_at_ticks
 from basilisk_adcs_adapter import ADCSConfig, PythonBdotMTQController, MAX_EFF_CNT
+from magnetic_environment import earth_dcm, tdb_seconds, MODEL_NAME
 
 
 def analytic_telemetry():
@@ -37,28 +38,41 @@ def analytic_telemetry():
     pre_angle = 0.1 * pre_t + 0.5 * alpha * pre_t**2
     post_angle = 0.1 * t + 0.5 * alpha * t**2
     df = pd.DataFrame({
-        "telemetry_schema_version": 2, "time_s": t, "time_ns": ticks,
-        "control_step_ns": 100_000_000, "sensor_state_time_ns": source_ticks,
+        "telemetry_schema_version": 3, "time_s": t, "time_ns": ticks,
+        "control_step_ns": 100_000_000, "sensor_state_time_ns": ticks,
+        "application_interval_valid": ticks > 0,
         "nav_time_tag_s": t, "pcoil_total_W": 0.1,
         "applied_torque_source": "ExtForceTorque.torqueExternalPntB_B",
+        "earth_orientation_model": MODEL_NAME, "earth_orientation_enabled": 1,
+        "earth_orientation_tdb_s": tdb_seconds(t), "wmm_coefficient_time_ns": ticks,
     })
     for col in comparison.PUBLICATION_TIME_COLUMNS:
         df[col] = ticks
+    for col in comparison.HELD_TIME_COLUMNS:
+        df[col] = source_ticks
+    matrices = np.array([earth_dcm(et)[0] for et in tdb_seconds(t)])
+    for i in range(3):
+        for j in range(3):
+            df[f"earth_C_PN_{i+1}{j+1}"] = matrices[:, i, j]
     vectors = {
         "omega_B": ([np.zeros(3), 0.1 + alpha * t, np.zeros(3)], "rad_s"),
-        "sensor_state_omega_B": ([np.zeros(3), 0.1 + alpha * pre_t, np.zeros(3)], "rad_s"),
-        "nav_omega_B": ([np.zeros(3), 0.1 + alpha * pre_t, np.zeros(3)], "rad_s"),
-        "B_N": ([4e-5 * np.sin(pre_angle), np.zeros(3), 4e-5 * np.cos(pre_angle)], "T"),
+        "sensor_state_omega_B": ([np.zeros(3), 0.1 + alpha * t, np.zeros(3)], "rad_s"),
+        "nav_omega_B": ([np.zeros(3), 0.1 + alpha * t, np.zeros(3)], "rad_s"),
+        "held_omega_B": ([np.zeros(3), 0.1 + alpha * pre_t, np.zeros(3)], "rad_s"),
+        "B_N": ([4e-5 * np.sin(post_angle), np.zeros(3), 4e-5 * np.cos(post_angle)], "T"),
+        "held_B_N": ([4e-5 * np.sin(pre_angle), np.zeros(3), 4e-5 * np.cos(pre_angle)], "T"),
         "B_B": ([0.0, 0.0, 4e-5], "T"),
         "mcmd": ([-torque_y / 4e-5, 0.0, 0.0], "Am2"),
+        "held_mcmd": ([-torque_y / 4e-5, 0.0, 0.0], "Am2"),
         "control_torque_B": ([0.0, torque_y, 0.0], "Nm"),
+        "held_control_torque_B": ([0.0, torque_y, 0.0], "Nm"),
         "applied_torque_B": ([0.0, torque_y, 0.0], "Nm"),
     }
     for prefix, (values, suffix) in vectors.items():
         for axis, value in zip("xyz", values):
             df[f"{prefix}_{axis}_{suffix}"] = value
-    for prefix, angle in [("sigma_BN", post_angle), ("sensor_state_sigma_BN", pre_angle),
-                          ("nav_sigma_BN", pre_angle)]:
+    for prefix, angle in [("sigma_BN", post_angle), ("sensor_state_sigma_BN", post_angle),
+                          ("nav_sigma_BN", post_angle), ("held_sigma_BN", pre_angle)]:
         df[f"{prefix}_1"] = 0.0
         df[f"{prefix}_2"] = np.tan(angle / 4.0)
         df[f"{prefix}_3"] = 0.0
@@ -101,9 +115,9 @@ class TelemetryRegressionTests(unittest.TestCase):
             with self.subTest(times=times), self.assertRaises(ValueError):
                 sample_at_ticks([0, 20], times, values, "test")
 
-    def test_old_post_step_attitude_pairing_fails_direction_check(self):
+    def test_one_step_attitude_pairing_fails_direction_check(self):
         df = analytic_telemetry()
-        df["sensor_state_sigma_BN_2"] = df["sigma_BN_2"]
+        df["sensor_state_sigma_BN_2"] = df["held_sigma_BN_2"]
         checks = validate(df)["checks"]
         self.assertTrue(checks["B_frame_norm_preserved"]["passed"])
         self.assertFalse(checks["B_frame_vector_aligned"]["passed"])
@@ -132,7 +146,8 @@ class TelemetryRegressionTests(unittest.TestCase):
 
     def test_consistent_command_and_readback_corruption_fails_plant_check(self):
         df = analytic_telemetry()
-        for col in ["mcmd_x_Am2", "control_torque_B_y_Nm", "applied_torque_B_y_Nm"]:
+        for col in ["mcmd_x_Am2", "control_torque_B_y_Nm", "applied_torque_B_y_Nm",
+                    "held_mcmd_x_Am2", "held_control_torque_B_y_Nm"]:
             df[col] *= 2.0
         checks = validate(df)["checks"]
         self.assertTrue(checks["torque_matches_m_cross_B"]["passed"])
