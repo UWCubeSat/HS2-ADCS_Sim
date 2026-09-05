@@ -84,6 +84,36 @@ def predict_body_rate(omega: np.ndarray, torque: np.ndarray, dt: np.ndarray) -> 
     return omega + h * (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0
 
 
+def predict_magnetic_step(sigma, omega, dipole, field_n, dt, inertia=INERTIA_DIAG_KG_M2):
+    """Independent coupled MRP/Euler RK4 with held m_B and B_N (SI units).
+
+    Uses recorded inputs, not native output or the controller's torque. Returns
+    accepted state, final RK stage state and torque for telemetry comparison.
+    Inertia is the unchanged ASSUMED development tensor; no other torques apply.
+    """
+    h = np.asarray(dt).reshape(-1, 1)
+    state = np.column_stack((sigma, omega))
+
+    def derivative(y):
+        s, w = y[:, :3], y[:, 3:]
+        s2 = np.sum(s * s, axis=1, keepdims=True)
+        sdot = ((1 - s2) * w + 2 * np.cross(s, w)
+                + 2 * s * np.sum(s * w, axis=1, keepdims=True)) / 4
+        tau = np.cross(dipole, rotate_inertial_to_body(s, field_n))
+        wdot = (tau - np.cross(w, inertia * w)) / inertia
+        return np.column_stack((sdot, wdot))
+
+    k1 = derivative(state)
+    k2 = derivative(state + h * k1 / 2)
+    k3 = derivative(state + h * k2 / 2)
+    last_stage = state + h * k3
+    k4 = derivative(last_stage)
+    result = state + h * (k1 + 2*k2 + 2*k3 + k4) / 6
+    shadow = np.sum(result[:, :3]**2, axis=1) > 1
+    result[shadow, :3] /= -np.sum(result[shadow, :3]**2, axis=1, keepdims=True)
+    return result, last_stage, np.cross(dipole, rotate_inertial_to_body(last_stage[:, :3], field_n))
+
+
 def require_detumble_telemetry(df: pd.DataFrame) -> None:
     """Reject legacy/partial evidence rather than passing on command aliases."""
     required = {
@@ -109,11 +139,32 @@ def require_detumble_telemetry(df: pd.DataFrame) -> None:
         raise ValueError(f"Missing Phase 2B telemetry columns: {', '.join(missing)}")
     if len(df) < 2 or not finite_numeric(df):
         raise ValueError("Detumble telemetry must have at least two finite rows")
-    if not (df["telemetry_schema_version"] == 3).all():
-        raise ValueError("Unsupported telemetry schema; rerun the Phase 2B detumble scenario")
-    if not (df["applied_torque_source"] == "ExtForceTorque.torqueExternalPntB_B").all():
-        raise ValueError("Applied torque must be the recorded ExtForceTorque combined torque")
-    for col in ["time_ns", "control_step_ns", "wmm_coefficient_time_ns", *PUBLICATION_TIME_COLUMNS, *HELD_TIME_COLUMNS]:
+    if df["telemetry_schema_version"].nunique() != 1 or df["telemetry_schema_version"].iloc[0] not in (3, 4):
+        raise ValueError("Unsupported or mixed telemetry schema; rerun the detumble scenario")
+    source = df["applied_torque_source"].iloc[0]
+    if df["applied_torque_source"].nunique() != 1 or source not in (
+            "ExtForceTorque.torqueExternalPntB_B", "MtbEffector.torqueExternalPntB_B"):
+        raise ValueError("Applied torque must identify one recorded dynamics effector")
+    extra_times = []
+    if df["telemetry_schema_version"].iloc[0] == 4:
+        native = source.startswith("MtbEffector.")
+        metadata = {"actuator_mode", "command_mode", "applied_torque_evaluation"}
+        if not metadata.issubset(df.columns):
+            raise ValueError("Missing schema 4 actuator contract")
+        if (not (df["actuator_mode"] == ("native" if native else "direct")).all()
+                or not (df["applied_torque_evaluation"] == ("final_RK4_stage" if native else "constant_body_hold")).all()
+                or df["command_mode"].nunique() != 1 or df["command_mode"].iloc[0] not in ("controller", "replay")):
+            raise ValueError("Inconsistent actuator/command/evaluation contract")
+    if source.startswith("MtbEffector."):
+        if not (df["telemetry_schema_version"] == 4).all():
+            raise ValueError("Native torque requires schema 4 stage and input evidence")
+        extra_times = ["native_output_time_ns", "native_input_dipole_time_ns", "native_input_field_time_ns"]
+        required_native = {*extra_times, *vector_columns("native_mtbNetTorque_B", "Nm"),
+                           *vector_columns("mtb_max_dipole", "Am2"),
+                           *[f"mtb_Gt_B_{i}{j}" for i in (1, 2, 3) for j in (1, 2, 3)]}
+        if not required_native.issubset(df.columns):
+            raise ValueError("Missing native output/input/configuration evidence")
+    for col in ["time_ns", "control_step_ns", "wmm_coefficient_time_ns", *PUBLICATION_TIME_COLUMNS, *HELD_TIME_COLUMNS, *extra_times]:
         values = df[col].to_numpy(dtype=float)
         if not np.isfinite(values).all() or not np.equal(values, np.rint(values)).all():
             raise ValueError(f"{col} must contain finite integer nanoseconds")
@@ -152,7 +203,8 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
     # truth attitude. Never use controller history or its computed torque here.
     current_command_error = np.linalg.norm(expected - np.cross(m, reconstructed_B_B), axis=1)
     held_sigma = vec3(df, [f"held_sigma_BN_{i}" for i in (1, 2, 3)])
-    held_b = rotate_inertial_to_body(held_sigma, vec3(df, vector_columns("held_B_N", "T")))
+    held_field_n = vec3(df, vector_columns("held_B_N", "T"))
+    held_b = rotate_inertial_to_body(held_sigma, held_field_n)
     held_m = vec3(df, vector_columns("held_mcmd", "Am2"))
     held_expected = vec3(df, vector_columns("held_control_torque_B", "Nm"))
     interval_rows = ticks > 0  # initialization has no preceding command/field or applied interval
@@ -166,11 +218,42 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
     dt = (df["state_time_ns"].to_numpy() - df["held_state_time_ns"].to_numpy()) * 1e-9
     propagated = dt > 0
     prediction = predict_body_rate(pre_omega[propagated], applied[propagated], dt[propagated])
+    source = str(df["applied_torque_source"].iloc[0])
+    native = source.startswith("MtbEffector.")
+    native_metrics = {}
+    power_omega = post_omega.copy()
+    if native:
+        limits = vec3(df, vector_columns("mtb_max_dipole", "Am2"))
+        axes = df[[f"mtb_Gt_B_{i}{j}" for i in (1, 2, 3) for j in (1, 2, 3)]].to_numpy().reshape(-1, 3, 3)
+        mapped_m = np.einsum("nij,nj->ni", axes, np.clip(held_m, -limits, limits))
+        predicted_state, stage, predicted_torque = predict_magnetic_step(
+            held_sigma[propagated], pre_omega[propagated], mapped_m[propagated],
+            held_field_n[propagated], dt[propagated])
+        # Torque readback is k4, NOT tau(t-dt) and NOT tau(accepted_state(t)).
+        cross_error = np.linalg.norm(applied[propagated] - predicted_torque, axis=1)
+        prediction = predicted_state[:, 3:]
+        power_omega[propagated] = stage[:, 3:]
+        timing_valid = (timing_valid and np.array_equal(df["native_output_time_ns"], ticks)
+                        and all(np.array_equal(df[c], np.maximum(ticks - CONTROL_STEP_NS, 0))
+                                for c in ("native_input_dipole_time_ns", "native_input_field_time_ns")))
+        native_metrics = {
+            # These compare two exports of ONE native quantity: transport only,
+            # never described as an independent magnetic-physics validation.
+            "native_output_transport_error_Nm": float(np.linalg.norm(
+                vec3(df, vector_columns("native_mtbNetTorque_B", "Nm")) - applied, axis=1).max()),
+            "magnetic_step_max_mrp_error": float(np.linalg.norm(
+                vec3(df, [f"sigma_BN_{i}" for i in (1, 2, 3)])[propagated] - predicted_state[:, :3], axis=1).max()),
+            "native_configuration_unchanged": bool(np.all(limits == [0.2, 0.2, 0.85])
+                                                     and np.all(axes == np.eye(3))),
+            "native_command_within_provisional_limits": bool(np.all(np.abs(m) <= limits + 1e-14)),
+            "rate_prediction_source": "Independent coupled MRP/Euler RK4, recorded dipole/B_N; native final-stage torque checked separately",
+            "mechanical_power_epoch": "Final RK4 stage; stage rate independently reconstructed",
+        }
     step_error = np.linalg.norm(post_omega[propagated] - prediction, axis=1)
     torque_mag = np.linalg.norm(applied, axis=1)
-    # Instantaneous endpoint power: post-step omega and the effector torque at
-    # that endpoint, not a finite-difference energy balance or an orbit average.
-    power = np.sum(post_omega * applied, axis=1)
+    # Instantaneous power at the recorded torque evaluation: final RK stage for
+    # native, accepted endpoint for direct; not a finite-difference energy balance.
+    power = np.sum(power_omega * applied, axis=1)
     nonzero = torque_mag > 1e-14
     earth = df[[f"earth_C_PN_{i}{j}" for i in (1, 2, 3) for j in (1, 2, 3)]].to_numpy().reshape(-1, 3, 3)
     et = df["earth_orientation_tdb_s"].to_numpy(dtype=float)
@@ -193,7 +276,8 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
         "max_earth_clock_tt_offset_s": float(clock_error.max()),
         "max_nav_rate_error_rad_s": float(np.linalg.norm(nav_omega - input_omega, axis=1).max()),
         "max_nav_mrp_error": float(np.linalg.norm(nav_sigma - sigma, axis=1).max()),
-        "torque_source": "ExtForceTorque.torqueExternalPntB_B",
+        "torque_source": source,
+        "command_mode": str(df["command_mode"].iloc[0]) if "command_mode" in df else "controller",
         "torque_cross_product_mean_abs_error_Nm": float(cross_error.mean()),
         "torque_cross_product_max_abs_error_Nm": float(cross_error.max()),
         "torque_cross_product_max_rel_error": float(cross_error.max() / max(float(torque_mag.max()), 1e-30)),
@@ -207,6 +291,7 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
         "min_mechanical_control_power_W": float(power.min()),
         "max_mechanical_control_power_W": float(power.max()),
         "negative_mechanical_power_fraction": float(np.mean(power[nonzero] < 0)) if np.any(nonzero) else None,
+        **native_metrics,
     }
 
 
@@ -378,17 +463,39 @@ def build_validation(ref: dict[str, Any], bsk: dict[str, Any]) -> dict[str, Any]
         bsk.get("peak_coil_power_W"),
         "<= 2.6 W",
     )
+    if bsk.get("torque_source", "").startswith("MtbEffector."):
+        # The controller torque is evaluated at the PREVIOUS acquisition state;
+        # equality with a final-stage native torque would be physically wrong.
+        del checks["effector_matches_torque_message"]
+        checks["independent_magnetic_inputs_predict_rate_step"] = checks.pop("applied_torque_predicts_rate_step")
+        for name, metric, limit in [
+            ("native_output_transport", "native_output_transport_error_Nm", 1e-15),
+            ("independent_magnetic_inputs_predict_attitude_step", "magnetic_step_max_mrp_error", 1e-12),
+        ]:
+            value = bsk.get(metric)
+            checks[name] = check(name, value is not None and value < limit, value, f"< {limit}")
+        for name in ("native_configuration_unchanged", "native_command_within_provisional_limits"):
+            checks[name] = check(name, bsk.get(name) is True)
+    if bsk.get("command_mode") == "replay":
+        # An open-loop replay is an actuator experiment, not a closed-loop
+        # detumble test. Controller diagnostic power is not the replay power.
+        for name in ("basilisk_final_omega_less_than_initial", "basilisk_final_energy_less_than_initial",
+                     "basilisk_mean_mechanical_power_negative", "peak_coil_power_within_expected_limit"):
+            del checks[name]
     return {
         "passed": all(item["passed"] for item in checks.values()),
         "checks": checks,
     }
 
 
-def main() -> int:
+def main(bsk_csv=None, report_path=None) -> int:
+    global COMPARE_OUT
+    if report_path is not None:
+        COMPARE_OUT = Path(report_path)
     if not REF.exists():
         maybe_remove_stale_comparison()
         raise SystemExit(f"Reference CSV not found: {REF}")
-    bsk_csv = OUT_DATA / "detumble_output.csv"
+    bsk_csv = OUT_DATA / "detumble_output.csv" if bsk_csv is None else Path(bsk_csv)
     if not bsk_csv.exists():
         maybe_remove_stale_comparison()
         raise SystemExit("Detumble output not found. Run scenario_huskysat2_detumble.py first.")
@@ -421,8 +528,8 @@ def main() -> int:
         "notes": [
             "This comparison is physical-metric based, not CSV schema exact.",
             "Frame, nav, torque-readback and rate-step checks use separate recorded sources with explicit epochs.",
-            "The direct ExtForceTorque bridge consumes controller torque; readback verifies its wiring, not independent magnetic actuator physics.",
-            "The rate-step check independently integrates Euler's equation with the legacy assumed inertia and recorded effector torque over each sampled 0.1 s interval; initialization is excluded.",
+            "Native MtbEffector readback is final-RK4-stage torque. The independent coupled MRP/Euler integration predicts that torque and the accepted rate/attitude from recorded dipole, inertial field and pre-state. Native message versus dynamics-field equality is only an output-transport check.",
+            "Direct-reference mode holds body torque constant; its rate-step check uses recorded effector torque. Native/direct end-stage differences from the earlier controller torque are expected. Initialization is excluded from application checks.",
             "State, Earth orientation, WMM and sensors now share the current epoch. Commands apply over the following interval; held records validate the completed interval.",
             "The explicit low-order IAU Earth model is not measured ITRF/EOP orientation. WMM secular-variation time is rounded internally to whole seconds by Basilisk 2.10.2.",
             "Field magnitude, coil power and decreasing rate/energy are development sanity checks, not HS-2 requirements verification. The historical 3000-3500 s window is informational only.",
@@ -446,4 +553,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--basilisk-csv", type=Path)
+    parser.add_argument("--report", type=Path)
+    args = parser.parse_args()
+    raise SystemExit(main(args.basilisk_csv, args.report))

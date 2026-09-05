@@ -6,7 +6,7 @@ This is the fast workflow path:
 - no Basilisk.ExternalModules import
 - Python Basilisk controller module with optional separate pybind core
 
-Telemetry contract (schema 3; seconds/nanoseconds from 2026-01-01 00:00 UTC):
+Telemetry contract (schema 4; seconds/nanoseconds from 2026-01-01 00:00 UTC):
 N is Earth-centered ICRF/J2000; P is the low-order IAU Earth-fixed frame
 defined in magnetic_environment.py; B is the unchanged simulated body frame
 (physical HS-2 axis mapping remains unresolved). sigma_BN represents B relative
@@ -23,18 +23,26 @@ in this ideal baseline, hence saved tam_S is B_B. No silent frame transpose.
   Earth absolute time is also saved as seconds past J2000 TDB. WMM internally
   rounds its secular-variation time to a whole second (wmm_coefficient_time_ns);
   geometry and message times retain the full task-clock precision.
-* mcmd is MTBArrayCmdMsg.mtbDipoleCmds[0:3]; control_torque is the recorded
+* mcmd is MTBCmdMsg.mtbDipoleCmds[0:3]; control_torque is the recorded
   CmdTorqueBodyMsg.torqueRequestBody, expected m x B at the CURRENT epoch.
-  The command is loaded after the controller and held over [t, t+0.1 s].
-* applied_torque is ExtForceTorque.torqueExternalPntB_B sampled AFTER the plant
-  update but BEFORE loading the new command. It was held over [t-0.1 s, t].
+  Dipole and inertial field are held over the following interval [t, t+0.1 s].
+* applied_torque is the selected effector's torqueExternalPntB_B sampled AFTER
+  propagation and BEFORE environment/commands update. Native MtbEffector
+  transforms the held B_N using hub attitude at EVERY RK4 stage. Its readback
+  and native_mtbNetTorque_B message contain the FINAL RK4 STAGE torque, not an
+  interval average or the exact accepted end-state torque. Their timestamps
+  denote publication/sampling at t; the field/dipole inputs belong to t-0.1 s.
+  In explicit direct-reference mode only, body torque is constant over the step.
   held_* are actual message/state recordings taken before propagation, including
-  the PRIOR dipole, field, expected torque and state that generated that torque.
-  Validate applied torque against these held records, not the current command.
+  the PRIOR dipole, field, expected torque and pre-integration state. Native
+  validation reconstructs the RK4 stages from these independent inputs; it
+  never equates final-stage torque to the earlier controller torque.
   At t=0 the plant is initialized; there is no completed application interval
   or previous field/command. Application checks explicitly exclude that row.
 * Currents, coil powers, saturation/validity and core-availability flags remain
   controller diagnostics at diagnostic_time_ns; they are not hardware readings.
+  command_mode=replay uses separate validation messages; those diagnostics then
+  describe the unused controller command, as controller_diagnostics_applied states.
 
 All sources are matched on exact integer task ticks, never nearest-time joined.
 Use sensor_state_sigma_BN with B_N/B_B for frame checks, and held/post omega for
@@ -64,6 +72,7 @@ except ImportError as exc:
 
 from basilisk_adcs_adapter import ADCSConfig, PythonBdotMTQController, MAX_EFF_CNT
 from magnetic_environment import EarthOrientation, WMMInputGuard, MODEL_NAME
+from magnetic_actuation import MagneticInputGuard, ReplayDipoles
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -86,7 +95,9 @@ CONTROL_DT_S = 0.1
 RECORD_DT_S = 1.0
 MAG_NOISE_STD_T = 0.0
 EPOCH_FRACTIONAL_YEAR = 2026.0
-USE_DIRECT_TORQUE_FALLBACK = True  # Directly applies m x B through Basilisk extForceTorque while MtbEffector wiring is investigated.
+# Verified by native torque/state tests, matched-evaluation direct trajectories,
+# and direct-hold step refinement. The legacy RK4 body-hold trajectory differs.
+DEFAULT_ACTUATOR = "native"
 
 
 def find_wmm2025_path() -> str:
@@ -194,7 +205,10 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
     return values[indices]
 
 
-def run(stop_time_s=None, write_outputs=True):
+def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
+        replay_commands=None, capture_commands=False, make_plots=True):
+    if actuator not in ("native", "direct"):
+        raise ValueError("actuator must be native or direct")
     sim = SimulationBaseClass.SimBaseClass()
     proc = sim.CreateNewProcess("DynamicsProcess")
     proc.addTask(sim.CreateNewTask("DynamicsTask", macros.sec2nano(CONTROL_DT_S)))
@@ -235,42 +249,51 @@ def run(stop_time_s=None, write_outputs=True):
     ctrl.navAttInMsg.subscribeTo(nav.attOutMsg)
     ctrl.tamSensorInMsg.subscribeTo(tam.tamDataOutMsg)
 
+    command_source = ctrl
+    if replay_commands is not None:
+        command_source = ReplayDipoles(replay_commands, tam.tamDataOutMsg)
+        command_source.ModelTag = "ValidationCommandReplay"
+
     mtb_cfg_msg = configure_mtb_config_message(adcs_cfg)
 
-    # Primary fast-development actuator path for now:
-    # The controller computes the magnetic torque tau_B = m_B x B_B and sends it to
-    # Basilisk's native ExtForceTorque dynamic effector. This proves the Basilisk
-    # spacecraft dynamics/control loop without requiring a custom Basilisk C++ module.
-    # MtbEffector remains the target native MTB actuator, but is not used here because
-    # its output was zero in the first local test.
-    direct_torque = extForceTorque.ExtForceTorque()
-    direct_torque.ModelTag = "DirectMagneticTorqueFallback"
-    direct_torque.cmdTorqueInMsg.subscribeTo(ctrl.cmdTorqueOutMsg)
-    sc.addDynamicEffector(direct_torque)
-
-    # Keep a native MtbEffector object available for later debugging, but do not attach
-    # it while the direct torque bridge is active; otherwise torque could be double-counted
-    # once MtbEffector wiring is fixed.
-    mtb = MtbEffector.MtbEffector()
-    mtb.ModelTag = "MtbEffector_debug_not_attached"
-    mtb.mtbCmdInMsg.subscribeTo(ctrl.mtbCmdOutMsg)
-    mtb.magInMsg.subscribeTo(mag.envOutMsgs[0])
-    mtb.mtbParamsInMsg.subscribeTo(mtb_cfg_msg)
+    # Exactly one magnetic dynamic effector is attached. Native 2.10.2 reads
+    # dipole/config/B_N messages and hub attitude on EVERY dynamics evaluation.
+    # ExtForceTorque is retained only as the legacy constant-body-torque reference.
+    if actuator == "native":
+        effector = MtbEffector.MtbEffector()
+        effector.mtbCmdInMsg.subscribeTo(command_source.mtbCmdOutMsg)
+        effector.magInMsg.subscribeTo(mag.envOutMsgs[0])
+        effector.mtbParamsInMsg.subscribeTo(mtb_cfg_msg)
+    else:
+        effector = extForceTorque.ExtForceTorque()
+        effector.cmdTorqueInMsg.subscribeTo(command_source.cmdTorqueOutMsg)
+    effector.ModelTag = "NativeMTB" if actuator == "native" else "DirectMagneticTorqueReference"
+    sc.addDynamicEffector(effector)
 
     # Capture the previous command/field/state before propagation. These are
-    # evidence for the torque held during the integration interval ending now.
+    # evidence for the magnetic inputs held during the interval ending now.
     rec_dt = macros.sec2nano(RECORD_DT_S)
     held_state_log = sc.scStateOutMsg.recorder(rec_dt)
     held_mag_log = mag.envOutMsgs[0].recorder(rec_dt)
-    held_cmd_log = ctrl.mtbCmdOutMsg.recorder(rec_dt)
-    held_torque_log = ctrl.cmdTorqueOutMsg.recorder(rec_dt)
+    held_cmd_log = command_source.mtbCmdOutMsg.recorder(rec_dt)
+    held_torque_log = command_source.cmdTorqueOutMsg.recorder(rec_dt)
     for recorder in [held_state_log, held_mag_log, held_cmd_log, held_torque_log]:
         sim.AddModelToTask("DynamicsTask", recorder, ModelPriority=1100)
+    if actuator == "native":
+        actuator_guard = MagneticInputGuard(effector, macros.sec2nano(CONTROL_DT_S))
+        actuator_guard.ModelTag = "NativeInputEpochGuard"
+        sim.AddModelToTask("DynamicsTask", actuator_guard, ModelPriority=1050)
 
-    # Plant first: the effector buffer already holds the preceding tick's command.
+    # Plant first: all command/field messages still belong to the preceding tick.
     sim.AddModelToTask("DynamicsTask", sc, ModelPriority=1000)
-    direct_torque_log = direct_torque.logger(["torqueExternalPntB_B"])
-    sim.AddModelToTask("DynamicsTask", direct_torque_log, ModelPriority=975)
+    if actuator == "native":
+        # UpdateState publishes the most recent dynamics torque; it does not
+        # calculate torque or latch inputs. Publish before environment/commands change.
+        sim.AddModelToTask("DynamicsTask", effector, ModelPriority=980)
+        native_output_log = effector.mtbOutMsg.recorder(rec_dt)
+        sim.AddModelToTask("DynamicsTask", native_output_log, ModelPriority=975)
+    effector_log = effector.logger(["torqueExternalPntB_B"])
+    sim.AddModelToTask("DynamicsTask", effector_log, ModelPriority=975)
     sensor_state_log = sc.scStateOutMsg.recorder(rec_dt)
     sim.AddModelToTask("DynamicsTask", sensor_state_log, ModelPriority=950)
 
@@ -281,23 +304,29 @@ def run(stop_time_s=None, write_outputs=True):
     sim.AddModelToTask("DynamicsTask", nav, ModelPriority=800)
     sim.AddModelToTask("DynamicsTask", tam, ModelPriority=700)
     sim.AddModelToTask("DynamicsTask", ctrl, ModelPriority=600)
-    sim.AddModelToTask("DynamicsTask", direct_torque, ModelPriority=500)
-    # ExtForceTorque UpdateState above loads the NEW command for the NEXT step.
+    if replay_commands is not None:
+        sim.AddModelToTask("DynamicsTask", command_source, ModelPriority=550)
+    if actuator == "direct":
+        sim.AddModelToTask("DynamicsTask", effector, ModelPriority=500)
+    # Only ExtForceTorque must latch the NEW torque for the NEXT step here.
 
     sc_log = sc.scStateOutMsg.recorder(rec_dt)
     mag_log = mag.envOutMsgs[0].recorder(rec_dt)
     tam_log = tam.tamDataOutMsg.recorder(rec_dt)
-    cmd_log = ctrl.mtbCmdOutMsg.recorder(rec_dt)
-    expected_torque_log = ctrl.cmdTorqueOutMsg.recorder(rec_dt)
+    cmd_log = command_source.mtbCmdOutMsg.recorder(rec_dt)
+    expected_torque_log = command_source.cmdTorqueOutMsg.recorder(rec_dt)
     nav_log = nav.attOutMsg.recorder(rec_dt)
     earth_log = earth_orientation.planetOutMsg.recorder(rec_dt)
     for recorder in [sc_log, mag_log, tam_log, cmd_log, expected_torque_log, nav_log, earth_log]:
         sim.AddModelToTask("DynamicsTask", recorder)
+    if capture_commands:
+        full_cmd_log = command_source.mtbCmdOutMsg.recorder()
+        sim.AddModelToTask("DynamicsTask", full_cmd_log)
 
     r0 = EARTH_RADIUS_M + ALTITUDE_M
     orbit_period_s = 2.0 * math.pi * math.sqrt(r0**3 / MU_EARTH)
     duration_s = orbit_period_s if stop_time_s is None else float(stop_time_s)
-    print(f"Running detumble scenario: {duration_s:.2f} s")
+    print(f"Running detumble scenario ({actuator}): {duration_s:.2f} s")
 
     sim.InitializeSimulation()
     sim.ConfigureStopTime(macros.sec2nano(duration_s))
@@ -323,7 +352,7 @@ def run(stop_time_s=None, write_outputs=True):
     B_B = sampled(tam_log, "tam_S")
     dipole = sampled(cmd_log, "mtbDipoleCmds")[:, :3]
     expected_torque_B = sampled(expected_torque_log, "torqueRequestBody")
-    applied_torque_B = sampled(direct_torque_log, "torqueExternalPntB_B")
+    applied_torque_B = sampled(effector_log, "torqueExternalPntB_B")
 
     diag = pd.DataFrame(ctrl.history)
     # History time_s is produced from the integer controller task tick. Recover
@@ -335,7 +364,12 @@ def run(stop_time_s=None, write_outputs=True):
     guard_ticks = guard_data["time_ns"].to_numpy(dtype=np.int64)
 
     df = pd.DataFrame({
-        "telemetry_schema_version": 3,
+        "telemetry_schema_version": 4,
+        "actuator_mode": actuator,
+        "command_mode": "replay" if replay_commands is not None else "controller",
+        "controller_diagnostics_applied": replay_commands is None,
+        "expected_torque_source": ("ReplayDipoles" if replay_commands is not None else "PythonBdotMTQController") + ".CmdTorqueBodyMsg",
+        "applied_torque_evaluation": "final_RK4_stage" if actuator == "native" else "constant_body_hold",
         "time_s": t,
         "time_ns": ticks,
         "control_step_ns": macros.sec2nano(CONTROL_DT_S),
@@ -358,10 +392,10 @@ def run(stop_time_s=None, write_outputs=True):
         "nav_time_tag_s": sampled(nav_log, "timeTag"),
         "dipole_command_time_ns": written(cmd_log),
         "expected_torque_time_ns": written(expected_torque_log),
-        "applied_torque_time_ns": sample_at_ticks(ticks, direct_torque_log.times(),
-                                                  direct_torque_log.times(), "effector sample time"),
+        "applied_torque_time_ns": sample_at_ticks(ticks, effector_log.times(),
+                                                  effector_log.times(), "effector sample time"),
         "diagnostic_time_ns": sample_at_ticks(ticks, diag_ticks, diag_ticks, "diagnostic time"),
-        "applied_torque_source": "ExtForceTorque.torqueExternalPntB_B",
+        "applied_torque_source": ("MtbEffector" if actuator == "native" else "ExtForceTorque") + ".torqueExternalPntB_B",
         "r_N_x_m": r[:, 0], "r_N_y_m": r[:, 1], "r_N_z_m": r[:, 2],
         "v_N_x_m_s": v[:, 0], "v_N_y_m_s": v[:, 1], "v_N_z_m_s": v[:, 2],
         "sigma_BN_1": sigma[:, 0], "sigma_BN_2": sigma[:, 1], "sigma_BN_3": sigma[:, 2],
@@ -418,7 +452,25 @@ def run(stop_time_s=None, write_outputs=True):
     for col in diagnostic_cols:
         df[col] = diag_sampled[col].to_numpy(dtype=float)
 
-    out_csv = OUT_DATA / "detumble_output.csv"
+    if actuator == "native":
+        configuration = mtb_cfg_msg.read()
+        for i, axis in enumerate("xyz"):
+            df[f"mtb_max_dipole_{axis}_Am2"] = configuration.maxMtbDipoles[i]
+        for i in range(3):
+            for j in range(3):
+                df[f"mtb_Gt_B_{i+1}{j+1}"] = configuration.GtMatrix_B[3*i+j]
+        df["native_output_time_ns"] = written(native_output_log)
+        inputs = np.asarray(actuator_guard.history, dtype=np.int64)
+        df["native_input_dipole_time_ns"] = sample_at_ticks(ticks, inputs[:, 0], inputs[:, 1], "native dipole epoch")
+        df["native_input_field_time_ns"] = sample_at_ticks(ticks, inputs[:, 0], inputs[:, 2], "native field epoch")
+        for i, axis in enumerate("xyz"):
+            df[f"native_mtbNetTorque_B_{axis}_Nm"] = sampled(native_output_log, "mtbNetTorque_B")[:, i]
+    if capture_commands:
+        df.attrs["command_history"] = [(int(tick), *row[:3]) for tick, row in
+                                       zip(full_cmd_log.timesWritten(), full_cmd_log.mtbDipoleCmds)]
+    out_csv = OUT_DATA / ("detumble_output.csv" if actuator == "native" else "detumble_direct_output.csv")
+    if replay_commands is not None:
+        out_csv = OUT_DATA / f"detumble_{actuator}_replay.csv"
     if write_outputs:
         df.to_csv(out_csv, index=False)
         print(f"Wrote {out_csv}")
@@ -427,11 +479,17 @@ def run(stop_time_s=None, write_outputs=True):
     print(f"Mean |applied magnetic torque| [N m]: {np.linalg.norm(applied_torque_B, axis=1).mean():.12g}")
     print(f"Peak |applied magnetic torque| [N m]: {np.linalg.norm(applied_torque_B, axis=1).max():.12g}")
 
-    if write_outputs:
+    if write_outputs and make_plots:
         from plot_results import plot_all
-        plot_all(df, OUT_PLOTS)
+        plot_all(df, OUT_PLOTS if actuator == "native" else OUT_PLOTS / "direct_reference")
     return df
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--actuator", choices=("native", "direct"), default=DEFAULT_ACTUATOR)
+    parser.add_argument("--duration", type=float, default=None)
+    parser.add_argument("--no-plots", action="store_true")
+    args = parser.parse_args()
+    run(stop_time_s=args.duration, actuator=args.actuator, make_plots=not args.no_plots)
