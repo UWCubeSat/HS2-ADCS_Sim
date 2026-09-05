@@ -76,7 +76,7 @@ def main(duration=None, make_plots=True):
     passed = (identical_commands and identical_initial_states and shared_environment
               and all(v["passed"] for v in validations.values()))
     sources = [Path(__file__), Path(comparison.__file__)] + [Path(__file__).parent / name for name in
-               ("scenario_huskysat2_detumble.py", "magnetic_actuation.py", "magnetic_environment.py", "basilisk_adcs_adapter.py")]
+               ("scenario_huskysat2_detumble.py", "magnetic_actuation.py", "magnetic_environment.py", "basilisk_adcs_adapter.py", "hs2_sim_config.py")]
     report = {
         "passed": passed,
         "started_utc": started_utc,

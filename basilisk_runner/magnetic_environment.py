@@ -33,9 +33,10 @@ import math
 
 import numpy as np
 from Basilisk.architecture import messaging, sysModel
+from hs2_sim_config import DEFAULT_CONFIG
 
-MODEL_NAME = "IAU_EARTH_pck00011_low_order"
-EPOCH_UTC = datetime(2026, 1, 1, tzinfo=timezone.utc)
+MODEL_NAME = DEFAULT_CONFIG.environment.earth_orientation_model.value
+EPOCH_UTC = datetime.fromisoformat(DEFAULT_CONFIG.environment.epoch_utc.value)
 J2000_CALENDAR = datetime(2000, 1, 1, 12, tzinfo=timezone.utc)
 EPOCH_CALENDAR_SECONDS = (EPOCH_UTC - J2000_CALENDAR).total_seconds()
 
@@ -81,7 +82,7 @@ class EarthOrientation(sysModel.SysModel):
     Kepler elements and would move Earth's origin. This orientation-only
     publisher preserves the existing Earth-centered spacecraft orbit.
     """
-    def __init__(self, epoch_fractional_year=2026.0):
+    def __init__(self, epoch_fractional_year=DEFAULT_CONFIG.environment.epoch_fractional_year.value):
         super().__init__()
         if epoch_fractional_year != 2026.0:
             raise ValueError("Review the orientation/time baseline before changing the 2026.0 epoch")

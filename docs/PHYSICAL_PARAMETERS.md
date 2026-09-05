@@ -4,6 +4,8 @@ Audit-derived record, 2026-09-05. Repository anchor: 833b015 on adcs-sim-recover
 
 Statuses follow [AGENTS.md](../AGENTS.md): CONFIRMED, TBR, TBC, TBD, ASSUMED. A CONFIRMED vendor rating or written requirement is not confirmation of installed hardware or achieved flight performance. All repository-only spacecraft/control values without HS-2 design traceability remain ASSUMED. Contradictions are retained as separate values.
 
+Phase 4 runtime source: [hs2_sim_config.py](../basilisk_runner/hs2_sim_config.py) centralizes the active detumble inputs and provenance while preserving Phase 3 (`c1b6021`) numerical values. Saved runs include a configuration JSON and fingerprint. The audit tables below remain historical evidence; candidate requirements and the 3.72911 kg estimate are not automatic runtime replacements.
+
 ## Source register
 
 Source codes below carry the exact Drive file, title, engineering revision, date, and authority limitations for the parameter and requirements tables. Drive modification dates are observations, not release dates. All Drive evidence was read within Husky Satellite Lab (0AC8raEVvalZjUk9PVA); no Drive changes were made.

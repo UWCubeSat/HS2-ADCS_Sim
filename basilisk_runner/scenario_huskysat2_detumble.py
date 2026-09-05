@@ -55,6 +55,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import math
+import json
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,6 +74,7 @@ except ImportError as exc:
 from basilisk_adcs_adapter import ADCSConfig, PythonBdotMTQController, MAX_EFF_CNT
 from magnetic_environment import EarthOrientation, WMMInputGuard, MODEL_NAME
 from magnetic_actuation import MagneticInputGuard, ReplayDipoles
+from hs2_sim_config import DEFAULT_CONFIG, HS2SimConfig
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -81,31 +83,31 @@ OUT_PLOTS = HERE / "output_plots"
 OUT_DATA.mkdir(parents=True, exist_ok=True)
 OUT_PLOTS.mkdir(parents=True, exist_ok=True)
 
-MASS_KG = 2.6
-LX_M, LY_M, LZ_M = 0.10, 0.10, 0.20
-IXX = (MASS_KG / 12.0) * (LY_M**2 + LZ_M**2)
-IYY = (MASS_KG / 12.0) * (LX_M**2 + LZ_M**2)
-IZZ = (MASS_KG / 12.0) * (LX_M**2 + LY_M**2)
-MU_EARTH = 3.986004418e14
-EARTH_RADIUS_M = 6.371e6
-ALTITUDE_M = 600e3
-INCLINATION_DEG = 56.0
-INITIAL_RATES = [0.8, -0.2, 0.3]
-CONTROL_DT_S = 0.1
-RECORD_DT_S = 1.0
-MAG_NOISE_STD_T = 0.0
-EPOCH_FRACTIONAL_YEAR = 2026.0
+# Compatibility exports only. Runtime construction below uses the supplied
+# HS2SimConfig directly, including explicit test/CLI overrides.
+MASS_KG = DEFAULT_CONFIG.spacecraft.mass.value
+LX_M, LY_M, LZ_M = DEFAULT_CONFIG.spacecraft.dimensions.value
+IXX, IYY, IZZ = np.diag(DEFAULT_CONFIG.spacecraft.inertia.value)
+MU_EARTH = DEFAULT_CONFIG.environment.mu_earth.value
+EARTH_RADIUS_M = DEFAULT_CONFIG.environment.orbit_reference_radius.value
+ALTITUDE_M = DEFAULT_CONFIG.orbit.altitude.value
+INCLINATION_DEG = DEFAULT_CONFIG.orbit.inclination.value
+INITIAL_RATES = list(DEFAULT_CONFIG.initial.body_rate.value)
+CONTROL_DT_S = DEFAULT_CONFIG.timing.control_step.value
+RECORD_DT_S = DEFAULT_CONFIG.timing.record_step.value
+MAG_NOISE_STD_T = DEFAULT_CONFIG.sensors.magnetometer_noise_std.value[0]
+EPOCH_FRACTIONAL_YEAR = DEFAULT_CONFIG.environment.epoch_fractional_year.value
 # Verified by native torque/state tests, matched-evaluation direct trajectories,
 # and direct-hold step refinement. The legacy RK4 body-hold trajectory differs.
-DEFAULT_ACTUATOR = "native"
+DEFAULT_ACTUATOR = DEFAULT_CONFIG.magnetorquers.implementation.value
 
 
-def find_wmm2025_path() -> str:
+def find_wmm2025_path(config=DEFAULT_CONFIG) -> str:
     """Find WMM2025.COF without hard-coding a user-specific Basilisk build path."""
     candidates = []
     for base in [Path(Basilisk.__path__[0]), ROOT / "reference_standalone" / "original_project"]:
         if base.exists():
-            candidates.extend(base.glob("**/WMM2025.COF"))
+            candidates.extend(base.glob("**/" + config.environment.coefficient_filename.value))
     if candidates:
         return str(candidates[0])
     raise FileNotFoundError(
@@ -140,30 +142,28 @@ def dcm_to_euler321(C):
     return np.array([phi, theta, psi])
 
 
-def configure_spacecraft():
+def configure_spacecraft(config: HS2SimConfig = DEFAULT_CONFIG):
+    config.validate()
     sc = spacecraft.Spacecraft()
     sc.ModelTag = "HuskySat2_detumble"
-    sc.hub.mHub = MASS_KG
-    sc.hub.r_BcB_B = [0.0, 0.0, 0.0]
-    sc.hub.IHubPntBc_B = [[IXX, 0.0, 0.0], [0.0, IYY, 0.0], [0.0, 0.0, IZZ]]
-
-    r0 = EARTH_RADIUS_M + ALTITUDE_M
-    v0 = math.sqrt(MU_EARTH / r0)
-    inc = math.radians(INCLINATION_DEG)
-    sc.hub.r_CN_NInit = [r0, 0.0, 0.0]
-    sc.hub.v_CN_NInit = [0.0, v0 * math.cos(inc), v0 * math.sin(inc)]
-    sc.hub.sigma_BNInit = [0.0, 0.0, 0.0]
-    sc.hub.omega_BN_BInit = [INITIAL_RATES[0], INITIAL_RATES[1], INITIAL_RATES[2]]
+    sc.hub.mHub = config.spacecraft.mass.value
+    sc.hub.r_BcB_B = list(config.spacecraft.com.value)
+    sc.hub.IHubPntBc_B = [list(row) for row in config.spacecraft.inertia.value]
+    position, velocity = config.initial_orbit_state()
+    sc.hub.r_CN_NInit = position
+    sc.hub.v_CN_NInit = velocity
+    sc.hub.sigma_BNInit = list(config.initial.sigma_BN.value)
+    sc.hub.omega_BN_BInit = list(config.initial.body_rate.value)
 
     earth = gravityEffector.GravBodyData()
     earth.planetName = "earth_planet_data"
-    earth.mu = MU_EARTH
+    earth.mu = config.environment.mu_earth.value
     earth.isCentralBody = True
     sc.gravField.gravBodies = spacecraft.GravBodyVector([earth])
     return sc
 
 
-def configure_mtb_config_message(config: ADCSConfig):
+def configure_mtb_config_message(config: ADCSConfig, sim_config: HS2SimConfig = DEFAULT_CONFIG):
     """Create MTB layout message.
 
     Basilisk's MtbEffector reads GtMatrix_B as a row-major 3 x numMTB
@@ -176,16 +176,15 @@ def configure_mtb_config_message(config: ADCSConfig):
     Do not stride by MAX_EFF_CNT here.  MtbEffector only reads the first
     3*numMTB entries of this array.
     """
-    gt = [0.0] * (3 * MAX_EFF_CNT)
-    gt[0] = 1.0
-    gt[4] = 1.0
-    gt[8] = 1.0
+    sim_config.validate()
+    count = sim_config.magnetorquers.count.value
+    gt = np.asarray(sim_config.magnetorquers.axes_B.value).ravel().tolist() + [0.0] * (3 * (MAX_EFF_CNT-count))
 
     max_dipoles = [0.0] * MAX_EFF_CNT
-    max_dipoles[0:3] = list(config.mtqDipoleLimit_Am2)
+    max_dipoles[:count] = list(config.mtqDipoleLimit_Am2)
 
     payload = messaging.MTBArrayConfigMsgPayload()
-    payload.numMTB = 3
+    payload.numMTB = count
     payload.GtMatrix_B = gt
     payload.maxMtbDipoles = max_dipoles
     return messaging.MTBArrayConfigMsg().write(payload)
@@ -205,26 +204,28 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
     return values[indices]
 
 
-def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
-        replay_commands=None, capture_commands=False, make_plots=True):
-    if actuator not in ("native", "direct"):
-        raise ValueError("actuator must be native or direct")
+def run(stop_time_s=None, write_outputs=True, actuator=None,
+        replay_commands=None, capture_commands=False, make_plots=True,
+        config: HS2SimConfig = DEFAULT_CONFIG):
+    config = config.with_run_options(stop_time_s, actuator)
+    actuator = config.magnetorquers.implementation.value
+    step_ns = macros.sec2nano(config.timing.dynamics_step.value)
     sim = SimulationBaseClass.SimBaseClass()
     proc = sim.CreateNewProcess("DynamicsProcess")
-    proc.addTask(sim.CreateNewTask("DynamicsTask", macros.sec2nano(CONTROL_DT_S)))
+    proc.addTask(sim.CreateNewTask("DynamicsTask", step_ns))
 
-    sc = configure_spacecraft()
+    sc = configure_spacecraft(config)
 
     mag = magneticFieldWMM.MagneticFieldWMM()
-    mag.ModelTag = "WMM2025"
-    mag.wmmDataFullPath = find_wmm2025_path()
-    mag.epochDateFractionalYear = EPOCH_FRACTIONAL_YEAR
-    mag.planetRadius = 6371.2e3
+    mag.ModelTag = config.environment.magnetic_model.value
+    mag.wmmDataFullPath = find_wmm2025_path(config)
+    mag.epochDateFractionalYear = config.environment.epoch_fractional_year.value
+    mag.planetRadius = config.environment.wmm_reference_radius.value
     mag.addSpacecraftToModel(sc.scStateOutMsg)
     # Initialize only the pre-run field sentinel. The t=0 row has no preceding
     # application interval; actual current-epoch WMM output is computed at t=0.
     mag.envOutMsgs[0].write(messaging.MagneticFieldMsgPayload(), 0)
-    earth_orientation = EarthOrientation(EPOCH_FRACTIONAL_YEAR)
+    earth_orientation = EarthOrientation(config.environment.epoch_fractional_year.value)
     earth_orientation.ModelTag = "EarthOrientation"
     mag.planetPosInMsg.subscribeTo(earth_orientation.planetOutMsg)
     wmm_guard = WMMInputGuard(mag)
@@ -232,18 +233,22 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
 
     nav = simpleNav.SimpleNav()
     nav.ModelTag = "SimpleNav"
+    nav.PMatrix = [list(row) for row in config.sensors.navigation_noise_matrix.value]
+    nav.walkBounds = list(config.sensors.navigation_walk_bounds.value)
     nav.scStateInMsg.subscribeTo(sc.scStateOutMsg)
 
     tam = magnetometer.Magnetometer()
     tam.ModelTag = "Magnetometer"
-    tam.dcm_SB = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-    tam.scaleFactor = 1.0
-    tam.senBias = [0.0, 0.0, 0.0]
-    tam.senNoiseStd = [MAG_NOISE_STD_T, MAG_NOISE_STD_T, MAG_NOISE_STD_T]
+    tam.dcm_SB = [list(row) for row in config.sensors.magnetometer_dcm_SB.value]
+    tam.scaleFactor = config.sensors.magnetometer_scale.value
+    tam.senBias = list(config.sensors.magnetometer_bias.value)
+    tam.senNoiseStd = list(config.sensors.magnetometer_noise_std.value)
+    tam.minOutput = config.sensors.magnetometer_min_output.value
+    tam.maxOutput = config.sensors.magnetometer_max_output.value
     tam.stateInMsg.subscribeTo(sc.scStateOutMsg)
     tam.magInMsg.subscribeTo(mag.envOutMsgs[0])
 
-    adcs_cfg = ADCSConfig()
+    adcs_cfg = ADCSConfig.from_sim_config(config)
     ctrl = PythonBdotMTQController(adcs_cfg)
     ctrl.ModelTag = "PythonBdotMTQController"
     ctrl.navAttInMsg.subscribeTo(nav.attOutMsg)
@@ -254,7 +259,7 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
         command_source = ReplayDipoles(replay_commands, tam.tamDataOutMsg)
         command_source.ModelTag = "ValidationCommandReplay"
 
-    mtb_cfg_msg = configure_mtb_config_message(adcs_cfg)
+    mtb_cfg_msg = configure_mtb_config_message(adcs_cfg, config)
 
     # Exactly one magnetic dynamic effector is attached. Native 2.10.2 reads
     # dipole/config/B_N messages and hub attitude on EVERY dynamics evaluation.
@@ -272,7 +277,7 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
 
     # Capture the previous command/field/state before propagation. These are
     # evidence for the magnetic inputs held during the interval ending now.
-    rec_dt = macros.sec2nano(RECORD_DT_S)
+    rec_dt = macros.sec2nano(config.timing.record_step.value)
     held_state_log = sc.scStateOutMsg.recorder(rec_dt)
     held_mag_log = mag.envOutMsgs[0].recorder(rec_dt)
     held_cmd_log = command_source.mtbCmdOutMsg.recorder(rec_dt)
@@ -280,7 +285,7 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
     for recorder in [held_state_log, held_mag_log, held_cmd_log, held_torque_log]:
         sim.AddModelToTask("DynamicsTask", recorder, ModelPriority=1100)
     if actuator == "native":
-        actuator_guard = MagneticInputGuard(effector, macros.sec2nano(CONTROL_DT_S))
+        actuator_guard = MagneticInputGuard(effector, step_ns)
         actuator_guard.ModelTag = "NativeInputEpochGuard"
         sim.AddModelToTask("DynamicsTask", actuator_guard, ModelPriority=1050)
 
@@ -323,9 +328,7 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
         full_cmd_log = command_source.mtbCmdOutMsg.recorder()
         sim.AddModelToTask("DynamicsTask", full_cmd_log)
 
-    r0 = EARTH_RADIUS_M + ALTITUDE_M
-    orbit_period_s = 2.0 * math.pi * math.sqrt(r0**3 / MU_EARTH)
-    duration_s = orbit_period_s if stop_time_s is None else float(stop_time_s)
+    duration_s = config.duration_s
     print(f"Running detumble scenario ({actuator}): {duration_s:.2f} s")
 
     sim.InitializeSimulation()
@@ -372,7 +375,7 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
         "applied_torque_evaluation": "final_RK4_stage" if actuator == "native" else "constant_body_hold",
         "time_s": t,
         "time_ns": ticks,
-        "control_step_ns": macros.sec2nano(CONTROL_DT_S),
+        "control_step_ns": step_ns,
         "application_interval_valid": ticks > 0,
         "state_time_ns": written(sc_log),
         "sensor_state_time_ns": written(sensor_state_log),
@@ -380,7 +383,7 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
         "earth_orientation_time_ns": sample_at_ticks(ticks, guard_ticks, guard_data["earth_orientation_time_ns"], "Earth input epoch"),
         "earth_orientation_tdb_s": sampled(earth_log, "J2000Current"),
         "earth_orientation_enabled": sampled(earth_log, "computeOrient"),
-        "earth_orientation_model": MODEL_NAME,
+        "earth_orientation_model": config.environment.earth_orientation_model.value,
         "field_evaluation_time_ns": written(mag_log),
         "wmm_coefficient_time_ns": ((ticks + 500_000_000) // 1_000_000_000) * 1_000_000_000,
         "held_state_time_ns": written(held_state_log),
@@ -468,11 +471,14 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
     if capture_commands:
         df.attrs["command_history"] = [(int(tick), *row[:3]) for tick, row in
                                        zip(full_cmd_log.timesWritten(), full_cmd_log.mtbDipoleCmds)]
+    df["simulation_config_sha256"] = config.fingerprint()
+    df.attrs["simulation_config"] = config.to_dict()
     out_csv = OUT_DATA / ("detumble_output.csv" if actuator == "native" else "detumble_direct_output.csv")
     if replay_commands is not None:
         out_csv = OUT_DATA / f"detumble_{actuator}_replay.csv"
     if write_outputs:
         df.to_csv(out_csv, index=False)
+        out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
         print(f"Wrote {out_csv}")
     print(f"Initial |omega| [rad/s]: {omega_mag[0]:.12g}")
     print(f"Final   |omega| [rad/s]: {omega_mag[-1]:.12g}")
@@ -488,8 +494,10 @@ def run(stop_time_s=None, write_outputs=True, actuator=DEFAULT_ACTUATOR,
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--actuator", choices=("native", "direct"), default=DEFAULT_ACTUATOR)
+    parser.add_argument("--actuator", choices=("native", "direct"), default=None)
+    parser.add_argument("--config", type=Path, help="Explicit provenance-bearing runtime configuration JSON")
     parser.add_argument("--duration", type=float, default=None)
     parser.add_argument("--no-plots", action="store_true")
     args = parser.parse_args()
-    run(stop_time_s=args.duration, actuator=args.actuator, make_plots=not args.no_plots)
+    run(stop_time_s=args.duration, actuator=args.actuator, make_plots=not args.no_plots,
+        config=DEFAULT_CONFIG if args.config is None else HS2SimConfig.load(args.config))

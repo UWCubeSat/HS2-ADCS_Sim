@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Sequence
-import math
 import numpy as np
+from hs2_sim_config import DEFAULT_CONFIG, HS2SimConfig
 
 try:
     import adcs_core as _adcs_core  # optional pybind module from cpp_adcs_core
@@ -25,13 +25,26 @@ MAX_EFF_CNT = 36
 
 @dataclass
 class ADCSConfig:
-    dipoleCommandGain: float = 67200.0
-    mtqDipoleGain_Am2_A: Sequence[float] = (2.3, 2.3, 0.85 / math.sqrt(1.75 / 4.4))
-    mtqResistance_Ohm: Sequence[float] = (51.0, 51.0, 4.4)
-    mtqCurrentLimit_A: Sequence[float] = (5.0 / 51.0, 5.0 / 51.0, math.sqrt(1.75 / 4.4))
-    mtqDipoleLimit_Am2: Sequence[float] = (0.2, 0.2, 0.85)
-    minMagField_T: float = 1.0e-12
-    use_cpp_core_if_available: bool = True
+    """Compatibility payload for Python/C++ controller APIs; defaults are sourced.
+
+    The active scenario builds this payload from its validated HS2SimConfig.
+    Existing callers/pointing keep the same numeric field names and behavior.
+    """
+    dipoleCommandGain: float = DEFAULT_CONFIG.controller.dipole_command_gain.value
+    mtqDipoleGain_Am2_A: Sequence[float] = DEFAULT_CONFIG.magnetorquers.dipole_gains.value
+    mtqResistance_Ohm: Sequence[float] = DEFAULT_CONFIG.magnetorquers.resistance.value
+    mtqCurrentLimit_A: Sequence[float] = DEFAULT_CONFIG.magnetorquers.current_limits.value
+    mtqDipoleLimit_Am2: Sequence[float] = DEFAULT_CONFIG.magnetorquers.dipole_limits.value
+    minMagField_T: float = DEFAULT_CONFIG.controller.minimum_field.value
+    use_cpp_core_if_available: bool = DEFAULT_CONFIG.controller.use_cpp_core_if_available.value
+
+    @classmethod
+    def from_sim_config(cls, config: HS2SimConfig):
+        config.validate()
+        mtq, control = config.magnetorquers, config.controller
+        return cls(control.dipole_command_gain.value, mtq.dipole_gains.value,
+                   mtq.resistance.value, mtq.current_limits.value, mtq.dipole_limits.value,
+                   control.minimum_field.value, control.use_cpp_core_if_available.value)
 
 
 def _cross(a: Sequence[float], b: Sequence[float]) -> np.ndarray:

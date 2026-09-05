@@ -6,6 +6,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from datetime import datetime, timezone
+from hs2_sim_config import DEFAULT_CONFIG, HS2SimConfig
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -13,17 +15,15 @@ REF = ROOT / "reference_standalone" / "adcs_output.csv"
 OUT_DATA = HERE / "output_data"
 COMPARE_OUT = OUT_DATA / "comparison_metrics.json"
 
-# Must match the current HuskySat-style baseline used by the Basilisk scenarios.
-# TODO: replace with verified HuskySat-2 inertia once the final vehicle properties are available.
-MASS_KG = 2.6
-LX_M, LY_M, LZ_M = 0.10, 0.10, 0.20
-IXX = (MASS_KG / 12.0) * (LY_M**2 + LZ_M**2)
-IYY = (MASS_KG / 12.0) * (LX_M**2 + LZ_M**2)
-IZZ = (MASS_KG / 12.0) * (LX_M**2 + LY_M**2)
+# Shared physical INPUTS; the equations below remain independent of Basilisk.
+# Compatibility aliases for existing analytical regression fixtures.
+MASS_KG = DEFAULT_CONFIG.spacecraft.mass.value
+LX_M, LY_M, LZ_M = DEFAULT_CONFIG.spacecraft.dimensions.value
+IXX, IYY, IZZ = np.diag(DEFAULT_CONFIG.spacecraft.inertia.value)
 INERTIA_DIAG_KG_M2 = np.array([IXX, IYY, IZZ], dtype=float)
 
 # CONFIRMED software timing in the Phase 2A detumble baseline, not a flight requirement.
-CONTROL_STEP_NS = 100_000_000
+CONTROL_STEP_NS = round(DEFAULT_CONFIG.timing.control_step.value * 1e9)
 PUBLICATION_TIME_COLUMNS = [
     "state_time_ns", "field_evaluation_time_ns", "tam_message_time_ns",
     "nav_message_time_ns", "dipole_command_time_ns", "expected_torque_time_ns",
@@ -66,15 +66,36 @@ def rotate_inertial_to_body(sigma: np.ndarray, vectors: np.ndarray) -> np.ndarra
             - 2.0 * q0 * np.cross(q, vectors))
 
 
-def predict_body_rate(omega: np.ndarray, torque: np.ndarray, dt: np.ndarray) -> np.ndarray:
+def rate_derivative(omega, torque, inertia):
+    """Independent Euler equation; preserve Phase 3 arithmetic for diagonal I."""
+    inertia = np.asarray(inertia)
+    if inertia.ndim == 2 and np.array_equal(inertia, np.diag(np.diag(inertia))):
+        inertia = np.diag(inertia)
+    if inertia.ndim == 1:
+        return (torque - np.cross(omega, inertia * omega)) / inertia
+    return np.linalg.solve(inertia, (torque - np.cross(omega, omega @ inertia.T)).T).T
+
+
+def config_for_telemetry(df, config=None):
+    if config is None:
+        saved = df.attrs.get("simulation_config")
+        config = DEFAULT_CONFIG if saved is None else HS2SimConfig.from_dict(saved)
+    config.validate()
+    if "simulation_config_sha256" in df and not (df["simulation_config_sha256"] == config.fingerprint()).all():
+        raise ValueError("Telemetry/configuration fingerprint mismatch; supply the matching saved configuration")
+    return config
+
+
+def predict_body_rate(omega: np.ndarray, torque: np.ndarray, dt: np.ndarray,
+                      inertia=INERTIA_DIAG_KG_M2) -> np.ndarray:
     """Independent Euler rigid-body equation/RK4 over the recorded hold interval.
 
-    Assumes the unchanged diagonal development inertia and constant applied
+    Assumes the configured development inertia and constant applied
     body torque; this check must be revised if other effectors are introduced.
     It consumes effector readback and truth states, never controller internals.
     """
     def derivative(w):
-        return (torque - np.cross(w, INERTIA_DIAG_KG_M2 * w)) / INERTIA_DIAG_KG_M2
+        return rate_derivative(w, torque, inertia)
 
     h = np.asarray(dt).reshape(-1, 1)
     k1 = derivative(omega)
@@ -100,7 +121,7 @@ def predict_magnetic_step(sigma, omega, dipole, field_n, dt, inertia=INERTIA_DIA
         sdot = ((1 - s2) * w + 2 * np.cross(s, w)
                 + 2 * s * np.sum(s * w, axis=1, keepdims=True)) / 4
         tau = np.cross(dipole, rotate_inertial_to_body(s, field_n))
-        wdot = (tau - np.cross(w, inertia * w)) / inertia
+        wdot = rate_derivative(w, tau, inertia)
         return np.column_stack((sdot, wdot))
 
     k1 = derivative(state)
@@ -170,18 +191,21 @@ def require_detumble_telemetry(df: pd.DataFrame) -> None:
             raise ValueError(f"{col} must contain finite integer nanoseconds")
 
 
-def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
+def telemetry_metrics(df: pd.DataFrame, config=None) -> dict[str, Any]:
     """Independent record-to-record checks, with explicit acquisition epochs."""
     require_detumble_telemetry(df)
+    config = config_for_telemetry(df, config)
+    step_ns = round(config.timing.control_step.value * 1e9)
+    inertia = np.asarray(config.spacecraft.inertia.value)
     ticks = df["time_ns"].to_numpy(dtype=np.int64)
     source_ticks = df["sensor_state_time_ns"].to_numpy(dtype=np.int64)
     publication_aligned = all(np.array_equal(df[c].to_numpy(), ticks)
                               for c in PUBLICATION_TIME_COLUMNS)
     timing_valid = (ticks[0] == 0 and np.all(np.diff(ticks) > 0)
-                    and np.all(ticks % CONTROL_STEP_NS == 0)
-                    and (df["control_step_ns"] == CONTROL_STEP_NS).all()
+                    and np.all(ticks % step_ns == 0)
+                    and (df["control_step_ns"] == step_ns).all()
                     and np.array_equal(df["application_interval_valid"], ticks > 0)
-                    and all(np.array_equal(df[c], np.maximum(ticks - CONTROL_STEP_NS, 0))
+                    and all(np.array_equal(df[c], np.maximum(ticks - step_ns, 0))
                             for c in HELD_TIME_COLUMNS)
                     and np.array_equal(df["wmm_coefficient_time_ns"],
                                        ((ticks + 500_000_000) // 1_000_000_000) * 1_000_000_000)
@@ -217,7 +241,7 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
     nav_sigma = vec3(df, [f"nav_sigma_BN_{i}" for i in (1, 2, 3)])
     dt = (df["state_time_ns"].to_numpy() - df["held_state_time_ns"].to_numpy()) * 1e-9
     propagated = dt > 0
-    prediction = predict_body_rate(pre_omega[propagated], applied[propagated], dt[propagated])
+    prediction = predict_body_rate(pre_omega[propagated], applied[propagated], dt[propagated], inertia)
     source = str(df["applied_torque_source"].iloc[0])
     native = source.startswith("MtbEffector.")
     native_metrics = {}
@@ -228,13 +252,13 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
         mapped_m = np.einsum("nij,nj->ni", axes, np.clip(held_m, -limits, limits))
         predicted_state, stage, predicted_torque = predict_magnetic_step(
             held_sigma[propagated], pre_omega[propagated], mapped_m[propagated],
-            held_field_n[propagated], dt[propagated])
+            held_field_n[propagated], dt[propagated], inertia)
         # Torque readback is k4, NOT tau(t-dt) and NOT tau(accepted_state(t)).
         cross_error = np.linalg.norm(applied[propagated] - predicted_torque, axis=1)
         prediction = predicted_state[:, 3:]
         power_omega[propagated] = stage[:, 3:]
         timing_valid = (timing_valid and np.array_equal(df["native_output_time_ns"], ticks)
-                        and all(np.array_equal(df[c], np.maximum(ticks - CONTROL_STEP_NS, 0))
+                        and all(np.array_equal(df[c], np.maximum(ticks - step_ns, 0))
                                 for c in ("native_input_dipole_time_ns", "native_input_field_time_ns")))
         native_metrics = {
             # These compare two exports of ONE native quantity: transport only,
@@ -243,8 +267,8 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
                 vec3(df, vector_columns("native_mtbNetTorque_B", "Nm")) - applied, axis=1).max()),
             "magnetic_step_max_mrp_error": float(np.linalg.norm(
                 vec3(df, [f"sigma_BN_{i}" for i in (1, 2, 3)])[propagated] - predicted_state[:, :3], axis=1).max()),
-            "native_configuration_unchanged": bool(np.all(limits == [0.2, 0.2, 0.85])
-                                                     and np.all(axes == np.eye(3))),
+            "native_configuration_unchanged": bool(np.all(limits == config.magnetorquers.dipole_limits.value)
+                                                     and np.all(axes == config.magnetorquers.axes_B.value)),
             "native_command_within_provisional_limits": bool(np.all(np.abs(m) <= limits + 1e-14)),
             "rate_prediction_source": "Independent coupled MRP/Euler RK4, recorded dipole/B_N; native final-stage torque checked separately",
             "mechanical_power_epoch": "Final RK4 stage; stage rate independently reconstructed",
@@ -259,9 +283,11 @@ def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
     et = df["earth_orientation_tdb_s"].to_numpy(dtype=float)
     # Calendar difference 2000-01-01 noon -> 2026-01-01 midnight = 9496.5 days.
     # UTC->TT is 69.184 s; NAIF DELTET periodic TDB-TT is bounded by 1.657 ms.
-    clock_error = np.abs(et - (9496.5 * 86400.0 + ticks * 1e-9 + 69.184))
+    calendar_seconds = (datetime.fromisoformat(config.environment.epoch_utc.value)
+                        - datetime(2000, 1, 1, 12, tzinfo=timezone.utc)).total_seconds()
+    clock_error = np.abs(et - (calendar_seconds + ticks * 1e-9 + 69.184))
     orientation_valid = bool((df["earth_orientation_enabled"] == 1).all()
-                             and (df["earth_orientation_model"] == "IAU_EARTH_pck00011_low_order").all()
+                             and (df["earth_orientation_model"] == config.environment.earth_orientation_model.value).all()
                              and np.max(clock_error) < 0.0017)
     earth_error = np.linalg.norm(earth - reference_earth_matrix(et), axis=(1, 2))
     return {
@@ -313,9 +339,14 @@ def finite_numeric(df: pd.DataFrame) -> bool:
     return bool(np.isfinite(numeric.to_numpy(dtype=float)).all())
 
 
-def rotational_energy_J(omega_B_rad_s: np.ndarray) -> np.ndarray:
+def rotational_energy_J(omega_B_rad_s: np.ndarray, inertia=INERTIA_DIAG_KG_M2) -> np.ndarray:
     """Rigid-body rotational kinetic energy using the scenario diagonal inertia."""
-    return 0.5 * np.sum((omega_B_rad_s**2) * INERTIA_DIAG_KG_M2.reshape((1, 3)), axis=1)
+    inertia = np.asarray(inertia)
+    if inertia.ndim == 2 and np.array_equal(inertia, np.diag(np.diag(inertia))):
+        inertia = np.diag(inertia)
+    if inertia.ndim == 1:
+        return 0.5 * np.sum((omega_B_rad_s**2) * inertia.reshape((1, 3)), axis=1)
+    return 0.5 * np.sum(omega_B_rad_s * (omega_B_rad_s @ inertia.T), axis=1)
 
 
 def maybe_remove_stale_comparison() -> None:
@@ -358,13 +389,14 @@ def summarize_reference(df: pd.DataFrame) -> dict[str, Any]:
     return out
 
 
-def summarize_basilisk(df: pd.DataFrame) -> dict[str, Any]:
-    independent = telemetry_metrics(df)
+def summarize_basilisk(df: pd.DataFrame, config=None) -> dict[str, Any]:
+    config = config_for_telemetry(df, config)
+    independent = telemetry_metrics(df, config)
     t = df["time_s"].to_numpy(dtype=float)
     omega = vec3(df, ["omega_B_x_rad_s", "omega_B_y_rad_s", "omega_B_z_rad_s"])
     wmag = np.linalg.norm(omega, axis=1)
 
-    energy = rotational_energy_J(omega)
+    energy = rotational_energy_J(omega, config.spacecraft.inertia.value)
     out: dict[str, Any] = {
         "rows": int(len(df)),
         "cols": int(len(df.columns)),
@@ -503,6 +535,9 @@ def main(bsk_csv=None, report_path=None) -> int:
     try:
         ref_df = pd.read_csv(REF)
         bsk_df = pd.read_csv(bsk_csv)
+        if "simulation_config_sha256" in bsk_df:
+            config_path = bsk_csv.with_name(bsk_csv.stem + "_config.json")
+            bsk_df.attrs["simulation_config"] = HS2SimConfig.load(config_path).to_dict()
         ref = summarize_reference(ref_df)
         bsk = summarize_basilisk(bsk_df)
     except (ValueError, KeyError, IndexError, OSError) as exc:
