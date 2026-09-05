@@ -152,8 +152,9 @@ class PythonBdotMTQController(sysModel.SysModel):
 
         payload = self.mtbCmdOutMsg.zeroMsgPayload
         dipoles3 = list(cmd["commanded_magnetic_dipole_B_Am2"])
-        payload.mtbDipoleCmds = [0.0] * MAX_EFF_CNT
-        payload.mtbDipoleCmds[0:3] = dipoles3
+        # SWIG's fixed-array getter returns a copy. Assign the whole array so
+        # the published command contains the computed dipoles, not zeros.
+        payload.mtbDipoleCmds = dipoles3 + [0.0] * (MAX_EFF_CNT - 3)
         self.mtbCmdOutMsg.write(payload, CurrentSimNanos, self.moduleID)
 
         torque3 = list(cmd["commanded_control_torque_B_Nm"])

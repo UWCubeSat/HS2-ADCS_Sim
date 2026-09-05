@@ -118,17 +118,21 @@ def plot_all(df: pd.DataFrame | None = None, output_dir: Path = OUT_PLOTS):
         plt.legend()
         paths.append(_save("coil_power.png", output_dir))
 
-    mtb_torque_cols = ["mtb_torque_B_x_Nm", "mtb_torque_B_y_Nm", "mtb_torque_B_z_Nm"]
-    if all(c in df.columns for c in mtb_torque_cols):
-        mtb_torque_mag = df["mtb_torque_B_mag_Nm"].to_numpy() if "mtb_torque_B_mag_Nm" in df else _mag_cols(df, mtb_torque_cols)
+    # Phase 2A detumble records ExtForceTorque readback, not native MTB output.
+    # Keep legacy plotting available for existing minimal/archived CSVs.
+    torque_prefix = "applied_torque" if "applied_torque_B_x_Nm" in df else "mtb_torque"
+    torque_cols = [f"{torque_prefix}_B_{axis}_Nm" for axis in "xyz"]
+    if all(c in df.columns for c in torque_cols):
+        torque_mag = _mag_cols(df, torque_cols)
         plt.figure(figsize=(9, 4))
-        plt.plot(t, df[mtb_torque_cols[0]], label="Tx")
-        plt.plot(t, df[mtb_torque_cols[1]], label="Ty")
-        plt.plot(t, df[mtb_torque_cols[2]], label="Tz")
-        plt.plot(t, mtb_torque_mag, label="|T|", linewidth=2)
+        plt.plot(t, df[torque_cols[0]], label="Tx")
+        plt.plot(t, df[torque_cols[1]], label="Ty")
+        plt.plot(t, df[torque_cols[2]], label="Tz")
+        plt.plot(t, torque_mag, label="|T|", linewidth=2)
         plt.xlabel("Time [s]")
         plt.ylabel("Torque [N m]")
-        plt.title("Magnetorquer Applied Torque")
+        plt.title("Applied External Torque (Body Frame)" if torque_prefix == "applied_torque"
+                  else "Magnetorquer Applied Torque")
         plt.grid(True)
         plt.legend()
         paths.append(_save("mtb_torque.png", output_dir))
@@ -155,9 +159,9 @@ def plot_all(df: pd.DataFrame | None = None, output_dir: Path = OUT_PLOTS):
     if "pcoil_total_W" in df.columns:
         print("Mean coil power [W]:", float(df["pcoil_total_W"].mean()))
         print("Peak coil power [W]:", float(df["pcoil_total_W"].max()))
-    if "mtb_torque_B_mag_Nm" in df.columns:
-        print("Mean |MTB torque| [N m]:", float(df["mtb_torque_B_mag_Nm"].mean()))
-        print("Peak |MTB torque| [N m]:", float(df["mtb_torque_B_mag_Nm"].max()))
+    if all(c in df.columns for c in torque_cols):
+        print(f"Mean |{torque_prefix}| [N m]:", float(torque_mag.mean()))
+        print(f"Peak |{torque_prefix}| [N m]:", float(torque_mag.max()))
     return paths
 
 

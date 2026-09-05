@@ -5,6 +5,36 @@ This is the fast workflow path:
 - no Basilisk source rebuild
 - no Basilisk.ExternalModules import
 - Python Basilisk controller module with optional separate pybind core
+
+Telemetry contract (schema 2; seconds/nanoseconds from simulation start):
+* time_s/time_ns is the recorder task tick, after spacecraft propagation.
+  r_N, v_N, sigma_BN, Euler angles and omega_B describe state_time_ns.
+* sensor_state_* is an additional, pre-environment snapshot of scStateOutMsg.
+  sensor_state_time_ns is its actual message write time, normally one 0.1 s
+  integration step earlier (both states have epoch zero on the initial row).
+  WMM, SimpleNav and TAM all consume this state; their task order is unchanged.
+* B_N is WMM's field evaluated at field_evaluation_time_ns using the POSITION
+  in sensor_state_*. B_B is the recorded TAM tam_S output (S=B only because
+  dcm_SB is identity here), using the ATTITUDE in that same sensor state.
+  The WMM evaluation epoch and input position epoch are deliberately separate.
+* nav_* comes from SimpleNav; nav_time_tag_s is its output/update tag, NOT
+  the consumed spacecraft state's epoch. *_message_time_ns are message headers.
+* mcmd is MTBArrayCmdMsg.mtbDipoleCmds[0:3]. control_torque is the independent
+  recording of CmdTorqueBodyMsg.torqueRequestBody, the controller's expected
+  m x B torque. Both commands are published at their respective *_time_ns.
+* applied_torque is ExtForceTorque.torqueExternalPntB_B sampled AFTER the plant
+  update, at applied_torque_time_ns. It is the combined dynamic-effector torque,
+  not a command alias and not native MtbEffector output. In this constant-body-
+  torque bridge it is held over [sensor_state_time_ns, state_time_ns]; the zero
+  row is initialization, with no elapsed integration interval.
+* Currents, coil powers, saturation/validity and core-availability flags remain
+  controller diagnostics at diagnostic_time_ns; they are not hardware readings.
+
+All sources are matched on exact integer task ticks, never nearest-time joined.
+Use sensor_state_sigma_BN with B_N/B_B for frame checks, and pre/post omega for
+the applied-torque dynamics check. Do not pair B_B with post-step sigma_BN.
+These are CONFIRMED software scheduling/source semantics for this development
+configuration, not confirmed HS-2 hardware or flight timing requirements.
 """
 
 from __future__ import annotations
@@ -143,6 +173,20 @@ def configure_mtb_config_message(config: ADCSConfig):
     return messaging.MTBArrayConfigMsg().write(payload)
 
 
+def sample_at_ticks(ticks, source_ticks, values, source_name):
+    """Select exact samples; missing/duplicate/out-of-order evidence is an error."""
+    ticks = np.asarray(ticks, dtype=np.int64)
+    source_ticks = np.asarray(source_ticks, dtype=np.int64)
+    values = np.asarray(values)
+    if (len(source_ticks) == 0 or len(source_ticks) != len(values)
+            or np.any(np.diff(source_ticks) <= 0)):
+        raise ValueError(f"Invalid timestamps/length for {source_name}")
+    indices = np.searchsorted(source_ticks, ticks)
+    if np.any(indices >= len(source_ticks)) or not np.array_equal(source_ticks[indices], ticks):
+        raise ValueError(f"Missing exact task-tick sample for {source_name}")
+    return values[indices]
+
+
 def run():
     sim = SimulationBaseClass.SimBaseClass()
     proc = sim.CreateNewProcess("DynamicsProcess")
@@ -198,6 +242,12 @@ def run():
     mtb.magInMsg.subscribeTo(mag.envOutMsgs[0])
     mtb.mtbParamsInMsg.subscribeTo(mtb_cfg_msg)
 
+    # Observe the exact state consumed by WMM/nav/TAM, before any model updates.
+    # This recorder is passive: preserve all original physics/control priorities.
+    rec_dt = macros.sec2nano(RECORD_DT_S)
+    sensor_state_log = sc.scStateOutMsg.recorder(rec_dt)
+    sim.AddModelToTask("DynamicsTask", sensor_state_log, ModelPriority=1000)
+
     # Higher priority runs earlier. Controller writes command before torque/dynamics updates.
     sim.AddModelToTask("DynamicsTask", mag, ModelPriority=900)
     sim.AddModelToTask("DynamicsTask", nav, ModelPriority=800)
@@ -206,14 +256,14 @@ def run():
     sim.AddModelToTask("DynamicsTask", direct_torque, ModelPriority=500)
     sim.AddModelToTask("DynamicsTask", sc, ModelPriority=100)
 
-    rec_dt = macros.sec2nano(RECORD_DT_S)
     sc_log = sc.scStateOutMsg.recorder(rec_dt)
     mag_log = mag.envOutMsgs[0].recorder(rec_dt)
     tam_log = tam.tamDataOutMsg.recorder(rec_dt)
     cmd_log = ctrl.mtbCmdOutMsg.recorder(rec_dt)
+    expected_torque_log = ctrl.cmdTorqueOutMsg.recorder(rec_dt)
     direct_torque_log = direct_torque.logger(["torqueExternalPntB_B"])
     nav_log = nav.attOutMsg.recorder(rec_dt)
-    for recorder in [sc_log, mag_log, tam_log, cmd_log, direct_torque_log, nav_log]:
+    for recorder in [sc_log, mag_log, tam_log, cmd_log, expected_torque_log, direct_torque_log, nav_log]:
         sim.AddModelToTask("DynamicsTask", recorder)
 
     r0 = EARTH_RADIUS_M + ALTITUDE_M
@@ -224,7 +274,15 @@ def run():
     sim.ConfigureStopTime(macros.sec2nano(orbit_period_s))
     sim.ExecuteSimulation()
 
-    t = sc_log.times() * macros.NANO2SEC
+    ticks = np.asarray(sc_log.times(), dtype=np.int64)
+    t = ticks * macros.NANO2SEC
+
+    def sampled(log, field):
+        return sample_at_ticks(ticks, log.times(), getattr(log, field), field)
+
+    def written(log):
+        return sample_at_ticks(ticks, log.times(), log.timesWritten(), "message write time")
+
     r = np.asarray(sc_log.r_BN_N, dtype=float)
     v = np.asarray(sc_log.v_BN_N, dtype=float)
     sigma = np.asarray(sc_log.sigma_BN, dtype=float)
@@ -232,54 +290,36 @@ def run():
     omega_mag = np.linalg.norm(omega, axis=1)
     euler = np.array([dcm_to_euler321(mrp_to_dcm(s)) for s in sigma])
 
-    B_N = np.asarray(mag_log.magField_N, dtype=float)
-    B_B = np.asarray(tam_log.tam_S, dtype=float)
-    dipole_all = np.asarray(cmd_log.mtbDipoleCmds, dtype=float)
-    dipole = dipole_all[:, :3]
-    # The direct_torque logger samples at the task rate, while the spacecraft
-    # recorders sample at RECORD_DT_S.  Align the direct-torque log onto the
-    # canonical spacecraft time vector before building the output DataFrame.
-    applied_torque_raw = np.asarray(direct_torque_log.torqueExternalPntB_B, dtype=float)
-    applied_torque_times = np.asarray(direct_torque_log.times(), dtype=float) * macros.NANO2SEC
-
-    if applied_torque_raw.ndim == 1:
-        applied_torque_raw = applied_torque_raw.reshape((-1, 3))
-
-    if len(applied_torque_raw) == 0:
-        applied_torque_B = np.zeros((len(t), 3))
-    else:
-        n_torque = min(len(applied_torque_raw), len(applied_torque_times))
-        torque_df = pd.DataFrame({
-            "time_s": applied_torque_times[:n_torque],
-            "applied_torque_B_x_Nm": applied_torque_raw[:n_torque, 0],
-            "applied_torque_B_y_Nm": applied_torque_raw[:n_torque, 1],
-            "applied_torque_B_z_Nm": applied_torque_raw[:n_torque, 2],
-        }).sort_values("time_s")
-
-        torque_sampled = pd.merge_asof(
-            pd.DataFrame({"time_s": t}),
-            torque_df,
-            on="time_s",
-            direction="nearest",
-            tolerance=max(CONTROL_DT_S, RECORD_DT_S),
-        )
-        applied_torque_B = torque_sampled[[
-            "applied_torque_B_x_Nm",
-            "applied_torque_B_y_Nm",
-            "applied_torque_B_z_Nm",
-        ]].fillna(0.0).to_numpy(dtype=float)
+    B_N = sampled(mag_log, "magField_N")
+    B_B = sampled(tam_log, "tam_S")
+    dipole = sampled(cmd_log, "mtbDipoleCmds")[:, :3]
+    expected_torque_B = sampled(expected_torque_log, "torqueRequestBody")
+    applied_torque_B = sampled(direct_torque_log, "torqueExternalPntB_B")
 
     diag = pd.DataFrame(ctrl.history)
-    diag_sampled = pd.merge_asof(
-        pd.DataFrame({"time_s": t}),
-        diag.sort_values("time_s") if not diag.empty else pd.DataFrame({"time_s": t}),
-        on="time_s",
-        direction="nearest",
-        tolerance=CONTROL_DT_S,
-    )
+    # History time_s is produced from the integer controller task tick. Recover
+    # that tick to avoid floating-point equality joins; no sample shifting.
+    diag_ticks = np.rint(diag["time_s"].to_numpy() * 1e9).astype(np.int64)
+    diag_sampled = pd.DataFrame(sample_at_ticks(ticks, diag_ticks, diag.to_numpy(), "controller history"),
+                                columns=diag.columns)
 
     df = pd.DataFrame({
+        "telemetry_schema_version": 2,
         "time_s": t,
+        "time_ns": ticks,
+        "control_step_ns": macros.sec2nano(CONTROL_DT_S),
+        "state_time_ns": written(sc_log),
+        "sensor_state_time_ns": written(sensor_state_log),
+        "field_evaluation_time_ns": written(mag_log),
+        "tam_message_time_ns": written(tam_log),
+        "nav_message_time_ns": written(nav_log),
+        "nav_time_tag_s": sampled(nav_log, "timeTag"),
+        "dipole_command_time_ns": written(cmd_log),
+        "expected_torque_time_ns": written(expected_torque_log),
+        "applied_torque_time_ns": sample_at_ticks(ticks, direct_torque_log.times(),
+                                                  direct_torque_log.times(), "effector sample time"),
+        "diagnostic_time_ns": sample_at_ticks(ticks, diag_ticks, diag_ticks, "diagnostic time"),
+        "applied_torque_source": "ExtForceTorque.torqueExternalPntB_B",
         "r_N_x_m": r[:, 0], "r_N_y_m": r[:, 1], "r_N_z_m": r[:, 2],
         "v_N_x_m_s": v[:, 0], "v_N_y_m_s": v[:, 1], "v_N_z_m_s": v[:, 2],
         "sigma_BN_1": sigma[:, 0], "sigma_BN_2": sigma[:, 1], "sigma_BN_3": sigma[:, 2],
@@ -300,50 +340,32 @@ def run():
         "applied_torque_B_y_Nm": applied_torque_B[:, 1],
         "applied_torque_B_z_Nm": applied_torque_B[:, 2],
         "applied_torque_B_mag_Nm": np.linalg.norm(applied_torque_B, axis=1),
-        # Legacy names retained so plotting/comparison scripts keep working. These are direct applied magnetic torque values.
-        "mtb_torque_B_x_Nm": applied_torque_B[:, 0],
-        "mtb_torque_B_y_Nm": applied_torque_B[:, 1],
-        "mtb_torque_B_z_Nm": applied_torque_B[:, 2],
-        "mtb_torque_B_mag_Nm": np.linalg.norm(applied_torque_B, axis=1),
+        "control_torque_B_x_Nm": expected_torque_B[:, 0],
+        "control_torque_B_y_Nm": expected_torque_B[:, 1],
+        "control_torque_B_z_Nm": expected_torque_B[:, 2],
+        "control_torque_B_mag_Nm": np.linalg.norm(expected_torque_B, axis=1),
     })
 
-    # Use the controller diagnostic history as the authoritative source for
-    # command-side quantities. The Basilisk message recorders and dynamic
-    # effector logger can be sampled at slightly different phases. Mixing those
-    # sources caused false validation failures in the m x B consistency check.
-    # These columns are intended to represent the controller/update-time command
-    # state sampled onto the canonical 1 Hz output grid.
-    authoritative_diag_cols = [
-        "B_B_x_T", "B_B_y_T", "B_B_z_T",
-        "mcmd_x_Am2", "mcmd_y_Am2", "mcmd_z_Am2",
+    for prefix, log, field, suffixes in [
+        ("sensor_state_r_N", sensor_state_log, "r_BN_N", ["x_m", "y_m", "z_m"]),
+        ("sensor_state_v_N", sensor_state_log, "v_BN_N", ["x_m_s", "y_m_s", "z_m_s"]),
+        ("sensor_state_sigma_BN", sensor_state_log, "sigma_BN", ["1", "2", "3"]),
+        ("sensor_state_omega_B", sensor_state_log, "omega_BN_B", ["x_rad_s", "y_rad_s", "z_rad_s"]),
+        ("nav_sigma_BN", nav_log, "sigma_BN", ["1", "2", "3"]),
+        ("nav_omega_B", nav_log, "omega_BN_B", ["x_rad_s", "y_rad_s", "z_rad_s"]),
+    ]:
+        values = sampled(log, field)
+        for i, suffix in enumerate(suffixes):
+            df[f"{prefix}_{suffix}"] = values[:, i]
+
+    diagnostic_cols = [
         "ix_A", "iy_A", "iz_A",
         "pcoil_x_W", "pcoil_y_W", "pcoil_z_W", "pcoil_total_W",
-        "control_torque_B_x_Nm", "control_torque_B_y_Nm", "control_torque_B_z_Nm", "control_torque_B_mag_Nm",
         "saturation_x", "saturation_y", "saturation_z",
         "controller_valid", "using_cpp_core",
     ]
-    for col in authoritative_diag_cols:
-        if col in diag_sampled.columns:
-            df[col] = diag_sampled[col]
-
-    # In the direct-torque fallback, the controller torque command is the torque
-    # sent to Basilisk's ExtForceTorque effector. Record it consistently with the
-    # same sampled controller diagnostics so validation checks compare like with
-    # like: tau_B = m_B x B_B.
-    torque_cols = ["control_torque_B_x_Nm", "control_torque_B_y_Nm", "control_torque_B_z_Nm"]
-    if all(col in df.columns for col in torque_cols):
-        torque_cmd = df[torque_cols].to_numpy(dtype=float)
-        torque_cmd_mag = np.linalg.norm(torque_cmd, axis=1)
-        df["applied_torque_B_x_Nm"] = torque_cmd[:, 0]
-        df["applied_torque_B_y_Nm"] = torque_cmd[:, 1]
-        df["applied_torque_B_z_Nm"] = torque_cmd[:, 2]
-        df["applied_torque_B_mag_Nm"] = torque_cmd_mag
-        df["mtb_torque_B_x_Nm"] = torque_cmd[:, 0]
-        df["mtb_torque_B_y_Nm"] = torque_cmd[:, 1]
-        df["mtb_torque_B_z_Nm"] = torque_cmd[:, 2]
-        df["mtb_torque_B_mag_Nm"] = torque_cmd_mag
-        # Keep the printed summary aligned with the written CSV.
-        applied_torque_B = torque_cmd
+    for col in diagnostic_cols:
+        df[col] = diag_sampled[col].to_numpy(dtype=float)
 
     out_csv = OUT_DATA / "detumble_output.csv"
     df.to_csv(out_csv, index=False)

@@ -22,6 +22,144 @@ IYY = (MASS_KG / 12.0) * (LX_M**2 + LZ_M**2)
 IZZ = (MASS_KG / 12.0) * (LX_M**2 + LY_M**2)
 INERTIA_DIAG_KG_M2 = np.array([IXX, IYY, IZZ], dtype=float)
 
+# CONFIRMED software timing in the Phase 2A detumble baseline, not a flight requirement.
+CONTROL_STEP_NS = 100_000_000
+PUBLICATION_TIME_COLUMNS = [
+    "state_time_ns", "field_evaluation_time_ns", "tam_message_time_ns",
+    "nav_message_time_ns", "dipole_command_time_ns", "expected_torque_time_ns",
+    "applied_torque_time_ns", "diagnostic_time_ns",
+]
+
+
+def vector_columns(prefix: str, suffix: str) -> list[str]:
+    return [f"{prefix}_{axis}_{suffix}" for axis in "xyz"]
+
+
+def rotate_inertial_to_body(sigma: np.ndarray, vectors: np.ndarray) -> np.ndarray:
+    """Passive C_BN rotation via unit quaternions, independent of the TAM code."""
+    s2 = np.sum(sigma * sigma, axis=1, keepdims=True)
+    q0 = (1.0 - s2) / (1.0 + s2)
+    q = 2.0 * sigma / (1.0 + s2)
+    return ((q0 * q0 - np.sum(q * q, axis=1, keepdims=True)) * vectors
+            + 2.0 * q * np.sum(q * vectors, axis=1, keepdims=True)
+            - 2.0 * q0 * np.cross(q, vectors))
+
+
+def predict_body_rate(omega: np.ndarray, torque: np.ndarray, dt: np.ndarray) -> np.ndarray:
+    """Independent Euler rigid-body equation/RK4 over the recorded hold interval.
+
+    Assumes the unchanged diagonal development inertia and constant applied
+    body torque; this check must be revised if other effectors are introduced.
+    It consumes effector readback and truth states, never controller internals.
+    """
+    def derivative(w):
+        return (torque - np.cross(w, INERTIA_DIAG_KG_M2 * w)) / INERTIA_DIAG_KG_M2
+
+    h = np.asarray(dt).reshape(-1, 1)
+    k1 = derivative(omega)
+    k2 = derivative(omega + 0.5 * h * k1)
+    k3 = derivative(omega + 0.5 * h * k2)
+    k4 = derivative(omega + h * k3)
+    return omega + h * (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0
+
+
+def require_detumble_telemetry(df: pd.DataFrame) -> None:
+    """Reject legacy/partial evidence rather than passing on command aliases."""
+    required = {
+        "telemetry_schema_version", "time_s", "time_ns", "sensor_state_time_ns",
+        "control_step_ns", "nav_time_tag_s", "applied_torque_source", "pcoil_total_W",
+        *PUBLICATION_TIME_COLUMNS,
+        *vector_columns("omega_B", "rad_s"),
+        *vector_columns("sensor_state_omega_B", "rad_s"),
+        *vector_columns("nav_omega_B", "rad_s"),
+        *vector_columns("B_N", "T"), *vector_columns("B_B", "T"),
+        *vector_columns("mcmd", "Am2"),
+        *vector_columns("control_torque_B", "Nm"),
+        *vector_columns("applied_torque_B", "Nm"),
+        *[f"{prefix}_{i}" for prefix in ("sigma_BN", "sensor_state_sigma_BN", "nav_sigma_BN")
+          for i in (1, 2, 3)],
+    }
+    missing = sorted(required - set(df.columns))
+    if missing:
+        raise ValueError(f"Missing Phase 2A telemetry columns: {', '.join(missing)}")
+    if len(df) < 2 or not finite_numeric(df):
+        raise ValueError("Detumble telemetry must have at least two finite rows")
+    if not (df["telemetry_schema_version"] == 2).all():
+        raise ValueError("Unsupported telemetry schema; rerun the Phase 2A detumble scenario")
+    if not (df["applied_torque_source"] == "ExtForceTorque.torqueExternalPntB_B").all():
+        raise ValueError("Applied torque must be the recorded ExtForceTorque combined torque")
+    for col in ["time_ns", "sensor_state_time_ns", "control_step_ns", *PUBLICATION_TIME_COLUMNS]:
+        values = df[col].to_numpy(dtype=float)
+        if not np.isfinite(values).all() or not np.equal(values, np.rint(values)).all():
+            raise ValueError(f"{col} must contain finite integer nanoseconds")
+
+
+def telemetry_metrics(df: pd.DataFrame) -> dict[str, Any]:
+    """Independent record-to-record checks, with explicit acquisition epochs."""
+    require_detumble_telemetry(df)
+    ticks = df["time_ns"].to_numpy(dtype=np.int64)
+    source_ticks = df["sensor_state_time_ns"].to_numpy(dtype=np.int64)
+    publication_aligned = all(np.array_equal(df[c].to_numpy(), ticks)
+                              for c in PUBLICATION_TIME_COLUMNS)
+    timing_valid = (ticks[0] == 0 and np.all(np.diff(ticks) > 0)
+                    and np.all(ticks % CONTROL_STEP_NS == 0)
+                    and (df["control_step_ns"] == CONTROL_STEP_NS).all()
+                    and np.array_equal(source_ticks, np.maximum(ticks - CONTROL_STEP_NS, 0))
+                    and publication_aligned
+                    and np.allclose(df["time_s"], ticks * 1e-9, rtol=0, atol=1e-9)
+                    and np.allclose(df["nav_time_tag_s"], ticks * 1e-9, rtol=0, atol=1e-9))
+    sigma = vec3(df, [f"sensor_state_sigma_BN_{i}" for i in (1, 2, 3)])
+    B_N = vec3(df, vector_columns("B_N", "T"))
+    B_B = vec3(df, vector_columns("B_B", "T"))
+    reconstructed_B_B = rotate_inertial_to_body(sigma, B_N)
+    b_error = np.linalg.norm(B_B - reconstructed_B_B, axis=1)
+    b_angle = np.degrees(np.arctan2(np.linalg.norm(np.cross(B_B, reconstructed_B_B), axis=1),
+                                  np.sum(B_B * reconstructed_B_B, axis=1)))
+    b_norm_error = np.abs(np.linalg.norm(B_N, axis=1) - np.linalg.norm(B_B, axis=1))
+    m = vec3(df, vector_columns("mcmd", "Am2"))
+    applied = vec3(df, vector_columns("applied_torque_B", "Nm"))
+    expected = vec3(df, vector_columns("control_torque_B", "Nm"))
+    # Reconstruct the field from a separate WMM record and the actual consumed
+    # truth attitude. Never use controller history or its computed torque here.
+    cross_error = np.linalg.norm(applied - np.cross(m, reconstructed_B_B), axis=1)
+    command_error = np.linalg.norm(applied - expected, axis=1)
+    pre_omega = vec3(df, vector_columns("sensor_state_omega_B", "rad_s"))
+    post_omega = vec3(df, vector_columns("omega_B", "rad_s"))
+    nav_omega = vec3(df, vector_columns("nav_omega_B", "rad_s"))
+    nav_sigma = vec3(df, [f"nav_sigma_BN_{i}" for i in (1, 2, 3)])
+    dt = (df["state_time_ns"].to_numpy() - source_ticks) * 1e-9
+    propagated = dt > 0
+    prediction = predict_body_rate(pre_omega[propagated], applied[propagated], dt[propagated])
+    step_error = np.linalg.norm(post_omega[propagated] - prediction, axis=1)
+    torque_mag = np.linalg.norm(applied, axis=1)
+    # Instantaneous endpoint power: post-step omega and the effector torque at
+    # that endpoint, not a finite-difference energy balance or an orbit average.
+    power = np.sum(post_omega * applied, axis=1)
+    nonzero = torque_mag > 1e-14
+    return {
+        "telemetry_timing_valid": bool(timing_valid),
+        "max_sensor_state_age_s": float(np.max(ticks - source_ticks) * 1e-9),
+        "max_B_frame_vector_error_T": float(b_error.max()),
+        "max_B_frame_direction_error_deg": float(b_angle.max()),
+        "max_B_frame_norm_error_T": float(b_norm_error.max()),
+        "mean_B_frame_norm_error_T": float(b_norm_error.mean()),
+        "max_nav_rate_error_rad_s": float(np.linalg.norm(nav_omega - pre_omega, axis=1).max()),
+        "max_nav_mrp_error": float(np.linalg.norm(nav_sigma - sigma, axis=1).max()),
+        "torque_source": "ExtForceTorque.torqueExternalPntB_B",
+        "torque_cross_product_mean_abs_error_Nm": float(cross_error.mean()),
+        "torque_cross_product_max_abs_error_Nm": float(cross_error.max()),
+        "torque_cross_product_max_rel_error": float(cross_error.max() / max(float(torque_mag.max()), 1e-30)),
+        "expected_vs_applied_max_error_Nm": float(command_error.max()),
+        "rigid_body_step_rows": int(np.count_nonzero(propagated)),
+        "rigid_body_step_max_rate_error_rad_s": float(step_error.max()) if len(step_error) else None,
+        "mean_applied_magnetic_torque_Nm": float(torque_mag.mean()),
+        "peak_applied_magnetic_torque_Nm": float(torque_mag.max()),
+        "mean_mechanical_control_power_W": float(power.mean()),
+        "min_mechanical_control_power_W": float(power.min()),
+        "max_mechanical_control_power_W": float(power.max()),
+        "negative_mechanical_power_fraction": float(np.mean(power[nonzero] < 0)) if np.any(nonzero) else None,
+    }
+
 
 def mag3(df: pd.DataFrame, cols: list[str]) -> np.ndarray:
     return np.sqrt(sum(np.asarray(df[c], dtype=float) ** 2 for c in cols))
@@ -87,12 +225,10 @@ def summarize_reference(df: pd.DataFrame) -> dict[str, Any]:
 
 
 def summarize_basilisk(df: pd.DataFrame) -> dict[str, Any]:
+    independent = telemetry_metrics(df)
     t = df["time_s"].to_numpy(dtype=float)
     omega = vec3(df, ["omega_B_x_rad_s", "omega_B_y_rad_s", "omega_B_z_rad_s"])
-    if "omega_mag_rad_s" in df.columns:
-        wmag = df["omega_mag_rad_s"].to_numpy(dtype=float)
-    else:
-        wmag = np.linalg.norm(omega, axis=1)
+    wmag = np.linalg.norm(omega, axis=1)
 
     energy = rotational_energy_J(omega)
     out: dict[str, Any] = {
@@ -111,56 +247,12 @@ def summarize_basilisk(df: pd.DataFrame) -> dict[str, Any]:
     if "pcoil_total_W" in df.columns:
         out["mean_coil_power_W"] = float(df["pcoil_total_W"].mean())
         out["peak_coil_power_W"] = float(df["pcoil_total_W"].max())
-    if "B_B_mag_T" in df.columns:
-        out["mean_B_body_T"] = float(df["B_B_mag_T"].mean())
-        out["peak_B_body_T"] = float(df["B_B_mag_T"].max())
-    elif all(c in df.columns for c in ["B_B_x_T", "B_B_y_T", "B_B_z_T"]):
+    if all(c in df.columns for c in ["B_B_x_T", "B_B_y_T", "B_B_z_T"]):
         bmag = mag3(df, ["B_B_x_T", "B_B_y_T", "B_B_z_T"])
         out["mean_B_body_T"] = float(bmag.mean())
         out["peak_B_body_T"] = float(bmag.max())
 
-    torque_cols = None
-    if all(c in df.columns for c in ["applied_torque_B_x_Nm", "applied_torque_B_y_Nm", "applied_torque_B_z_Nm"]):
-        torque_cols = ["applied_torque_B_x_Nm", "applied_torque_B_y_Nm", "applied_torque_B_z_Nm"]
-        torque_label = "applied_magnetic_torque"
-    elif all(c in df.columns for c in ["mtb_torque_B_x_Nm", "mtb_torque_B_y_Nm", "mtb_torque_B_z_Nm"]):
-        torque_cols = ["mtb_torque_B_x_Nm", "mtb_torque_B_y_Nm", "mtb_torque_B_z_Nm"]
-        torque_label = "mtb_torque"
-    else:
-        torque_label = "none"
-
-    if torque_cols is not None:
-        torque = vec3(df, torque_cols)
-        torque_mag = np.linalg.norm(torque, axis=1)
-        mech_power = np.sum(omega * torque, axis=1)
-        nonzero_torque = torque_mag > 1e-14
-        out[f"mean_{torque_label}_Nm"] = float(torque_mag.mean())
-        out[f"peak_{torque_label}_Nm"] = float(torque_mag.max())
-        out["mean_mechanical_control_power_W"] = float(mech_power.mean())
-        out["min_mechanical_control_power_W"] = float(mech_power.min())
-        out["max_mechanical_control_power_W"] = float(mech_power.max())
-        out["negative_mechanical_power_fraction"] = float(np.mean(mech_power[nonzero_torque] < 0.0)) if np.any(nonzero_torque) else None
-
-    if all(c in df.columns for c in ["mcmd_x_Am2", "mcmd_y_Am2", "mcmd_z_Am2", "B_B_x_T", "B_B_y_T", "B_B_z_T"]):
-        m_B = vec3(df, ["mcmd_x_Am2", "mcmd_y_Am2", "mcmd_z_Am2"])
-        B_B = vec3(df, ["B_B_x_T", "B_B_y_T", "B_B_z_T"])
-        tau_cross = np.cross(m_B, B_B)
-        if torque_cols is not None:
-            torque = vec3(df, torque_cols)
-            err = torque - tau_cross
-            err_mag = np.linalg.norm(err, axis=1)
-            tau_mag = np.linalg.norm(torque, axis=1)
-            out["torque_cross_product_mean_abs_error_Nm"] = float(err_mag.mean())
-            out["torque_cross_product_max_abs_error_Nm"] = float(err_mag.max())
-            out["torque_cross_product_max_rel_error"] = float(err_mag.max() / max(float(tau_mag.max()), 1e-30))
-
-    if all(c in df.columns for c in ["B_N_x_T", "B_N_y_T", "B_N_z_T", "B_B_x_T", "B_B_y_T", "B_B_z_T"]):
-        B_N = vec3(df, ["B_N_x_T", "B_N_y_T", "B_N_z_T"])
-        B_B = vec3(df, ["B_B_x_T", "B_B_y_T", "B_B_z_T"])
-        b_norm_err = np.abs(np.linalg.norm(B_N, axis=1) - np.linalg.norm(B_B, axis=1))
-        out["max_B_frame_norm_error_T"] = float(b_norm_err.max())
-        out["mean_B_frame_norm_error_T"] = float(b_norm_err.mean())
-
+    out.update(independent)
     return out
 
 
@@ -192,14 +284,29 @@ def build_validation(ref: dict[str, Any], bsk: dict[str, Any]) -> dict[str, Any]
     )
     checks["torque_matches_m_cross_B"] = check(
         "torque_matches_m_cross_B",
-        bsk.get("torque_cross_product_max_abs_error_Nm", float("inf")) < 5e-8
-        or bsk.get("torque_cross_product_max_rel_error", float("inf")) < 0.05,
+        bsk.get("torque_cross_product_max_abs_error_Nm", float("inf")) < 1e-12,
         {
             "max_abs_error_Nm": bsk.get("torque_cross_product_max_abs_error_Nm"),
             "max_rel_error": bsk.get("torque_cross_product_max_rel_error"),
         },
-        "max abs < 5e-8 Nm OR max rel < 5%",
+        "max abs < 1e-12 Nm; recorded effector versus m_command x reconstructed B_body",
     )
+    checks["telemetry_epochs_aligned"] = check(
+        "telemetry_epochs_aligned", bsk.get("telemetry_timing_valid") is True,
+        bsk.get("max_sensor_state_age_s"),
+        "Exact publication ticks; consumed state one 0.1 s step earlier, except initialization",
+    )
+    # Numerical consistency tolerances for the current ideal software baseline;
+    # these are not sensor accuracy, hardware calibration or flight requirements.
+    for name, metric, tolerance in [
+        ("B_frame_vector_aligned", "max_B_frame_vector_error_T", 1e-12),
+        ("nav_rate_matches_consumed_state", "max_nav_rate_error_rad_s", 1e-12),
+        ("nav_attitude_matches_consumed_state", "max_nav_mrp_error", 1e-12),
+        ("effector_matches_torque_message", "expected_vs_applied_max_error_Nm", 1e-12),
+        ("applied_torque_predicts_rate_step", "rigid_body_step_max_rate_error_rad_s", 1e-10),
+    ]:
+        value = bsk.get(metric)
+        checks[name] = check(name, value is not None and value < tolerance, value, f"< {tolerance}")
     checks["B_body_mean_LEO_plausible"] = check(
         "B_body_mean_LEO_plausible",
         2.0e-5 <= bsk.get("mean_B_body_T", 0.0) <= 7.0e-5,
@@ -230,21 +337,27 @@ def build_validation(ref: dict[str, Any], bsk: dict[str, Any]) -> dict[str, Any]
     }
 
 
-def main() -> None:
+def main() -> int:
     if not REF.exists():
         maybe_remove_stale_comparison()
         raise SystemExit(f"Reference CSV not found: {REF}")
     bsk_csv = OUT_DATA / "detumble_output.csv"
     if not bsk_csv.exists():
-        bsk_csv = OUT_DATA / "minimal_output.csv"
-    if not bsk_csv.exists():
         maybe_remove_stale_comparison()
-        raise SystemExit("No Basilisk output found. Run scenario_huskysat2_detumble.py or scenario_huskysat2_minimal.py first.")
+        raise SystemExit("Detumble output not found. Run scenario_huskysat2_detumble.py first.")
 
-    ref_df = pd.read_csv(REF)
-    bsk_df = pd.read_csv(bsk_csv)
-    ref = summarize_reference(ref_df)
-    bsk = summarize_basilisk(bsk_df)
+    try:
+        ref_df = pd.read_csv(REF)
+        bsk_df = pd.read_csv(bsk_csv)
+        ref = summarize_reference(ref_df)
+        bsk = summarize_basilisk(bsk_df)
+    except (ValueError, KeyError, IndexError, OSError) as exc:
+        failure = {"reference_file": str(REF), "basilisk_file": str(bsk_csv),
+                   "validation": {"passed": False, "error": str(exc)}}
+        COMPARE_OUT.parent.mkdir(parents=True, exist_ok=True)
+        COMPARE_OUT.write_text(json.dumps(failure, indent=2), encoding="utf-8")
+        print(json.dumps(failure, indent=2))
+        return 2
     validation = build_validation(ref, bsk)
 
     comparison = {
@@ -255,7 +368,12 @@ def main() -> None:
         "validation": validation,
         "notes": [
             "This comparison is physical-metric based, not CSV schema exact.",
-            "The validation checks are range/invariant tests, not claims of exact standalone equivalence.",
+            "Frame, nav, torque-readback and rate-step checks use separate recorded sources with explicit epochs.",
+            "The direct ExtForceTorque bridge consumes controller torque; readback verifies its wiring, not independent magnetic actuator physics.",
+            "The rate-step check independently integrates Euler's equation with the legacy assumed inertia and recorded effector torque over each sampled 0.1 s interval; initialization is excluded.",
+            "WMM evaluation uses the previous published position. This phase exposes that mixed epoch without repairing WMM/Earth orientation or changing dynamics.",
+            "Field magnitude, coil power, decreasing rate/energy and the 3000-3500 s first-crossing window are development regressions, not HS-2 requirements verification.",
+            "Reference summaries are informational; these checks do not establish standalone equivalence or HS-2 flight performance.",
             "Exact agreement is not expected until WMM epoch, frames, controller timing, disturbances, and actuator models are aligned.",
         ],
     }
@@ -271,7 +389,8 @@ def main() -> None:
         print("Failed checks:")
         for name in failed:
             print(f"  - {name}")
+    return 0 if validation["passed"] else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
