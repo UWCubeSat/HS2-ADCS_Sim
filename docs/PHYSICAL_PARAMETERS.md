@@ -127,7 +127,7 @@ Local source aliases: L1 = [minimal](../basilisk_runner/scenario_huskysat2_minim
 | H-bridge | DRV8231 in B3; voltage amplifiers TBR in ICD | model | TBC | B3 section2.6; I1 Table01 | Source register | No released PCB/BOM/driver characterization established. |
 | PWM interface | Six PWM channels versus comment saying three PWM plus three GPIO | channels | TBC | I1 sections4.1.3,4.2.3 and comment[i] | Drive rev16403 | Internal contradiction; actual wiring/firmware must decide. |
 | PWM carrier/burst/settling | PWM_FREQUENCY,BURST_TICKS,RESET_WAIT_TICKS named; values TBD | Hz; ticks;s | TBD | I1 section4.1.3 | I1 register | No reproducible numeric actuation schedule or measured current decay. |
-| Magnetic quiet interval | Burst then zero current for uncontaminated magnetic sampling | behavior | CONFIRMED | I1 section4.2.4 | I1 register | Duration/settling threshold and sensor phase remain TBD; active repo does not model it. |
+| Magnetic quiet interval | Burst then zero current for uncontaminated magnetic sampling | behavior | CONFIRMED | I1 section4.2.4 | I1 register | Duration/settling threshold and sensor phase remain TBD. Phase 6A now offers an opt-in software timing cycle; this does not establish hardware timing. |
 | Duty assumptions | PDR80%; budget detumble50%,experiment20%,standby10% | % | ASSUMED | P1 slide20; B1 Power Draw | Source register | Analysis assumptions, not verified hardware thermal duty limits. |
 | Actuator thermal limits | Rod thermal-vacuum qualification -20 to80; air-coil operating -55 to85 | C | TBC | H1/H2/H3; I1 section3 | Source register | Flight drive/temperature/duty envelope unverified. |
 | Battery budget | 75.6 | Wh | ASSUMED | B1 Power Generated row16 | B1 register | Nominal capacity, not verified usable energy. |
@@ -157,6 +157,21 @@ Local source aliases: L1 = [minimal](../basilisk_runner/scenario_huskysat2_minim
 | Flight control rate | MDD/SW1 5 versus ICD10 | Hz | TBC | M1 section2.4;SW1 section2.2;I1 section4 | Source register | Effective execution timing and source-age trace not established. |
 | Image/GNSS timing | RVM LOST/FOUND10 ms,FOUND/GNSS +/-65 ms,FOUND/truth +/-10 ms; B3 camera0.50 ms,GNSS3.0 ms predictions | ms | TBC | R1 PAY-12/15/16;B3 sections4.4,4.6 | Source register | Requirement limits and predicted timing errors are distinct quantities; exposure midpoint/clock/latency need tests. |
 | General thermal environment | MDD internal -30 to40,external -40 to90,battery0 to45; B3 alignment environment -30 to85 | C | TBC | M1 section4.5;B3 section2.7 | Source register | Component-specific limits and thermoelastic/power constraints must be reconciled. |
+
+## Phase 6A magnetic cycle architecture (2026-09-06)
+
+The continuous regression mode remains the default, with unchanged physical profiles, gain, native torque law and 0.1 s command transport clock. The separate [magnetic_control_cycle.py](../basilisk_runner/magnetic_control_cycle.py) configuration controls only the opt-in acquisition/command cycle. Its duration inputs carry the same provenance/status fields as the physical runtime configuration; cycle settings and a separate hash are saved beside cycled CSVs. No numeric HS-2 timing selection is made.
+
+| PARAMETER | VALUE | UNITS | STATUS | SOURCE | REVISION/DATE | NOTES/CONFLICTS |
+|---|---|---|---|---|---|---|
+| Flight burst, quiet/settling and sample phase | Unresolved | s | TBD | I1 sections 4.1.3/4.2.4; existing source register | I1 register | Documented coil-off sampling intent does not specify these durations. Existing 5/10 Hz flight-rate conflict remains TBC. |
+| Diagnostic quiet / additional settling | 0.2 / 0.2 | s | ASSUMED | magnetic_control_cycle.py diagnostic_cycle_config | Phase 6A / 2026-09-06 | TEST-ONLY; at least 0.4 s observed zero command/effective dipole before acquisition. Settling may explicitly be zero in other diagnostic configurations. |
+| Diagnostic sample | Instant at cycle offset 0.4; integration duration 0 | s | ASSUMED | Same diagnostic factory | Phase 6A / 2026-09-06 | TEST-ONLY ideal acquisition; no physical measurement aperture or internal sensor timing is claimed. |
+| Diagnostic compute / actuation-start event | Cycle offsets 0.5 / 0.6 | s | ASSUMED | Same diagnostic factory | Phase 6A / 2026-09-06 | TEST-ONLY 0.1 s sample-to-compute and 0.1 s compute-to-actuate delays; controller uses the frozen sample's field and nav state together. |
+| Diagnostic burst / total coil-off / period | 0.4 / 0.6 / 1.0 | s | ASSUMED | Same diagnostic factory; derived sums | Phase 6A / 2026-09-06 | TEST-ONLY duty = 0.4. All durations resolve to integer plant ticks; not a hardware duty/thermal rating. |
+| Electrical command abstraction | Signed command divided by effective per-axis dipole limit | 1 | ASSUMED | MagneticCycleDriver; unchanged current/dipole limits | Phase 6A / 2026-09-06 | Normalized amplitude, not physical PWM carrier/duty. Current = dipole/gain; power estimate = I^2 R. No inductance, current decay, driver transient or remanence model. |
+
+All `_ns` cycle telemetry uses integer simulation nanoseconds; `-1` marks no sample/compute yet or an enabled coil with no current quiet-age credit. Cycle vector quantities use B axes: dipoles in A m^2, field in T, rate in rad/s, torque in N m, and MRPs dimensionless. `cycle_electrical_normalized` is dimensionless. `cycle_sample_valid` describes the acquired, held sample for its own cycle, not a claim that an energized magnetometer is clean. The actual TAM message is recorded independently. Schema 5 explicitly labels `B_B` as current truth and exports held sensor data separately. Architecture validation is not hardware validation or HS-2 flight-performance verification.
 
 ## Unclosed decisions
 

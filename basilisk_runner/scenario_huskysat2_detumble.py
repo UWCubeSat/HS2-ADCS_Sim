@@ -49,6 +49,17 @@ Use sensor_state_sigma_BN with B_N/B_B for frame checks, and held/post omega for
 the applied-torque dynamics check. No interpolation or time relabeling is used.
 These are CONFIRMED software scheduling/source semantics for this development
 configuration, not confirmed HS-2 hardware or flight timing requirements.
+
+Opt-in cycle mode (schema 5) retains the plant/environment contract above.
+TAM executes only at cycle_sample_epoch_ns, and the controller consumes that
+sample's field AND nav snapshot at cycle_compute_epoch_ns. B_B then explicitly
+means CURRENT TRUTH transform, while cycle_sample_B_B is the actual held TAM
+measurement. tam_message_time_ns is its real publication time (zero sentinel
+before the first acquisition). control_step_ns is the plant/command transport
+clock; cycle_period_ns is the control-cycle period. Current expected torque is
+a diagnostic truth-frame calculation, with sample-epoch controller torque
+separately exported. Current gated commands apply over the following interval;
+native torque at a COIL_OFF boundary can still belong to the preceding burst.
 """
 
 from __future__ import annotations
@@ -76,6 +87,7 @@ except ImportError as exc:
 from basilisk_adcs_adapter import ADCSConfig, PythonBdotMTQController, MAX_EFF_CNT
 from magnetic_environment import EarthOrientation, WMMInputGuard, MODEL_NAME
 from magnetic_actuation import MagneticInputGuard, ReplayDipoles
+from magnetic_control_cycle import MagneticCycleConfig, MagneticCycleDriver, diagnostic_cycle_config
 from hs2_sim_config import DEFAULT_CONFIG, HS2SimConfig, PROFILE_NAMES, get_profile_config, physical_profile_name
 
 HERE = Path(__file__).resolve().parent
@@ -208,10 +220,14 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
 
 def run(stop_time_s=None, write_outputs=True, actuator=None,
         replay_commands=None, capture_commands=False, make_plots=True,
-        config: HS2SimConfig = DEFAULT_CONFIG):
+        config: HS2SimConfig = DEFAULT_CONFIG, cycle: MagneticCycleConfig | None = None):
     config = config.with_run_options(stop_time_s, actuator)
     actuator = config.magnetorquers.implementation.value
     step_ns = macros.sec2nano(config.timing.dynamics_step.value)
+    if cycle is not None:
+        cycle.validate(step_ns)
+        if actuator != "native" or replay_commands is not None:
+            raise ValueError("Cycled acquisition requires native actuation without command replay")
     sim = SimulationBaseClass.SimBaseClass()
     proc = sim.CreateNewProcess("DynamicsProcess")
     proc.addTask(sim.CreateNewTask("DynamicsTask", step_ns))
@@ -256,6 +272,13 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     ctrl.navAttInMsg.subscribeTo(nav.attOutMsg)
     ctrl.tamSensorInMsg.subscribeTo(tam.tamDataOutMsg)
 
+    cycled_driver = None
+    if cycle is not None:
+        cycled_driver = MagneticCycleDriver(cycle, step_ns, tam, nav.attOutMsg,
+                                           sc.scStateOutMsg, mag.envOutMsgs[0], adcs_cfg)
+        cycled_driver.ModelTag = "MagneticCycleDriver"
+        ctrl = cycled_driver
+
     command_source = ctrl
     if replay_commands is not None:
         command_source = ReplayDipoles(replay_commands, tam.tamDataOutMsg)
@@ -276,10 +299,12 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         effector.cmdTorqueInMsg.subscribeTo(command_source.cmdTorqueOutMsg)
     effector.ModelTag = "NativeMTB" if actuator == "native" else "DirectMagneticTorqueReference"
     sc.addDynamicEffector(effector)
+    if cycled_driver is not None:
+        cycled_driver.effector = effector
 
     # Capture the previous command/field/state before propagation. These are
     # evidence for the magnetic inputs held during the interval ending now.
-    rec_dt = macros.sec2nano(config.timing.record_step.value)
+    rec_dt = step_ns if cycle is not None else macros.sec2nano(config.timing.record_step.value)
     held_state_log = sc.scStateOutMsg.recorder(rec_dt)
     held_mag_log = mag.envOutMsgs[0].recorder(rec_dt)
     held_cmd_log = command_source.mtbCmdOutMsg.recorder(rec_dt)
@@ -312,7 +337,8 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     sim.AddModelToTask("DynamicsTask", wmm_guard, ModelPriority=910)
     sim.AddModelToTask("DynamicsTask", mag, ModelPriority=900)
     sim.AddModelToTask("DynamicsTask", nav, ModelPriority=800)
-    sim.AddModelToTask("DynamicsTask", tam, ModelPriority=700)
+    if cycle is None:
+        sim.AddModelToTask("DynamicsTask", tam, ModelPriority=700)
     sim.AddModelToTask("DynamicsTask", ctrl, ModelPriority=600)
     if replay_commands is not None:
         sim.AddModelToTask("DynamicsTask", command_source, ModelPriority=550)
@@ -357,7 +383,8 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     euler = np.array([dcm_to_euler321(mrp_to_dcm(s)) for s in sigma])
 
     B_N = sampled(mag_log, "magField_N")
-    B_B = sampled(tam_log, "tam_S")
+    B_B = (sampled(tam_log, "tam_S") if cycle is None else
+           np.array([mrp_to_dcm(s) @ b for s, b in zip(sigma, B_N)]))
     dipole = sampled(cmd_log, "mtbDipoleCmds")[:, :3]
     expected_torque_B = sampled(expected_torque_log, "torqueRequestBody")
     applied_torque_B = sampled(effector_log, "torqueExternalPntB_B")
@@ -372,11 +399,12 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     guard_ticks = guard_data["time_ns"].to_numpy(dtype=np.int64)
 
     df = pd.DataFrame({
-        "telemetry_schema_version": 4,
+        "telemetry_schema_version": 4 if cycle is None else 5,
         "actuator_mode": actuator,
-        "command_mode": "replay" if replay_commands is not None else "controller",
+        "command_mode": "cycled" if cycle is not None else ("replay" if replay_commands is not None else "controller"),
         "controller_diagnostics_applied": replay_commands is None,
-        "expected_torque_source": ("ReplayDipoles" if replay_commands is not None else "PythonBdotMTQController") + ".CmdTorqueBodyMsg",
+        "expected_torque_source": ("MagneticCycleDriver.current_truth_expectation" if cycle is not None else
+                                  ("ReplayDipoles" if replay_commands is not None else "PythonBdotMTQController")) + ".CmdTorqueBodyMsg",
         "applied_torque_evaluation": "final_RK4_stage" if actuator == "native" else "constant_body_hold",
         "time_s": t,
         "time_ns": ticks,
@@ -460,6 +488,16 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     for col in diagnostic_cols:
         df[col] = diag_sampled[col].to_numpy(dtype=float)
 
+    if cycle is not None:
+        extra = {col: diag_sampled[col].to_numpy() for col in diag_sampled if col.startswith("cycle_")}
+        df = pd.concat([df, pd.DataFrame(extra)], axis=1)
+        df["cycle_period_ns"] = cycle.period_ns
+        df["cycle_config_sha256"] = cycle.fingerprint()
+        df["B_B_source"] = "current_truth_C_BN_times_WMM_B_N; not a sensor sample"
+        for i, a in enumerate("xyz"):
+            df[f"tam_sample_B_B_{a}_T"] = sampled(tam_log, "tam_S")[:, i]
+        df.attrs["magnetic_cycle"] = cycle.to_dict()
+
     if actuator == "native":
         configuration = mtb_cfg_msg.read()
         for i, axis in enumerate("xyz"):
@@ -485,6 +523,8 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         out_csv = OUT_DATA / f"detumble_{actuator}_replay.csv"
     if profile != "regression_baseline":
         out_csv = out_csv.with_name(out_csv.stem + f"_{profile}.csv")
+    if cycle is not None:
+        out_csv = out_csv.with_name(out_csv.stem + "_cycled.csv")
     if write_outputs:
         df.to_csv(out_csv, index=False)
         out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
@@ -494,6 +534,10 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
                     "configuration": config.to_dict(), "csv_file": out_csv.name,
                     "csv_sha256": hashlib.sha256(out_csv.read_bytes()).hexdigest(),
                     "scope": "Development/sensitivity model; NOT FLIGHT VALIDATED"}
+        if cycle is not None:
+            manifest.update(magnetic_cycle=cycle.to_dict(), cycle_sha256=cycle.fingerprint(),
+                            actual_record_step_ns=step_ns, telemetry_schema_version=5)
+            out_csv.with_name(out_csv.stem + "_cycle.json").write_text(json.dumps(cycle.to_dict(), indent=2), encoding="utf-8")
         out_csv.with_name(out_csv.stem + "_run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         print(f"Wrote {out_csv}")
     print(f"Initial |omega| [rad/s]: {omega_mag[0]:.12g}")
@@ -504,6 +548,8 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     if write_outputs and make_plots:
         from plot_results import plot_all
         plot_dir = OUT_PLOTS if actuator == "native" else OUT_PLOTS / "direct_reference"
+        if cycle is not None:
+            plot_dir = plot_dir / "cycled"
         plot_all(df, plot_dir if profile == "regression_baseline" else plot_dir / profile)
     return df
 
@@ -518,9 +564,15 @@ def main(argv=None):
                            help="Physical profile; candidate is an explicit opt-in sensitivity case")
     parser.add_argument("--duration", type=float, default=None)
     parser.add_argument("--no-plots", action="store_true")
+    cycle_selection = parser.add_mutually_exclusive_group()
+    cycle_selection.add_argument("--magnetic-cycle", choices=("continuous", "diagnostic"), default="continuous",
+                                 help="Opt-in ASSUMED architecture-test timing; continuous remains default")
+    cycle_selection.add_argument("--cycle-config", type=Path, help="Explicit provenance-bearing cycle JSON")
     args = parser.parse_args(argv)
     run(stop_time_s=args.duration, actuator=args.actuator, make_plots=not args.no_plots,
-        config=get_profile_config(args.profile) if args.config is None else HS2SimConfig.load(args.config))
+        config=get_profile_config(args.profile) if args.config is None else HS2SimConfig.load(args.config),
+        cycle=(MagneticCycleConfig.load(args.cycle_config) if args.cycle_config else
+               diagnostic_cycle_config() if args.magnetic_cycle == "diagnostic" else None))
 
 
 if __name__ == "__main__":

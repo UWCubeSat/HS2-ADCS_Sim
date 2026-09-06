@@ -160,24 +160,25 @@ def require_detumble_telemetry(df: pd.DataFrame) -> None:
         raise ValueError(f"Missing Phase 2B telemetry columns: {', '.join(missing)}")
     if len(df) < 2 or not finite_numeric(df):
         raise ValueError("Detumble telemetry must have at least two finite rows")
-    if df["telemetry_schema_version"].nunique() != 1 or df["telemetry_schema_version"].iloc[0] not in (3, 4):
+    if df["telemetry_schema_version"].nunique() != 1 or df["telemetry_schema_version"].iloc[0] not in (3, 4, 5):
         raise ValueError("Unsupported or mixed telemetry schema; rerun the detumble scenario")
     source = df["applied_torque_source"].iloc[0]
     if df["applied_torque_source"].nunique() != 1 or source not in (
             "ExtForceTorque.torqueExternalPntB_B", "MtbEffector.torqueExternalPntB_B"):
         raise ValueError("Applied torque must identify one recorded dynamics effector")
     extra_times = []
-    if df["telemetry_schema_version"].iloc[0] == 4:
+    if df["telemetry_schema_version"].iloc[0] in (4, 5):
         native = source.startswith("MtbEffector.")
         metadata = {"actuator_mode", "command_mode", "applied_torque_evaluation"}
         if not metadata.issubset(df.columns):
             raise ValueError("Missing schema 4 actuator contract")
         if (not (df["actuator_mode"] == ("native" if native else "direct")).all()
                 or not (df["applied_torque_evaluation"] == ("final_RK4_stage" if native else "constant_body_hold")).all()
-                or df["command_mode"].nunique() != 1 or df["command_mode"].iloc[0] not in ("controller", "replay")):
+                or df["command_mode"].nunique() != 1
+                or df["command_mode"].iloc[0] not in (("cycled",) if df["telemetry_schema_version"].iloc[0] == 5 else ("controller", "replay"))):
             raise ValueError("Inconsistent actuator/command/evaluation contract")
     if source.startswith("MtbEffector."):
-        if not (df["telemetry_schema_version"] == 4).all():
+        if not df["telemetry_schema_version"].isin((4, 5)).all():
             raise ValueError("Native torque requires schema 4 stage and input evidence")
         extra_times = ["native_output_time_ns", "native_input_dipole_time_ns", "native_input_field_time_ns"]
         required_native = {*extra_times, *vector_columns("native_mtbNetTorque_B", "Nm"),
@@ -198,9 +199,12 @@ def telemetry_metrics(df: pd.DataFrame, config=None) -> dict[str, Any]:
     step_ns = round(config.timing.control_step.value * 1e9)
     inertia = np.asarray(config.spacecraft.inertia.value)
     ticks = df["time_ns"].to_numpy(dtype=np.int64)
+    cycled = int(df["telemetry_schema_version"].iloc[0]) == 5
+    # Schema 5 intentionally holds actual TAM samples; its separate cycle checks
+    # validate acquisition/consumption. B_B is explicitly current truth in schema 5.
     source_ticks = df["sensor_state_time_ns"].to_numpy(dtype=np.int64)
     publication_aligned = all(np.array_equal(df[c].to_numpy(), ticks)
-                              for c in PUBLICATION_TIME_COLUMNS)
+                              for c in PUBLICATION_TIME_COLUMNS if not (cycled and c == "tam_message_time_ns"))
     timing_valid = (ticks[0] == 0 and np.all(np.diff(ticks) > 0)
                     and np.all(ticks % step_ns == 0)
                     and (df["control_step_ns"] == step_ns).all()
@@ -290,6 +294,17 @@ def telemetry_metrics(df: pd.DataFrame, config=None) -> dict[str, Any]:
                              and (df["earth_orientation_model"] == config.environment.earth_orientation_model.value).all()
                              and np.max(clock_error) < 0.0017)
     earth_error = np.linalg.norm(earth - reference_earth_matrix(et), axis=(1, 2))
+    cycle_metrics = {}
+    if cycled:
+        from validate_magnetic_cycle import cycle_checks
+        cycle_metrics["magnetic_cycle_checks"] = cycle_checks(df, config)
+        valid_samples = df["cycle_sample_valid"].to_numpy(dtype=bool)
+        ages = ticks[valid_samples] - df["cycle_sample_epoch_ns"].to_numpy(dtype=np.int64)[valid_samples]
+        cycle_metrics["max_held_magnetic_sample_age_s"] = float(ages.max()*1e-9) if len(ages) else None
+        cycle_metrics["sensor_timing_contract"] = (
+            "sensor_state_* and nav_* describe the current truth/nav provider; their age and agreement metrics "
+            "do not describe a fresh TAM acquisition. The controller consumes the cycle's frozen field/nav "
+            "snapshot; actual TAM publication, held sample age and consumption are checked separately.")
     return {
         "telemetry_timing_valid": bool(timing_valid),
         "max_sensor_state_age_s": float(np.max(ticks - source_ticks) * 1e-9),
@@ -318,6 +333,7 @@ def telemetry_metrics(df: pd.DataFrame, config=None) -> dict[str, Any]:
         "max_mechanical_control_power_W": float(power.max()),
         "negative_mechanical_power_fraction": float(np.mean(power[nonzero] < 0)) if np.any(nonzero) else None,
         **native_metrics,
+        **cycle_metrics,
     }
 
 
@@ -514,6 +530,11 @@ def build_validation(ref: dict[str, Any], bsk: dict[str, Any]) -> dict[str, Any]
         for name in ("basilisk_final_omega_less_than_initial", "basilisk_final_energy_less_than_initial",
                      "basilisk_mean_mechanical_power_negative", "peak_coil_power_within_expected_limit"):
             del checks[name]
+    if bsk.get("command_mode") == "cycled":
+        checks.update(bsk["magnetic_cycle_checks"])
+        checks["telemetry_epochs_aligned"]["limit"] = (
+            "Current plant/environment/nav-provider and command-transport epochs; held TAM and controller "
+            "consumption epochs validated separately by cycle checks")
     return {
         "passed": all(item["passed"] for item in checks.values()),
         "checks": checks,
@@ -538,6 +559,10 @@ def main(bsk_csv=None, report_path=None) -> int:
         if "simulation_config_sha256" in bsk_df:
             config_path = bsk_csv.with_name(bsk_csv.stem + "_config.json")
             bsk_df.attrs["simulation_config"] = HS2SimConfig.load(config_path).to_dict()
+        if int(bsk_df.telemetry_schema_version.iloc[0]) == 5:
+            from magnetic_control_cycle import MagneticCycleConfig
+            bsk_df.attrs["magnetic_cycle"] = MagneticCycleConfig.load(
+                bsk_csv.with_name(bsk_csv.stem + "_cycle.json")).to_dict()
         ref = summarize_reference(ref_df)
         bsk = summarize_basilisk(bsk_df)
     except (ValueError, KeyError, IndexError, OSError) as exc:
@@ -572,6 +597,9 @@ def main(bsk_csv=None, report_path=None) -> int:
             "Exact agreement is not expected until WMM epoch, frames, controller timing, disturbances, and actuator models are aligned.",
         ],
     }
+
+    if bsk.get("command_mode") == "cycled":
+        comparison["notes"][4] = bsk["sensor_timing_contract"]
 
     COMPARE_OUT.parent.mkdir(parents=True, exist_ok=True)
     COMPARE_OUT.write_text(json.dumps(comparison, indent=2), encoding="utf-8")

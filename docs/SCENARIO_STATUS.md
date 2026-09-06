@@ -44,6 +44,22 @@ Phase 5 operational addendum (2026-09-06): the recovered native-MtbEffector scen
 
 The unsaturated damping identity predicts nonpositive mechanical power when the same contemporaneous physical body field/rate enter the law. Per-axis clipping, sampled/biased measurements, and applied-versus-command timing require their own verification; they cannot be dismissed by that algebraic identity.
 
+### Phase 6A opt-in magnetic acquisition/actuation cycle
+
+The continuous mode above remains the recovered regression default. `scenario_huskysat2_detumble.py --magnetic-cycle diagnostic` selects a separate ASSUMED / TEST-ONLY timing configuration; `--cycle-config` accepts an explicit provenance-bearing cycle JSON. Both physical profiles remain unchanged. No HS-2 burst, settling, PWM or sample-phase value is released by this option.
+
+| FIELD | PHASE 6A BEHAVIOR |
+|---|---|
+| Purpose/status | Validate actual coil-off acquisition and held-burst architecture. WORKING DEVELOPMENT BASELINE; NOT FLIGHT VALIDATED. |
+| Phase sequence | In each diagnostic 1 s cycle: COIL_OFF at 0; QUIET; SETTLING at 0.2; SAMPLE at 0.4; COMPUTE at 0.5; ACTUATE over [0.6,1.0); repeat. Sample and compute are single events; their phase spans include the explicit subsequent waiting interval. |
+| Actual sensor/controller execution | The driver calls the existing TAM only at SAMPLE and the unchanged controller only at COMPUTE. Field and nav are frozen at the same acquisition epoch. A sample from an earlier cycle cannot authorize a new burst. |
+| Actuator/environment | One attached/scheduled native MtbEffector. Gated body dipole is republished each 0.1 s tick for the following interval. Current WMM inertial field continues supplying the plant; Earth orientation and magnetic physics are unchanged. |
+| Validity | Native input dipole/effective dipole and completed-step torque must be zero at acquisition, with sufficient observed quiet history and current field/state/nav epochs. Invalid acquisition or control usage faults in strict mode; rejection counters remain visible. |
+| Telemetry | Schema 5 records every plant tick, phase boundaries, actual TAM sample/message epochs, held sample state/field, compute/burst epochs, requested/clipped/electrical/native-input dipoles, and independent native torque. Current truth B_B is explicitly distinguished from held measured B. At a coil-off boundary the logged native torque can still describe the preceding burst; checks use the held input of the completed interval. |
+| Validation/accounting | Independent event-grid reconstruction, corrupted-record tests, runtime invalid-input tests, native torque/state checks, and full-step work versus propagated energy. Electrical energy is only an estimate under the existing provisional I^2 R model. |
+| Output | Separate `*_cycled.csv`, physical config, cycle config/hash, and run manifest; `validate_magnetic_cycle.py` produces timing/duty/energy results. |
+| Limitations | Ideal instantaneous sampling and electrical actuation; no carrier, RL decay, magnetic contamination magnitude, remanence, measured settling criterion, thermal limit or hardware correlation. The nominal 40% diagnostic burst duty is not an HS-2 design selection. No 24-hour requirement verification. |
+
 ## Current direct-torque pointing
 
 | FIELD | FINDING |
