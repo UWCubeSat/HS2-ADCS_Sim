@@ -1,9 +1,11 @@
 """First-party runtime inputs for the Phase 3 detumble model, centralized in Phase 4.
 
 Defaults preserve c1b6021 (2026-09-05). This is a runtime baseline, not a released
-HS-2 vehicle configuration. Requirements/candidate values stay in
-docs/REQUIREMENTS_BASELINE.md and docs/PHYSICAL_PARAMETERS.md. In particular,
-the 3.72911 kg budget estimate is NOT selected; actual COM/inertia remain TBD.
+HS-2 vehicle configuration. Phase 5 adds an explicitly selected hs2_candidate
+physical profile from docs/PHYSICAL_PARAMETERS.md; it never replaces defaults.
+Its budget mass and geometry-only inertia are assumptions; flight COM/inertia
+remain TBD. Profile identity is separate from the unchanged configuration JSON
+schema/fingerprint, and is recorded in each scenario's run manifest.
 
 Use dataclasses.replace to make explicit, provenance-bearing configurations.
 No environment variables, requirements-derived substitutions or silent fallback.
@@ -346,3 +348,87 @@ class HS2SimConfig:
 
 
 DEFAULT_CONFIG = HS2SimConfig()
+
+
+# Phase 5 evidence is reused from the completed audit, not a new hardware release.
+# Keep all non-spacecraft sections identical to DEFAULT_CONFIG. Do not use B1's
+# isolated 0.05 kg m^2 budget entry as a tensor or silently select new hardware.
+_CANDIDATE_MASS = Parameter(
+    3.72911, "kg", "ASSUMED",
+    "docs/PHYSICAL_PARAMETERS.md: B1 OFFICIAL UNP BUDGETS, Mass Budget E43 "
+    "(Drive 1QjB3b6N_8ApnokAY7mx5-lb7i-Ln06A943hU4ePlcwg); B2 same roll-up",
+    "B1 cover 2025-07-31; modified 2026-09-03; HS-2 release revision not established",
+    "spacecraft",
+    "Mass-budget estimate only; estimated PCB masses, TBD cells and old camera/lens "
+    "entries remain. Not released or measured flight mass; excludes the budget margin.")
+_CANDIDATE_DIMENSIONS = Parameter(
+    (0.100, 0.100, 0.3405), "m", "TBC",
+    "docs/PHYSICAL_PARAMETERS.md: R1 Working RVM STR-9 "
+    "(Drive 11IF6Z258qsOcPkMAP1GGssFSR6CSEYRHTrowt0nhDzM); "
+    "M1 section 4.6; B2 Volume Budget",
+    "R1 tracker rev 9, 2026-03-21; M1 log rev 8, 2026-08-17; B2 draft modified 2026-08-27",
+    "B xyz",
+    "RVM envelope 100 x 100 x 340.5 mm selected only for this sensitivity case. "
+    "Conflicts retained: MDD 100 x 100 x 340 mm; volume-budget structure "
+    "100 x 100 x 338.6 mm. 3U is CONFIRMED design intent (M1 4.6/R1 STR-9), "
+    "not confirmed exact/as-built dimensions. Mathematical X=0.100 m, Y=0.100 m, "
+    "Z=0.3405 m; physical HS-2 axis mapping and deployed geometry remain TBD.")
+_CX, _CY, _CZ = _CANDIDATE_DIMENSIONS.value
+_CM = _CANDIDATE_MASS.value
+_CANDIDATE_INERTIA = Parameter(
+    ((_CM / 12.0 * (_CY**2 + _CZ**2), 0.0, 0.0),
+     (0.0, _CM / 12.0 * (_CX**2 + _CZ**2), 0.0),
+     (0.0, 0.0, _CM / 12.0 * (_CX**2 + _CY**2))),
+    "kg m^2", "ASSUMED",
+    "Phase 5 uniform rectangular prism derived from candidate mass and dimensions; "
+    "docs/PHYSICAL_PARAMETERS.md: actual COM/full inertia TBD (I2/S1)",
+    "Phase 5 derivation 2026-09-06; no released CAD mass properties",
+    "B about COM",
+    "Geometry-only placeholder: Ixx=m(y^2+z^2)/12, Iyy=m(x^2+z^2)/12, "
+    "Izz=m(x^2+y^2)/12; SI kg and m. Uniform density, centroid=COM, principal "
+    "axes aligned to mathematical B xyz, hence products of inertia zero. "
+    "This is not the physical HS-2 tensor; CAD export with frame/origin and "
+    "deployed configuration is required. Does not use the isolated 0.05 kg m^2 budget entry.")
+_CANDIDATE_COM = Parameter(
+    (0.0, 0.0, 0.0), "m", "ASSUMED",
+    "docs/PHYSICAL_PARAMETERS.md: actual spacecraft COM TBD, I2 STR ICD/S1 structural report",
+    "Audit 2026-09-05; Phase 5 placeholder 2026-09-06; no measured/released COM",
+    "B: r_BcB_B",
+    "Model origin and uniform-prism centroid coincide with COM only by assumption. "
+    "Zero is not a measured HS-2 COM; authoritative physical COM remains TBD.")
+_HS2_CANDIDATE_CONFIG = replace(DEFAULT_CONFIG, spacecraft=SpacecraftConfig(
+    mass=_CANDIDATE_MASS, dimensions=_CANDIDATE_DIMENSIONS,
+    inertia=_CANDIDATE_INERTIA, com=_CANDIDATE_COM))
+PROFILE_NAMES = ("regression_baseline", "hs2_candidate")
+
+
+def get_regression_baseline_config() -> HS2SimConfig:
+    """The unchanged Phase 4/static-cleanup default, including its fingerprint."""
+    return DEFAULT_CONFIG
+
+
+def get_hs2_candidate_config() -> HS2SimConfig:
+    """Explicit opt-in sensitivity case; budget mass/TBC envelope, not flight truth."""
+    return _HS2_CANDIDATE_CONFIG
+
+
+def get_profile_config(name: str) -> HS2SimConfig:
+    if name == "regression_baseline":
+        return get_regression_baseline_config()
+    if name == "hs2_candidate":
+        return get_hs2_candidate_config()
+    raise ValueError(f"Unknown physical profile: {name!r}")
+
+
+def physical_profile_name(config: HS2SimConfig) -> str:
+    """Identify exact physical values AND provenance, including after JSON reload.
+
+    Nonphysical run options (duration, actuator, etc.) remain in the full config
+    fingerprint. Unrecognized physical overrides are explicitly named custom.
+    Names do not enter to_dict(): historical fingerprints stay compatible.
+    """
+    if config.spacecraft == DEFAULT_CONFIG.spacecraft:
+        return "regression_baseline"
+    if config.spacecraft == _HS2_CANDIDATE_CONFIG.spacecraft:
+        return "hs2_candidate"
+    return "custom"

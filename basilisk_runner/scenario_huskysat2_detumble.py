@@ -56,6 +56,7 @@ from __future__ import annotations
 from pathlib import Path
 import math
 import json
+import hashlib
 from typing import cast
 
 import matplotlib.pyplot as plt
@@ -75,7 +76,7 @@ except ImportError as exc:
 from basilisk_adcs_adapter import ADCSConfig, PythonBdotMTQController, MAX_EFF_CNT
 from magnetic_environment import EarthOrientation, WMMInputGuard, MODEL_NAME
 from magnetic_actuation import MagneticInputGuard, ReplayDipoles
-from hs2_sim_config import DEFAULT_CONFIG, HS2SimConfig
+from hs2_sim_config import DEFAULT_CONFIG, HS2SimConfig, PROFILE_NAMES, get_profile_config, physical_profile_name
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -477,12 +478,23 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
                                        zip(full_cmd_log.timesWritten(), full_cmd_log.mtbDipoleCmds)]
     df["simulation_config_sha256"] = config.fingerprint()
     df.attrs["simulation_config"] = config.to_dict()
+    profile = physical_profile_name(config)
+    df.attrs["physical_profile"] = profile
     out_csv = OUT_DATA / ("detumble_output.csv" if actuator == "native" else "detumble_direct_output.csv")
     if replay_commands is not None:
         out_csv = OUT_DATA / f"detumble_{actuator}_replay.csv"
+    if profile != "regression_baseline":
+        out_csv = out_csv.with_name(out_csv.stem + f"_{profile}.csv")
     if write_outputs:
         df.to_csv(out_csv, index=False)
         out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
+        # Additive metadata preserves the historical CSV and bare config schema.
+        # The snapshot includes physical values, units, statuses and provenance.
+        manifest = {"physical_profile": profile, "configuration_sha256": config.fingerprint(),
+                    "configuration": config.to_dict(), "csv_file": out_csv.name,
+                    "csv_sha256": hashlib.sha256(out_csv.read_bytes()).hexdigest(),
+                    "scope": "Development/sensitivity model; NOT FLIGHT VALIDATED"}
+        out_csv.with_name(out_csv.stem + "_run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         print(f"Wrote {out_csv}")
     print(f"Initial |omega| [rad/s]: {omega_mag[0]:.12g}")
     print(f"Final   |omega| [rad/s]: {omega_mag[-1]:.12g}")
@@ -491,17 +503,25 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
 
     if write_outputs and make_plots:
         from plot_results import plot_all
-        plot_all(df, OUT_PLOTS if actuator == "native" else OUT_PLOTS / "direct_reference")
+        plot_dir = OUT_PLOTS if actuator == "native" else OUT_PLOTS / "direct_reference"
+        plot_all(df, plot_dir if profile == "regression_baseline" else plot_dir / profile)
     return df
 
 
-if __name__ == "__main__":
+def main(argv=None):
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--actuator", choices=("native", "direct"), default=None)
-    parser.add_argument("--config", type=Path, help="Explicit provenance-bearing runtime configuration JSON")
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--config", type=Path, help="Explicit provenance-bearing runtime configuration JSON")
+    selection.add_argument("--profile", choices=PROFILE_NAMES, default="regression_baseline",
+                           help="Physical profile; candidate is an explicit opt-in sensitivity case")
     parser.add_argument("--duration", type=float, default=None)
     parser.add_argument("--no-plots", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     run(stop_time_s=args.duration, actuator=args.actuator, make_plots=not args.no_plots,
-        config=DEFAULT_CONFIG if args.config is None else HS2SimConfig.load(args.config))
+        config=get_profile_config(args.profile) if args.config is None else HS2SimConfig.load(args.config))
+
+
+if __name__ == "__main__":
+    main()

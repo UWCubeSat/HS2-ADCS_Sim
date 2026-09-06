@@ -25,6 +25,8 @@ Engineering values below are ASSUMED development inputs unless linked to a separ
 
 ## Current Basilisk magnetic detumble
 
+Phase 5 operational addendum (2026-09-06): the recovered native-MtbEffector scenario offers explicit `--profile regression_baseline` (default, unchanged) and `--profile hs2_candidate` physical inputs. The latter uses the ASSUMED 3.72911 kg budget estimate, TBC 3U envelope, and ASSUMED uniform-prism inertia/zero COM described in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md#phase-5-explicit-physical-profiles). Orbit, controller, actuator limits, ideal sensors, environment and scheduling are shared. Candidate outputs use separate filenames and provenance manifests. [compare_physical_profiles.py](../basilisk_runner/compare_physical_profiles.py) compares saved runs using each tensor, independent volume-integration sanity checks and existing native torque/state validation. Status: WORKING DEVELOPMENT BASELINE / sensitivity study; NOT FLIGHT VALIDATED. One orbit does not verify the 24-hour detumble requirement; CAD properties, physical axes, actual hardware and test correlation remain unresolved. The following table retains the original audit findings at 833b015.
+
 | FIELD | FINDING |
 |---|---|
 | Path | [basilisk_runner/scenario_huskysat2_detumble.py](../basilisk_runner/scenario_huskysat2_detumble.py), [adapter](../basilisk_runner/basilisk_adcs_adapter.py) |

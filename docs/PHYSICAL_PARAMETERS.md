@@ -6,6 +6,19 @@ Statuses follow [AGENTS.md](../AGENTS.md): CONFIRMED, TBR, TBC, TBD, ASSUMED. A 
 
 Phase 4 runtime source: [hs2_sim_config.py](../basilisk_runner/hs2_sim_config.py) centralizes the active detumble inputs and provenance while preserving Phase 3 (`c1b6021`) numerical values. Saved runs include a configuration JSON and fingerprint. The audit tables below remain historical evidence; candidate requirements and the 3.72911 kg estimate are not automatic runtime replacements.
 
+## Phase 5 explicit physical profiles
+
+`regression_baseline` remains the default with its original configuration JSON/fingerprint and 2.6 kg box. `--profile hs2_candidate` explicitly selects a sensitivity case in [hs2_sim_config.py](../basilisk_runner/hs2_sim_config.py). Every other runtime section remains identical. Names are recorded outside the fingerprint in separate `_run.json` manifests; candidate CSV/config/plot names are separate from the regression outputs. This is **NOT FLIGHT VALIDATED**.
+
+| CANDIDATE PARAMETER | VALUE / UNITS | STATUS | SOURCE / REVISION / LIMITATION |
+|---|---|---|---|
+| Mass | 3.72911 kg | ASSUMED | B1 Mass Budget E43, modified 2026-09-03; B2 same roll-up. Release revision not established; estimated/TBD/old hardware entries remain. Not released measured mass. |
+| Form factor / envelope | 3U intent; 0.100 x 0.100 x 0.3405 m used in this case | CONFIRMED intent; TBC exact dimensions | R1 STR-9 (tracker rev 9, 2026-03-21); M1 4.6 (log rev 8, 2026-08-17). Conflicts retained: MDD 340 mm and B2 volume-budget structure 338.6 mm; no arbitrary reconciliation. |
+| Model COM | [0,0,0] m | ASSUMED | Origin equals the uniform-prism centroid only for this model. Actual COM remains TBD under I2/S1; no measurement exists in the audited evidence. |
+| Model inertia about COM | diag(0.03913708713979167, 0.03913708713979167, 0.006215183333333334) kg m^2; products zero | ASSUMED | Phase 5 derivation, 2026-09-06: uniform rectangular prism from the candidate mass/envelope, shown at runtime float precision. Geometry-only placeholder, independently checked by volume integration. Does not use B1's isolated 0.05 kg m^2 entry. |
+
+Dimensional assignment is mathematical B X=0.100 m, Y=0.100 m, Z=0.3405 m; it does not establish physical HS-2 axes. Uniform density, principal-axis alignment, centroid=COM, and zero products are assumptions. Released CAD mass properties must still establish COM, full tensor, reference point, axis mapping, and deployed configuration. A one-orbit comparison does not verify R1 ADCS-1 (at least 10 deg/s to 0.5 deg/s within 24 h); norm/per-axis interpretation, direction envelope, and sustained-success criteria remain TBC.
+
 ## Source register
 
 Source codes below carry the exact Drive file, title, engineering revision, date, and authority limitations for the parameter and requirements tables. Drive modification dates are observations, not release dates. All Drive evidence was read within Husky Satellite Lab (0AC8raEVvalZjUk9PVA); no Drive changes were made.
