@@ -1,0 +1,3479 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "test_plan_not_runtime_configuration",
+  "artifact_state": "COMPLETE TEST PLAN; NO TEST RESULTS",
+  "runtime_usable": false,
+  "plan_revision": "Phase 6C / 2026-09-06",
+  "execution_status": "NOT EXECUTED",
+  "flight_candidate_created": false,
+  "baseline_commit": "8053e464a0b322688a786f2187db0ed70224e02c",
+  "evidence_basis": {
+    "markdown": "docs/MAGNETIC_CONTROL_EVIDENCE.md",
+    "markdown_sha256": "30e2a7e697883b0c3bc3802c7bb19602896975280af58630da7500692cadb1dc",
+    "json": "basilisk_runner/config/magnetic_control_evidence.json",
+    "json_sha256": "15e6ca570fbe7c4f6701ee0ec082597e962f6402ec754f4465ff389330c1792b",
+    "method": "Reuse committed Phase 6B evidence; no new Drive/web research. Current candidates/statuses are copied without reconciliation."
+  },
+  "priority_definitions": {
+    "P0": "Blocks physically credible magnetic-control simulation.",
+    "P1": "Needed for realistic performance prediction, beyond basic architecture.",
+    "P2": "Later refinement/uncertainty reduction or evidence-record housekeeping; never a substitute for required measurements."
+  },
+  "blockers": [
+    {
+      "id": "A02",
+      "parameter": "Intended actuator models",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "ICD": "2 CubeSpace CR0002 rods + 1 EXA MT01A air coil",
+        "MDD": "3 in-house MTA cells"
+      },
+      "units": "model/count",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / Systems / procurement",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation"
+      ],
+      "why_it_matters": "Actuator identity determines applicable torque/electrical physics.",
+      "evidence_to_resolve": "Released installed BOM with part/variant/serial/PCB revisions; approved disposition of COTS versus in-house and MT01A versus MT01.",
+      "model_outputs": [
+        "M01"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "Table 01",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "M1",
+          "section": "section 4.1",
+          "revision_date": "MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"
+        },
+        {
+          "source_id": "T1",
+          "section": "Torque Rods / Air coils / Magnetorquer Voltage Amplifiers rows",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        }
+      ]
+    },
+    {
+      "id": "A03",
+      "parameter": "Physical actuator axes, origin and polarity",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "flight_body_axis_mapping": null,
+        "as_built_mounting_matrix": null,
+        "regression_layout": "X/Y rods, Z coil; identity axes"
+      },
+      "units": "body unit vectors / rotation matrix",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / Structures / CDH",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Wrong axes or polarity can redirect/reverse torque.",
+      "evidence_to_resolve": "Released body datum and as-built coil/sensor survey; positive-command/current/dipole sign and pin-channel records with uncertainty.",
+      "model_outputs": [
+        "M01",
+        "M02"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-002"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 2.1-2.3",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "section 2.6",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "D1",
+          "section": "Actuators and power: Repo actuator directions",
+          "revision_date": "Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"
+        }
+      ]
+    },
+    {
+      "id": "A05",
+      "parameter": "Air-coil dipole and nominal/saturation voltage claims",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "MT01A": [
+          {
+            "dipole_lower_bound_Am2": 0.395,
+            "voltage_V": 3.3
+          },
+          {
+            "dipole_lower_bound_Am2": 0.79,
+            "voltage_V": 9
+          }
+        ],
+        "MT01A_voltage_heading_V": [
+          1.25,
+          5
+        ],
+        "older_MT01_Compact": {
+          "nominal_lower_bound_Am2": 0.19,
+          "saturation_lower_bound_Am2": 0.85
+        }
+      },
+      "units": "A m^2; V",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / supplier liaison",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement",
+        "calibration",
+        "schematic/BOM confirmation"
+      ],
+      "why_it_matters": "Variant-mixed dipole claims cannot define a physical clamp.",
+      "evidence_to_resolve": "Confirm air-coil variant and permitted envelope; measure signed moment/current versus command and conditions; retain vendor lower bounds as lower bounds.",
+      "model_outputs": [
+        "M02",
+        "M03"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-002",
+        "ADCS-MAG-003"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "H2",
+          "section": "performance table and voltage heading",
+          "revision_date": "Internal revision/date not established; audited modified 2026-07-29"
+        },
+        {
+          "source_id": "H3",
+          "section": "performance table, rev B",
+          "revision_date": "Rev B, 2020"
+        },
+        {
+          "source_id": "I1",
+          "section": "Table 01",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        }
+      ]
+    },
+    {
+      "id": "A06",
+      "parameter": "Air-coil resistance",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "claimed_range_ohm": [
+          4.1,
+          4.7
+        ],
+        "reference_temperature_degC": 25,
+        "regression_ohm": 4.4
+      },
+      "units": "ohm; degC",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / EPS / Thermal",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Resistance affects current, heating and delivered moment.",
+      "evidence_to_resolve": "Per-winding resistance with lead/contact correction, winding temperature and measurement uncertainty.",
+      "model_outputs": [
+        "M03"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "H2",
+          "section": "resistance specification",
+          "revision_date": "Internal revision/date not established; audited modified 2026-07-29"
+        },
+        {
+          "source_id": "H3",
+          "section": "resistance specification",
+          "revision_date": "Rev B, 2020"
+        },
+        {
+          "source_id": "C1",
+          "section": "MagnetorquerConfig resistance",
+          "revision_date": "Git e919c3f, 2026-09-06"
+        }
+      ]
+    },
+    {
+      "id": "A08",
+      "parameter": "Air-coil voltage, current and power",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "ICD": {
+          "rail_V": 12,
+          "current_A": [
+            0.07,
+            1.1
+          ],
+          "power_W": [
+            0.84,
+            13.2
+          ]
+        },
+        "budget": {
+          "voltage_V": 5,
+          "power_W": 1.75
+        },
+        "ICD_thermal_power_W": 1.75,
+        "MT01A_power_mW": [
+          50,
+          1500
+        ],
+        "datasheet_current_units_as_printed": "mAh"
+      },
+      "units": "V; A; W; mW; mAh (invalid for current)",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / EPS / Thermal",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Rail/winding and peak/average ambiguity invalidates power/actuation limits.",
+      "evidence_to_resolve": "Released measurement boundaries; synchronous bus/winding V/I; peak/steady/cycle power and limits; disposition of conflicting voltages, powers and variants.",
+      "model_outputs": [
+        "M03"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 1.1, 1.1.1 and 3 thermal table",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B1",
+          "section": "Power Draw, air-coil row",
+          "revision_date": "Template cover 2025-07-31; audited modified 2026-09-03; HS-2 release revision not established"
+        },
+        {
+          "source_id": "H2",
+          "section": "voltage/current/power tables",
+          "revision_date": "Internal revision/date not established; audited modified 2026-07-29"
+        },
+        {
+          "source_id": "H3",
+          "section": "performance table",
+          "revision_date": "Rev B, 2020"
+        }
+      ]
+    },
+    {
+      "id": "A09",
+      "parameter": "Installed magnetic gain and dipole transfer function",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "measured_per_axis_gain": null,
+        "air_coil_gain": null,
+        "temperature_current_dependence": null
+      },
+      "units": "A m^2/A; function of current/temperature",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / magnetic calibration lead",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Actual command-current-dipole response sets control authority.",
+      "evidence_to_resolve": "Independent vector dipole measurements versus signed command/current, temperature, history/background; held-out validation and uncertainty.",
+      "model_outputs": [
+        "M02"
+      ],
+      "test_ids": [
+        "ADCS-MAG-002"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "H1",
+          "section": "vendor gain only",
+          "revision_date": "Internal revision/date not established; audited modified 2026-07-29"
+        },
+        {
+          "source_id": "B3",
+          "section": "section 2.6 proposed magnetic-moment/current-command characterization",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "T1",
+          "section": "ADCS component test status",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "MTA PWM procedure and blank results",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "A10",
+      "parameter": "Actuator dynamics and residual dipole",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "inductance_H": null,
+        "rise_time_s": null,
+        "hysteresis": null,
+        "temperature_model": null
+      },
+      "units": "H; s; A m^2; degC dependence",
+      "prior_treatment": "NOT MODELED YET",
+      "priority": "P1",
+      "owners": "ADCS / EPS / Thermal",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "bench measurement",
+        "calibration",
+        "timing measurement"
+      ],
+      "why_it_matters": "Rise dynamics, magnetic memory and temperature response refine prediction.",
+      "evidence_to_resolve": "Measured turn-on/off waveform families and history loops; identify R-L or other dynamic coefficients only after model adequacy checks. Basic off validity remains P0 in C03/E04.",
+      "model_outputs": [
+        "M02",
+        "M04",
+        "M05"
+      ],
+      "test_ids": [
+        "ADCS-MAG-002",
+        "ADCS-MAG-003",
+        "ADCS-MAG-004",
+        "ADCS-MAG-005"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "D1",
+          "section": "Actuators and power",
+          "revision_date": "Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"
+        },
+        {
+          "source_id": "I1",
+          "section": "section 4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "C2",
+          "section": "module contract",
+          "revision_date": "Git e919c3f, 2026-09-06"
+        }
+      ]
+    },
+    {
+      "id": "A12",
+      "parameter": "Driver/H-bridge selection",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "budget_driver": "TI DRV8231",
+        "ICD_voltage_amplifiers": "TBR",
+        "released_PCB_BOM": null
+      },
+      "units": "model",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / CDH / EPS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement"
+      ],
+      "why_it_matters": "Driver identity/mode determines current path and OFF behavior.",
+      "evidence_to_resolve": "Released driver schematic/BOM and register/pin truth table; confirm/reject DRV8231 claim against observed switching states.",
+      "model_outputs": [
+        "M01",
+        "M03"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-003"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "B3",
+          "section": "section 2.6",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "I1",
+          "section": "Table 01 and section 1.1.1",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "T1",
+          "section": "Magnetorquer Voltage Amplifiers row",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        }
+      ]
+    },
+    {
+      "id": "A13",
+      "parameter": "Power rails and coil-drive boundary",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "ADCS_rails_V": [
+          3.3,
+          5,
+          12
+        ],
+        "rod_supply_V": 5,
+        "air_coil_driver_supply_V": 12,
+        "logic_signal_description_V": "0-5 PWM / LVTTL elsewhere"
+      },
+      "units": "V",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "EPS / ADCS / CDH",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement"
+      ],
+      "why_it_matters": "Supply and logic labels cannot substitute for winding voltage.",
+      "evidence_to_resolve": "Trace rail/connector/logic levels to driver/winding; simultaneous supply/winding measurements in declared modes.",
+      "model_outputs": [
+        "M03"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 1.1, 1.1.1, 1.2",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "I5",
+          "section": "sections 1 and 4.2.5",
+          "revision_date": "ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z"
+        }
+      ]
+    },
+    {
+      "id": "A14",
+      "parameter": "ADCS power and energy allocation",
+      "current_status": "TBR",
+      "current_candidate_values": {
+        "RVM_detumble_power_upper_bound_W": 2,
+        "RVM_standby_power_upper_bound_W": 0.4,
+        "RVM_detumble_energy_upper_bound_Wh": 11,
+        "requirements_derivation_energy_Wh": 60,
+        "ICD_ADCS_peak_W": 12,
+        "PDR_torquer_power_W": 2.97,
+        "PDR_detumble_energy_Wh": 6.27
+      },
+      "units": "W; Wh",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P1",
+      "owners": "Systems / ADCS / EPS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement"
+      ],
+      "why_it_matters": "Power/energy compliance requires scoped allocations.",
+      "evidence_to_resolve": "Approve bus/winding and peak/average/cycle boundaries; reconcile power allocation and 11/60 Wh conflict before mission energy verification; measured cycle power.",
+      "model_outputs": [
+        "M03",
+        "M12"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "R1",
+          "section": "ADCS-2 and ADCS-10",
+          "revision_date": "Cover 2025-09-28; tracker through rev 9, 2026-03-21; audited modified 2026-09-03"
+        },
+        {
+          "source_id": "R2",
+          "section": "section 4.5 derivation",
+          "revision_date": "REQ-001/REQ-002 both appear; rev E 2025-10-05; audited Drive rev 34576, 2026-07-08"
+        },
+        {
+          "source_id": "I1",
+          "section": "section 1.1.1",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "P1",
+          "section": "slide 20",
+          "revision_date": "No numbered release/cover date established; audited modified 2025-12-13"
+        }
+      ]
+    },
+    {
+      "id": "A15",
+      "parameter": "Thermal/continuous-duty envelope",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "rod_qualification_degC": [
+          -20,
+          80
+        ],
+        "air_coil_operating_claim_degC": [
+          -55,
+          85
+        ],
+        "ICD_thermal_table_duty_percent": 100,
+        "verified_flight_thermal_duty_limit": null
+      },
+      "units": "degC; %",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "Thermal / EPS / ADCS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Usable duty/burst must fit a real operating envelope.",
+      "evidence_to_resolve": "Signed safe electrical/temperature test limits; measured heating/steady response versus burst/duty with thermal boundary conditions; approved restricted envelope/extrapolation.",
+      "model_outputs": [
+        "M03"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "H1",
+          "section": "thermal-vacuum qualification",
+          "revision_date": "Internal revision/date not established; audited modified 2026-07-29"
+        },
+        {
+          "source_id": "H2",
+          "section": "temperature limits",
+          "revision_date": "Internal revision/date not established; audited modified 2026-07-29"
+        },
+        {
+          "source_id": "H3",
+          "section": "temperature limits",
+          "revision_date": "Rev B, 2020"
+        },
+        {
+          "source_id": "I1",
+          "section": "section 3 thermal table",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        }
+      ]
+    },
+    {
+      "id": "B01",
+      "parameter": "Flight control/manager rate",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "MDD_and_software_proposal_Hz": 5,
+        "ICD_manager_and_application_tick_Hz": 10,
+        "derived_tick_periods_s": [
+          0.2,
+          0.1
+        ]
+      },
+      "units": "Hz; s",
+      "prior_treatment": "PARAMETRIC SWEEP",
+      "priority": "P0",
+      "owners": "CDH / ADCS / Systems",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "timing measurement"
+      ],
+      "why_it_matters": "Manager rate alone does not establish acquisition/control timing.",
+      "evidence_to_resolve": "Approved 5/10 Hz disposition, event mapping, firmware/config hash and measured cadence under representative load.",
+      "model_outputs": [
+        "M09",
+        "M10"
+      ],
+      "test_ids": [
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "RESPONSIBLE PARAMETRIC SWEEP",
+      "sweep_note": "Only the documented 5/10 Hz scheduler alternatives; not full-cycle periods or measured jitter.",
+      "evidence_sources": [
+        {
+          "source_id": "M1",
+          "section": "section 2.4",
+          "revision_date": "MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"
+        },
+        {
+          "source_id": "SW1",
+          "section": "sections 2.2-3.1",
+          "revision_date": "No numbered release/date; audited modified 2026-04-21"
+        },
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.1, 4.1.3, AdcsApplication and 4.2",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        }
+      ]
+    },
+    {
+      "id": "B03",
+      "parameter": "IMU transport and configured serial rate",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "ICD_electrical": "LVTTL UART",
+        "ICD_detailed": "UART / RS-232 full duplex",
+        "ICD_detailed_bps": 115200,
+        "ICD_manager_ports": "Drv.I2cWrite / Drv.I2cWriteRead",
+        "MDD": "RS-422 TBR",
+        "vendor": "RS-232/TTL UART options"
+      },
+      "units": "protocol; bit/s",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "CDH / ADCS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "timing measurement"
+      ],
+      "why_it_matters": "Conflicting sensor interfaces prevent reproducible acquisition.",
+      "evidence_to_resolve": "Exact sensor variant, connector/transceiver/protocol settings; decoded packet/register captures and UART/I2C/RS-422 disposition.",
+      "model_outputs": [
+        "M07",
+        "M09"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-006",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 1.2, 4.1.1 and 4.2.1",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "H4",
+          "section": "interfaces",
+          "revision_date": "DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"
+        },
+        {
+          "source_id": "M1",
+          "section": "section 4.1",
+          "revision_date": "MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"
+        },
+        {
+          "source_id": "SW1",
+          "section": "IMU interface discussion",
+          "revision_date": "No numbered release/date; audited modified 2026-04-21"
+        },
+        {
+          "source_id": "T2",
+          "section": "IMMU communication procedure",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "B05",
+      "parameter": "Actual magnetometer acquisition/output settings",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "raw_output_rate_Hz": null,
+        "internal_filter_settings": null,
+        "packet_contents": null,
+        "sample_trigger_and_timestamp_semantics": null
+      },
+      "units": "Hz; configuration; clock/epoch",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / CDH / sensor liaison",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement",
+        "calibration",
+        "timing measurement"
+      ],
+      "why_it_matters": "Packets may contain stale or contaminated acquisition history.",
+      "evidence_to_resolve": "Register/filter/output readback and timed independent field stimulus establishing cadence, effective aperture/filter history and epoch/availability bounds.",
+      "model_outputs": [
+        "M07",
+        "M09"
+      ],
+      "test_ids": [
+        "ADCS-MAG-006"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.1 and 4.2.1",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "section 2.8",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "IMMU acquisition procedure, blank results",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "B06",
+      "parameter": "Magnetic measurement software path",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "ImuManager_published_fields": "angular rate, linear acceleration, timestamp",
+        "BDot_inputs": "current B, previous B, angular rate",
+        "current_B_provider_and_B_timestamp_contract": null
+      },
+      "units": "port payload / epoch",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "CDH / ADCS flight software",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "timing measurement"
+      ],
+      "why_it_matters": "Unclosed current-field source/epoch invalidates freshness reasoning.",
+      "evidence_to_resolve": "Flight topology/schema/code revision identifying B producer, units/frame/validity, acquisition epoch, previous/current sample IDs and actual consumption trace.",
+      "model_outputs": [
+        "M07",
+        "M09",
+        "M10"
+      ],
+      "test_ids": [
+        "ADCS-MAG-006",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.1, 4.1.4-4.1.5 and AdcsApplication port table",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "sections 2.4 and 2.8",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        }
+      ]
+    },
+    {
+      "id": "B07",
+      "parameter": "Flight scheduler jitter and end-to-end timing trace",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "execution_order": null,
+        "queue_latency_s": null,
+        "jitter_s": null,
+        "measured_control_period_s": null
+      },
+      "units": "s; execution order",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "CDH / ADCS integration",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "timing measurement",
+        "integrated/HIL test"
+      ],
+      "why_it_matters": "Latency and jitter change field/rate age at actuation.",
+      "evidence_to_resolve": "Synchronized acquisition-availability-compute-command-driver-current trace with conditional joint delay bounds/distributions and clock uncertainty.",
+      "model_outputs": [
+        "M09",
+        "M10"
+      ],
+      "test_ids": [
+        "ADCS-MAG-007",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "section 4, queued managers and application",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "T1",
+          "section": "ADCS integrated test row",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "blank procedure results",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "parameter": "Required quiet period",
+      "current_status": "TBD",
+      "current_candidate_values": null,
+      "units": "s",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / magnetic test lead / Systems",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement",
+        "calibration",
+        "timing measurement"
+      ],
+      "why_it_matters": "Zero command history cannot establish a valid sample.",
+      "evidence_to_resolve": "Approved magnetic-error allocation and earliest entire valid acquisition window after OFF over amplitude/history/temperature/geometry envelope.",
+      "model_outputs": [
+        "M05",
+        "M06",
+        "M12"
+      ],
+      "test_ids": [
+        "ADCS-MAG-004",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006"
+      ],
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "section 4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "MTA/IMMU procedures",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        },
+        {
+          "source_id": "D1",
+          "section": "Phase 6A timing section",
+          "revision_date": "Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "parameter": "Current-decay time and off-state behavior",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "current_decay_s": null,
+        "current_threshold_A": null,
+        "off_state_mode": null
+      },
+      "units": "s; A; brake/coast/recirculation state",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / EPS / CDH",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "timing measurement"
+      ],
+      "why_it_matters": "Current may persist after OFF depending on recirculation mode.",
+      "evidence_to_resolve": "Command-off, driver-off and winding-current traces for supported modes/polarities; link any acceptable current threshold to magnetic validity.",
+      "model_outputs": [
+        "M04",
+        "M06",
+        "M09"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-004"
+      ],
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.3 and 4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "section 2.6",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "PWM verification procedure",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "parameter": "Magnetic settling time",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "settling_s": null,
+        "residual_field_threshold_T": null,
+        "reset_wait_ticks": "named, numeric value absent; device reset wait only"
+      },
+      "units": "s; T; ticks",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / magnetic test lead",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement",
+        "calibration",
+        "timing measurement"
+      ],
+      "why_it_matters": "Residual field/filter recovery can outlast current decay.",
+      "evidence_to_resolve": "Local vector field and flight-sensor recovery versus baseline with repeated histories and approved residual-field criterion; reset wait remains separate.",
+      "model_outputs": [
+        "M05",
+        "M06",
+        "M12"
+      ],
+      "test_ids": [
+        "ADCS-MAG-005",
+        "ADCS-MAG-006"
+      ],
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.3 parameter table and 4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "parameter": "Magnetometer sample aperture and phase",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "aperture_s": null,
+        "trigger_phase_s": null,
+        "sample_window_reference": null
+      },
+      "units": "s; epoch definition",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / CDH / sensor liaison",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement",
+        "calibration",
+        "timing measurement"
+      ],
+      "why_it_matters": "Output timestamp/rate does not specify a physical acquisition window.",
+      "evidence_to_resolve": "Device-setting confirmation plus timed field stimuli identifying aperture/filter response and timestamp reference; retain bounds if acquisition is not directly observable.",
+      "model_outputs": [
+        "M07",
+        "M09"
+      ],
+      "test_ids": [
+        "ADCS-MAG-006"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "H4",
+          "section": "p. 6 sample capability",
+          "revision_date": "DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"
+        },
+        {
+          "source_id": "I1",
+          "section": "section 4.2.1",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "C2",
+          "section": "to_dict sample_model",
+          "revision_date": "Git e919c3f, 2026-09-06"
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "parameter": "Sample-to-compute delay",
+      "current_status": "TBD",
+      "current_candidate_values": null,
+      "units": "s",
+      "prior_treatment": "PARAMETRIC SWEEP",
+      "priority": "P0",
+      "owners": "CDH / ADCS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "timing measurement"
+      ],
+      "why_it_matters": "Aging field/rate inputs affect computed commands.",
+      "evidence_to_resolve": "Acquisition reference, availability, compute start/end and consumed sample ID; separate transport, queue and execution delays.",
+      "model_outputs": [
+        "M09"
+      ],
+      "test_ids": [
+        "ADCS-MAG-006",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "section 4, ImuManager / AttitudeFilter / AdcsApplication",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "C2",
+          "section": "diagnostic_cycle_config",
+          "revision_date": "Git e919c3f, 2026-09-06"
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "parameter": "Compute-to-actuation delay",
+      "current_status": "TBD",
+      "current_candidate_values": null,
+      "units": "s",
+      "prior_treatment": "PARAMETRIC SWEEP",
+      "priority": "P0",
+      "owners": "CDH / ADCS / EPS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "bench measurement",
+        "timing measurement"
+      ],
+      "why_it_matters": "Publication and physical moment onset need not coincide.",
+      "evidence_to_resolve": "Compute completion, command publication, PWM latch/enable and winding-current rise on a common clock; moment onset where independently resolved.",
+      "model_outputs": [
+        "M04",
+        "M09"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.3, AdcsApplication and 4.2.3",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "C2",
+          "section": "diagnostic_cycle_config",
+          "revision_date": "Git e919c3f, 2026-09-06"
+        }
+      ]
+    },
+    {
+      "id": "C08",
+      "parameter": "Serial latency interface allocation",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "ICD_latency": "less than one ADCS control-loop period",
+        "conditional_upper_bound_s": 0.1
+      },
+      "units": "s",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P1",
+      "owners": "CDH / ADCS / Systems",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "timing measurement"
+      ],
+      "why_it_matters": "Serial allocation cannot be used as nominal sample age.",
+      "evidence_to_resolve": "Approved loop/latency endpoints and measured transport; confirm applicability of the ICD less-than-one-period allocation.",
+      "model_outputs": [
+        "M09",
+        "M12"
+      ],
+      "test_ids": [
+        "ADCS-MAG-006",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "section 4.2.1 Timing",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "M1",
+          "section": "section 2.4 competing 5 Hz design",
+          "revision_date": "MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"
+        }
+      ]
+    },
+    {
+      "id": "C09",
+      "parameter": "Burst duration and actuation window",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "BURST_TICKS": null,
+        "burst_duration_s": null,
+        "start_phase_s": null,
+        "ICD_manager_tick_Hz": 10
+      },
+      "units": "ticks; s; Hz",
+      "prior_treatment": "PARAMETRIC SWEEP",
+      "priority": "P0",
+      "owners": "ADCS / CDH / EPS / Thermal",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "timing measurement",
+        "integrated/HIL test"
+      ],
+      "why_it_matters": "Burst window and retrigger policy govern duty and command age.",
+      "evidence_to_resolve": "Configured BURST_TICKS/rate, replace/queue/retrigger/expiry policy, measured window and admissible duty envelope.",
+      "model_outputs": [
+        "M03",
+        "M09",
+        "M10"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-007",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.3 and 4.2.3-4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        }
+      ]
+    },
+    {
+      "id": "C10",
+      "parameter": "Historical mode duty assumptions",
+      "current_status": "ASSUMED",
+      "current_candidate_values": {
+        "PDR_percent": 80,
+        "budget_detumble_percent": 50,
+        "budget_experiment_percent": 20,
+        "budget_standby_percent": 10
+      },
+      "units": "%",
+      "prior_treatment": "PARAMETRIC SWEEP",
+      "priority": "P1",
+      "owners": "ADCS / EPS / Systems",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "bench measurement",
+        "integrated/HIL test"
+      ],
+      "why_it_matters": "Historical duty anchors are not allowable operating limits.",
+      "evidence_to_resolve": "Mode-specific power/duty definition and measured approved envelope; separate carrier duty, burst fraction and nonzero-current time.",
+      "model_outputs": [
+        "M03",
+        "M10"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "RESPONSIBLE PARAMETRIC SWEEP",
+      "sweep_note": "Historical mode duty anchors only; non-flight, not thermal limits and not automatically feasible cycles.",
+      "evidence_sources": [
+        {
+          "source_id": "P1",
+          "section": "slide 20",
+          "revision_date": "No numbered release/cover date established; audited modified 2025-12-13"
+        },
+        {
+          "source_id": "B1",
+          "section": "Power Draw, mode duty entries",
+          "revision_date": "Template cover 2025-07-31; audited modified 2026-09-03; HS-2 release revision not established"
+        }
+      ]
+    },
+    {
+      "id": "D01",
+      "parameter": "PWM/GPIO channel allocation",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "ICD_software": "6 PWM: X+/X-, Y+/Y-, Z+/Z-",
+        "ICD_PC104_and_review_comment": "3 PWM + 3 GPIO",
+        "EPS_support": "ADCS GPIO_1/2/3 and PWM_3 named in connector table"
+      },
+      "units": "signal channels",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "CDH / ADCS / EPS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement"
+      ],
+      "why_it_matters": "Incorrect channel mapping can change sign or inhibit actuation.",
+      "evidence_to_resolve": "Released schematic/connector/pinmux truth table tied to firmware; trace every used PWM/GPIO and dispose of 6 PWM versus 3 PWM +3 GPIO.",
+      "model_outputs": [
+        "M01",
+        "M03",
+        "M10"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-003",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "section 1.3.1 PC104 table; sections 4.1.3, 4.2.3; comment [i]",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "I5",
+          "section": "connector pin table, ADCS H-Bridge GPIO/PWM labels",
+          "revision_date": "ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z"
+        }
+      ]
+    },
+    {
+      "id": "D02",
+      "parameter": "PWM polarity, magnitude, enable and off semantics",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "six_PWM_description": "positive/negative pair selects direction; duty sets drive; configure enables; idle/reset duty zero",
+        "three_PWM_three_GPIO_truth_table": null
+      },
+      "units": "truth table / signed duty / enable state",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "CDH / ADCS / EPS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement"
+      ],
+      "why_it_matters": "Zero duty, disable, brake and coast differ physically.",
+      "evidence_to_resolve": "Per-pin truth table and winding response for positive/negative, idle/OFF/reset/recovery states; apply polarity exactly once.",
+      "model_outputs": [
+        "M01",
+        "M03",
+        "M04"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-003",
+        "ADCS-MAG-004"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 4.1.3 and 4.2.3-4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "section 2.6",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        }
+      ]
+    },
+    {
+      "id": "D03",
+      "parameter": "PWM carrier frequency and resolution",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "PWM_FREQUENCY_Hz": null,
+        "timer_resolution_bits": null,
+        "measured_waveform": null
+      },
+      "units": "Hz; bits",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "CDH / ADCS / EPS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "timing measurement"
+      ],
+      "why_it_matters": "Carrier/quantization/latch behavior affects current and contamination.",
+      "evidence_to_resolve": "PrmDb/firmware settings plus carrier period, duty resolution, latch/switching traces and instrumentation bandwidth/uncertainty.",
+      "model_outputs": [
+        "M03",
+        "M10"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "section 4.1.3 parameter table",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "MTA PWM Frequency/Duty/Peak Voltage fields",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "D05",
+      "parameter": "Per-coil current sensing and dipole feedback",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "per_coil_sensor": null,
+        "control_feedback_bandwidth_Hz": null,
+        "current_regulation_configuration": null,
+        "measured_dipole_feedback": null
+      },
+      "units": "topology; Hz; A; A m^2",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "EPS / ADCS / CDH",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Rail monitoring is not per-coil feedback/regulation evidence.",
+      "evidence_to_resolve": "Schematic/firmware confirmation of sensing/regulation paths or their documented absence; independent sensor calibration and limiting/feedback measurements.",
+      "model_outputs": [
+        "M03"
+      ],
+      "test_ids": [
+        "ADCS-MAG-003"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "MagnetorquerManager ports and telemetry",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "I5",
+          "section": "sections 4.1.2 and 4.2.5",
+          "revision_date": "ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "section 2.6",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        }
+      ]
+    },
+    {
+      "id": "E01",
+      "parameter": "Magnetometer placement and separation",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "IMMU_location": "payload-structure lateral plate",
+        "MTA_stack_location": "between PDS and S-band transceiver",
+        "minimum_MTA_IMMU_separation_m": null,
+        "magnetometer_body_transform": null,
+        "stack_pitch_mm": 15.24
+      },
+      "units": "location; m; rotation; mm",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "Structures / ADCS",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Contamination and transforms depend on actual installation.",
+      "evidence_to_resolve": "Survey coil/sensor positions/orientations, harness return paths and relevant configuration; establish magnetic separation independently of stack pitch.",
+      "model_outputs": [
+        "M01",
+        "M05"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-005"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 2.1-2.3",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "parameter": "Alignment knowledge requirement versus budget predictions",
+      "current_status": "TBC",
+      "current_candidate_values": {
+        "RVM_actuator_knowledge_deg": 3,
+        "RVM_sensor_knowledge_deg": 3,
+        "B3_actuator_prediction_allocation_deg": [
+          0.1,
+          0.25
+        ],
+        "B3_sensor_prediction_allocation_deg": [
+          0.25,
+          0.5
+        ]
+      },
+      "units": "deg",
+      "prior_treatment": "PARAMETRIC SWEEP",
+      "priority": "P0",
+      "owners": "ADCS / Structures / Systems",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "calibration"
+      ],
+      "why_it_matters": "Nominal alignment and knowledge uncertainty differ.",
+      "evidence_to_resolve": "Survey/calibration and covariance/bounds tied to a body datum; disposition of 3 degree knowledge obligation and tighter budget allocations.",
+      "model_outputs": [
+        "M01",
+        "M12"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-006"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "R1",
+          "section": "ADCS-6/ADCS-7",
+          "revision_date": "Cover 2025-09-28; tracker through rev 9, 2026-03-21; audited modified 2026-09-03"
+        },
+        {
+          "source_id": "I1",
+          "section": "sections 2.1-2.2",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "sections 2.4 and 2.6",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        }
+      ]
+    },
+    {
+      "id": "E03",
+      "parameter": "Magnetic cleanliness and allowable contamination",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "allowable_residual_field_T": null,
+        "allowable_sample_bias_T": null,
+        "allowable_gradient_T_per_m": null,
+        "cleanliness_allocation": null
+      },
+      "units": "T; T/m; acceptance rule",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / Systems / sensor lead",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation"
+      ],
+      "why_it_matters": "No accepted magnetic-error allocation means no accepted quiet time.",
+      "evidence_to_resolve": "Approved magnetic-error metric/limit, frame/window/coverage/margin and operating envelope; independent baseline/reference definition.",
+      "model_outputs": [
+        "M06",
+        "M12"
+      ],
+      "test_ids": [
+        "ADCS-MAG-005",
+        "ADCS-MAG-006"
+      ],
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 2.3 and 4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "sections 2.4, 2.8",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "IMMU/MTA procedures",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "E04",
+      "parameter": "Remanence, residual field and interference map",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "remanent_dipole_Am2": null,
+        "local_post_burst_residual_T": null,
+        "hard_soft_iron_calibration": null,
+        "actuator_to_sensor_transfer": null
+      },
+      "units": "A m^2; T; calibration matrices",
+      "prior_treatment": "NOT MODELED YET",
+      "priority": "P0",
+      "owners": "ADCS / magnetic calibration lead",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "bench measurement",
+        "calibration"
+      ],
+      "why_it_matters": "Residual/hysteretic fields corrupt B even with zero current.",
+      "evidence_to_resolve": "Measured per-axis/polarity/history coupling and post-OFF residual maps; ambient reference correction that retains remanence and uncertainty.",
+      "model_outputs": [
+        "M05",
+        "M06"
+      ],
+      "test_ids": [
+        "ADCS-MAG-002",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "I1",
+          "section": "sections 2.3 and 4.2.4",
+          "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"
+        },
+        {
+          "source_id": "T1",
+          "section": "ADCS test status",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "blank IMMU/MTA results",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        },
+        {
+          "source_id": "T3",
+          "section": "blank results and appendices",
+          "revision_date": "Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "parameter": "External magnetometers and total installed count",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "VN100_internal": "one three-axis magnetometer per documented candidate VN-100",
+        "additional_external_models": null,
+        "additional_external_count": null
+      },
+      "units": "model/count",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / CDH / Systems",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "schematic/BOM confirmation",
+        "bench measurement"
+      ],
+      "why_it_matters": "Consumed B must match the calibrated physical sensor.",
+      "evidence_to_resolve": "Installed inventory/serials, connector and firmware selection; demonstrate physical source of each consumed sample; generic headings do not prove external devices.",
+      "model_outputs": [
+        "M01",
+        "M07"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-006",
+        "ADCS-MAG-007"
+      ],
+      "sweep_class": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "H4",
+          "section": "p. 6",
+          "revision_date": "DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"
+        },
+        {
+          "source_id": "M1",
+          "section": "section 4.1",
+          "revision_date": "MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"
+        },
+        {
+          "source_id": "B3",
+          "section": "sections 2.4 and 2.8",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "T3",
+          "section": "Functional Tests Overview: Magnetometer and IMU",
+          "revision_date": "Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"
+        }
+      ]
+    },
+    {
+      "id": "F01",
+      "parameter": "ADCS hardware test tracker",
+      "current_status": "CONFIRMED",
+      "current_candidate_values": {
+        "PCB": "delivered; Unit Test done? No",
+        "torque_rods": "ordered; procedure Yes; internal review; done No",
+        "IMU": "ordered; procedure Yes; internal review; done No",
+        "sun_sensors": "ordered; procedure Yes; internal review; done No",
+        "voltage_amplifiers": "incomplete row",
+        "air_coils": "incomplete row",
+        "integrated_ADCS_test": "blank completion cell"
+      },
+      "units": "tracker states",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P2",
+      "owners": "ADCS / Systems verification",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation"
+      ],
+      "why_it_matters": "Tracker flags cannot validate physical parameters.",
+      "evidence_to_resolve": "Link executed record IDs/configurations to tracker; obsolete entries may be replaced without redundant legacy testing.",
+      "model_outputs": [
+        "M13"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "T1",
+          "section": "component table and integrated subsystem table",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "parameter": "Current ADCS verification procedure",
+      "current_status": "CONFIRMED",
+      "current_candidate_values": "IMMU magnetic/data acquisition, MTA PWM frequency/duty/voltage, detumble and power checks planned; measurement/result/initial fields unfilled in the reviewed copy",
+      "units": "procedure state",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P2",
+      "owners": "ADCS / Systems verification",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation"
+      ],
+      "why_it_matters": "A written procedure is not a measured result.",
+      "evidence_to_resolve": "Crosswalk procedure IDs to signed executed packages; reuse qualified results rather than duplicate tests.",
+      "model_outputs": [
+        "M13"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "T2",
+          "section": "functional overview; IMMU procedure/results; MTA PWM procedure/results; energy/power procedure/results",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "parameter": "Older ADCS verification record",
+      "current_status": "CONFIRMED",
+      "current_candidate_values": "Template procedures; no filled results or signed execution; graph/data appendices contain placeholders or are empty",
+      "units": "procedure state",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P2",
+      "owners": "ADCS / Systems verification",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation"
+      ],
+      "why_it_matters": "Blank old templates are not acceptance records.",
+      "evidence_to_resolve": "Link the actual current measured record and classify the legacy template; no requirement to fill an obsolete template.",
+      "model_outputs": [
+        "M13"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "T3",
+          "section": "sections 2.8-2.13 in functional/performance blocks; appendices A/B",
+          "revision_date": "Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "parameter": "Budget MC/HIL/calibration assertions",
+      "current_status": "ASSUMED",
+      "current_candidate_values": "Claims/verification descriptions for coil-axis/polarity/current characterization and Monte Carlo/HIL sensor/control budgets; no linked completed measurement record located",
+      "units": "verification claim",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P1",
+      "owners": "ADCS / Systems / HIL lead",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "document confirmation",
+        "integrated/HIL test"
+      ],
+      "why_it_matters": "Budget verification assertions need independent substantiation.",
+      "evidence_to_resolve": "Reserved integrated/HIL records and predeclared criteria, or retain claim as unverified; no tuning on verification data.",
+      "model_outputs": [
+        "M11",
+        "M13"
+      ],
+      "test_ids": [
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "B3",
+          "section": "sections 2.4, 2.6, 2.8-2.9",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        },
+        {
+          "source_id": "T1",
+          "section": "ADCS integrated test row",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "results and graph sections",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        },
+        {
+          "source_id": "T3",
+          "section": "appendices",
+          "revision_date": "Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "parameter": "Completed measurements constraining a flight cycle",
+      "current_status": "TBD",
+      "current_candidate_values": {
+        "dipole": null,
+        "current_power": null,
+        "magnetometer_noise_bias": null,
+        "interference": null,
+        "quiet_settling": null,
+        "control_timing": null,
+        "HIL": null
+      },
+      "units": "measurement records",
+      "prior_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "priority": "P0",
+      "owners": "ADCS / Systems / test leads",
+      "owner_status": "PROPOSED; team assignment unconfirmed",
+      "evidence_types": [
+        "bench measurement",
+        "calibration",
+        "timing measurement",
+        "integrated/HIL test"
+      ],
+      "why_it_matters": "No qualified measurements means no supported physical cycle.",
+      "evidence_to_resolve": "Complete calibrated measured packages with conditions/uncertainty/independent comparisons/sign-off; preserve failures and exclusions.",
+      "model_outputs": [
+        "M01",
+        "M02",
+        "M03",
+        "M04",
+        "M05",
+        "M06",
+        "M07",
+        "M09",
+        "M10",
+        "M11",
+        "M12",
+        "M13",
+        "M08"
+      ],
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-002",
+        "ADCS-MAG-003",
+        "ADCS-MAG-004",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006",
+        "ADCS-MAG-007",
+        "ADCS-MAG-008"
+      ],
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE",
+      "sweep_note": "No numeric range is authorized by this row. Documentary/record items require evidence, not numerical sweeps; calibration/threshold/identity prerequisites may also apply.",
+      "evidence_sources": [
+        {
+          "source_id": "T1",
+          "section": "ADCS rows",
+          "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z"
+        },
+        {
+          "source_id": "T2",
+          "section": "blank measurements/results",
+          "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"
+        },
+        {
+          "source_id": "T3",
+          "section": "blank measurements/results",
+          "revision_date": "Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"
+        },
+        {
+          "source_id": "B3",
+          "section": "verification assertions",
+          "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"
+        }
+      ]
+    }
+  ],
+  "model_outputs": [
+    {
+      "id": "M01",
+      "name": "Identity, geometry and polarity",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "geometry.json: hardware/serial/revision, body datum, g_Bi unit columns, r_Bi, sensor C_SB/r_BS, channel/sign map, survey uncertainty; signed drawing/BOM links.",
+      "units": "1; m; rad (source degrees retained)",
+      "frame_time_contract": "B is a released right-handed body datum; C_SB maps B components to S. G_B columns are individual coil axes, not necessarily an orthogonal DCM. Origin is explicit.",
+      "future_basilisk_destination": "Future MagnetorquerConfig.count/axes_B and SensorConfig.magnetometer_dcm_SB after body-vector-to-coil allocation is verified; polarity applied exactly once. Positions support contamination modeling, not a changed mass/COM profile.",
+      "uncertainty_rule": "Measured correlated survey uncertainty; do not invent a Gaussian mounting distribution."
+    },
+    {
+      "id": "M02",
+      "name": "Command-current-vector-dipole calibration",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "calibration table: command/units, coil, I_A, m_B_Am2[3], V_V, T_degC, driver mode, history, ambient_B_T, time, uncertainty; fit/held-out case IDs.",
+      "units": "A; A m^2; V; degC; T; s",
+      "frame_time_contract": "Positive current/moment tied to M01; independently infer vector moment from calibrated reference field/geometry or torque. Test background, history and direction dependence.",
+      "future_basilisk_destination": "Future dipole_gains only if scalar linear gain/fixed direction meets allocation. Otherwise separately authorized calibration adapter/lookup and allocation work is needed; native MtbEffector still receives per-axis dipole. Do not force direction-changing response into a fixed axis.",
+      "uncertainty_rule": "Fit and instrument/geometry/background/repeatability uncertainty, correlations and interpolation domain; reserve independent poses/sequences. Vendor lower bounds are not maximum clamps."
+    },
+    {
+      "id": "M03",
+      "name": "Electrical, power and thermal/duty envelope",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "electrical.json plus waveforms/tables: bus/winding V/I, resistance versus temperature, limiting/feedback topology, driver modes/carrier, peak/mean/RMS windows, allowed burst/duty/temperature.",
+      "units": "V; A; ohm; W; J; Hz; s; degC; fraction",
+      "frame_time_contract": "Supply, logic and winding boundaries distinct; instantaneous signed p(t)=v(t)i(t) before averaging/integrating. Record regeneration, ripple and baseline loads. I_rms^2 R is winding heat when applicable, not bus power.",
+      "future_basilisk_destination": "Future current/voltage/power limits only where existing MagnetorquerConfig derivations match measured behavior. Curves/driver losses/regulation/thermal constraints may require separate code authorization; no electrical constants introduced now.",
+      "uncertainty_rule": "Instrument/ripple/temperature and run variability; admissible envelope excludes untested thermal/voltage/duty cases."
+    },
+    {
+      "id": "M04",
+      "name": "Physical current rise/decay",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "timing distribution",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "transient traces: command/driver event IDs and times, coil I/V versus elapsed time, polarity, history, temperature, mode, uncertainty and finite-record bounds.",
+      "units": "A; V; s; optional independently measured A m^2",
+      "frame_time_contract": "Separate software command-off, driver-off and winding current response. Current crossing needs approved threshold/stability definition; unresolved below-floor current is bounded, not zero.",
+      "future_basilisk_destination": "Future switching/actuator-response model or validated bounded approximation; no R-L model without adequacy tests. Feeds M06 but electrical decay alone does not define magnetic quiet time.",
+      "uncertainty_rule": "Conditional waveform family and repeatability/threshold timing bounds, probe bandwidth and trigger skew; retain censoring/nonsettled cases."
+    },
+    {
+      "id": "M05",
+      "name": "Local contamination, remanence and magnetic recovery",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "interference table/raw traces: coil/command/I, polarity/history, B_S_raw_T, B_S_cal_T, independent ambient/local B, off times, sensor acquisition/availability, geometry and temperature.",
+      "units": "T; A; s; m; degC; A m^2 where independently measured",
+      "frame_time_contract": "S is flight sensor frame; independent ambient transformed into S. Characterize reference probe's coil pickup; retain changed post-burst baseline/remanence. Test simultaneous-coil response, not assumed superposition.",
+      "future_basilisk_destination": "Future explicit sensor contamination/bias model, separate from WMM B_N and native torque. Do not apply local coil self-field as external Earth field producing spacecraft torque.",
+      "uncertainty_rule": "Measured vector coupling, history/background/temperature dependence and correlated residuals; no invented contamination magnitude."
+    },
+    {
+      "id": "M06",
+      "name": "Quiet/settling validity rule",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "timing distribution",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "validity.json: approved criterion ID, entire effective acquisition window, earliest command-off-to-valid-window age by condition, current/field thresholds if applicable, coverage/margin, failures/exclusions.",
+      "units": "s; T; A; declared error metric/coverage",
+      "frame_time_contract": "Quiet and settling use a common explicit origin; require full acquisition/filter history to meet criterion. Independent current/field transients may overlap; do not blindly sum measured durations.",
+      "future_basilisk_destination": "Future MagneticCycleConfig.quiet/settling split represents one measured off-to-valid-acquisition requirement without double counting. Finite aperture/filter history needs explicit modeling or an approved bounded approximation; instantaneous TAM is not measured aperture.",
+      "uncertainty_rule": "Repeatability, sensor filter memory and timing/measurement uncertainty enter margin by approved method; no numeric threshold/margin from this plan."
+    },
+    {
+      "id": "M07",
+      "name": "Flight sensor configuration/acquisition semantics",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "timing distribution",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "sensor.json/register dump plus packet/stimulus traces: source/variant, interface, raw/calibration state, output/filter settings, sample IDs, acquisition bounds/window and availability, staleness flags.",
+      "units": "Hz; T; s; bit/s; packet units",
+      "frame_time_contract": "Distinguish acquisition start/reference/end, data-ready, transmission, receipt and decode; record clock origin/drift/wrap. If acquisition is unobservable, retain identified bounds.",
+      "future_basilisk_destination": "Future SensorConfig/acquisition driver settings; present ideal TAM lacks real packet/filter/finite aperture behavior. Vendor 200 Hz is not selected output cadence or a 5 ms aperture.",
+      "uncertainty_rule": "Measured filter/step response and epoch/window uncertainty; device capability alone cannot determine filter history or group delay."
+    },
+    {
+      "id": "M08",
+      "name": "Magnetometer calibration, bias and noise",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "calibration/residual table: raw/corrected B_S, reference B, orientation, temperature, scale/cross-axis/bias, residual covariance/PSD/autocorrelation, independent validation cases.",
+      "units": "T; T^2 covariance; 1; Hz; T/sqrt(Hz); degC",
+      "frame_time_contract": "S with traceable C_SB; separate sensor offset/noise from background drift and actuator remanence; retain internal corrections and raw outputs.",
+      "future_basilisk_destination": "Future bias/scale/noise or richer sensor model only after separate authorization. No estimator/noise implementation now; vendor density is not per-sample standard deviation without filter/bandwidth.",
+      "uncertainty_rule": "Only measured supported distributions; preserve bias drift/correlation and distinguish instrument floor. Wider untested tails remain unsupported."
+    },
+    {
+      "id": "M09",
+      "name": "Acquisition-to-application events/delay/jitter",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "timing distribution",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "events table: run/cycle/sample/command IDs, event name, clock ID/ticks, mapped t_ns and uncertainty, load/mode; raw logic/current/packet/software traces.",
+      "units": "s; integer ticks with declared clock scale",
+      "frame_time_contract": "Record acquisition, availability, compute start/end, publication, driver latch/on/off and current rise separately; calibrate clock skew/drift and trace overhead. Actual events, not target tick times.",
+      "future_basilisk_destination": "Future sample_to_compute/compute_to_actuate after explicit event mapping; separate transport, queue, execution, publication, latch/current response to avoid double counting. Nonrepresentable timing requires separate work, not rounding.",
+      "uncertainty_rule": "Empirical joint/conditional timing distributions or bounds with autocorrelation and tails supported by records; no independent Gaussian jitter invented."
+    },
+    {
+      "id": "M10",
+      "name": "Scheduler/burst/PWM command policy",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "calibration curve / lookup table",
+        "timing distribution",
+        "uncertainty distribution",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "schedule.json: firmware/topology/PrmDb/pinmux hashes, acquisition/manager/control/cycle clocks, BURST_TICKS/reset settings, carrier, replace/retrigger/expiry/OFF rules; observed traces.",
+      "units": "Hz; ticks; s; duty fraction",
+      "frame_time_contract": "Manager tick, PWM carrier, burst fraction and physical current-on duration distinct. RESET_WAIT_TICKS is reset recovery, not magnetic settling.",
+      "future_basilisk_destination": "Future cycle parameters and scheduling contract after feasibility review. Existing 0.1 s plant grid requires four distinct positive phases and >=0.4 s whole cycle; 5/10 Hz manager rates do not imply feasible complete cycles.",
+      "uncertainty_rule": "Cadence/phase uncertainty tied to M09 and real firmware modes; ideal test cycle remains unchanged."
+    },
+    {
+      "id": "M11",
+      "name": "Independent integrated/HIL validation",
+      "result_status": "TBD",
+      "input_classes": [
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "validation manifest plus reserved input/output traces: measured current/field/dipole/power/events, inferred values labeled separately, native torque/analytical torque/simulated state; residuals and acceptance decisions.",
+      "units": "T; A; A m^2; N m; rad/s; s; W; J",
+      "frame_time_contract": "Measured versus simulated truth explicit; gyro/nav injection on fixed fixture labeled substitution. Cage tracking/latency independently measured; feedback must not silently cancel coil contamination.",
+      "future_basilisk_destination": "Validation only; no fitting/tuning on this set. m=f(I) is not independent measured dipole; m x B is not measured torque. Simulated rate is not hardware rigid-body validation.",
+      "uncertainty_rule": "Use predeclared allocated residual/coverage limits with instrument/model uncertainty; physical torque/rate requires independent instrumentation."
+    },
+    {
+      "id": "M12",
+      "name": "Approved acceptance/requirement definitions",
+      "result_status": "TBD",
+      "input_classes": [
+        "deterministic scalar/vector/matrix",
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "acceptance register: criterion ID/revision/owner, metric/frame/window/limit/coverage/margin/envelope and source/conflict disposition.",
+      "units": "T or declared metric; rad; s; W; J; fraction",
+      "frame_time_contract": "Magnetic allocation, alignment knowledge versus mounting, serial versus end-to-end latency and power boundaries explicitly defined.",
+      "future_basilisk_destination": "Future validation/configuration metadata only after approval. RVM 3 degree orientation knowledge is not a measured mount tolerance; TBR energy budget does not define duty or 24-hour compliance.",
+      "uncertainty_rule": "Approved uncertainty/coverage treatment; no numeric limit, confidence level or equipment tolerance invented."
+    },
+    {
+      "id": "M13",
+      "name": "Reproducible executed evidence package",
+      "result_status": "TBD",
+      "input_classes": [
+        "validation-only evidence"
+      ],
+      "proposed_record_format": "manifest.json links immutable raw records, hardware/firmware/config/calibration revisions, procedure/results/signatures, frame/time/channel schema, analysis hash, fits/held-out sets, failures/exclusions.",
+      "units": "Metadata; units declared for every measured channel",
+      "frame_time_contract": "Common event IDs and clock mappings retained; original raw data preserved along with derived tables and exact processing version.",
+      "future_basilisk_destination": "Provenance/validation only. Every later candidate parameter needs measured/approved source, status, configuration/frame and revision; tracker/procedure flags never promote values.",
+      "uncertainty_rule": "Instrument uncertainty/calibration validity and sampling/coverage limitations included; missing results remain TBD."
+    }
+  ],
+  "tests": [
+    {
+      "id": "ADCS-MAG-001",
+      "title": "Actuator identity, polarity and body-axis verification",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Identify the actual assembly and establish physical frames/channel signs used by the model.",
+      "required_hardware": "Actual or explicitly configuration-equivalent MTA/driver/selected sensor/harness; released BOM/drawings; survey instruments; independent calibrated vector magnetic reference; bounded power/current/logic instrumentation.",
+      "setup": "Survey body datum, coil axes/centers and sensor location/orientation in the intended configuration; record fixture-to-body transform and magnetic-reference poses.",
+      "controlled_variables": "Part/serial/PCB/firmware, mounting/harness, background field, temperature and approved polarity-test commands.",
+      "measured_channels": "Identity/pin records; g_Bi, C_SB, r_B; command/driver state, signed winding current, independent field/moment direction; survey uncertainty.",
+      "timestamp_requirements": "Static configuration/time records plus mapped command/current/field acquisition IDs for powered polarity; actual acquisition epochs, not receipt time.",
+      "procedure_outline": [
+        "Complete document/survey stage 001-D; resolve COTS/in-house and air-coil variant, actual sensor inventory and data source.",
+        "Define B origin/handedness, survey coil/sensor transforms and current-return routing; do not substitute stack pitch for magnetic separation.",
+        "After approved initial limits/MAG-003 bring-up, perform powered stage 001-P: correlate +/- commands, actual current direction and independent vector field direction.",
+        "Check C_SB direction/right-handedness/orthonormality within measured uncertainty. Preserve nonorthogonality of separate coil axes; do not require G_B to be an orthogonal DCM.",
+        "Close discrepancies by signed disposition; cross-check moment direction in MAG-002. Record legacy-procedure/record crosswalk without requiring obsolete template execution."
+      ],
+      "model_outputs": [
+        "M01",
+        "M07",
+        "M13"
+      ],
+      "blocker_ids": [
+        "A02",
+        "A03",
+        "A05",
+        "A12",
+        "B03",
+        "D01",
+        "D02",
+        "E01",
+        "E02",
+        "E06",
+        "F01",
+        "F02",
+        "F03",
+        "F05"
+      ],
+      "support_evidence_ids": [
+        "A01",
+        "B02"
+      ],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "RVM ADCS-6/7 (Phase 6B E02) document orientation knowledge within 3 degrees. Applicability/tighter budget allocations remain TBC; knowledge uncertainty is not mounting tolerance. Proposed identity/sign comparison must match the approved configuration; numeric survey acceptance beyond the applicable obligation is TBD.",
+      "prerequisites": "001-D is unpowered. Initial safe bench limits and MAG-003 bring-up precede 001-P; full thermal-envelope characterization is not a prerequisite for the static survey."
+    },
+    {
+      "id": "ADCS-MAG-002",
+      "title": "Per-axis current-to-dipole and command calibration",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Measure command-to-current-to-vector-dipole response and test linearity, saturation and history dependence.",
+      "required_hardware": "Identified actuator/driver and actual firmware command source; approved supply; calibrated current/voltage and temperature instruments; independent vector reference magnetometer(s) with surveyed fixture or calibrated torque magnetometry; controlled/monitored background field.",
+      "setup": "Use multiple surveyed poses/orientations with an identifiable field-to-moment inverse; check dipole approximation against independent poses rather than assume near-field dipolar behavior. Retain pre/post zero-command baselines and ambient reference.",
+      "controlled_variables": "Signed amplitude, rising/falling sequence, dwell/history, voltage, winding temperature, driver/carrier, background vector and reference pose.",
+      "measured_channels": "Command/latch, I/V, independent field vectors/poses or torque, temperature and zero/remanent/transient records.",
+      "timestamp_requirements": "Map command/current/reference-field clocks; record physical acquisition windows and actual dwell. Stability/dwell acceptance is defined before selecting steady intervals; no invented duration.",
+      "procedure_outline": [
+        "Use MAG-001 identity/geometry and MAG-003 initial limits; all points stay inside an approved test envelope.",
+        "Collect zero and +/- commands over that envelope with ascending/descending paths, repeats and different magnetic histories/background orientations; test per-axis direction and coupling.",
+        "Infer moment independently from calibrated reference field/geometry or torque; propagate instrument, background and geometry uncertainty and retain remanence.",
+        "Fit current versus command separately from vector moment versus measured current; assess linear/nonlinear and temperature/history dependence using reserved poses/sequences.",
+        "Publish curves, interpolation domain, uncertainty and held-out residuals. Adopt scalar gain/fixed axis only against a predeclared model-error allocation; do not turn vendor lower bounds into clamps."
+      ],
+      "model_outputs": [
+        "M01",
+        "M02",
+        "M13"
+      ],
+      "blocker_ids": [
+        "A03",
+        "A05",
+        "A09",
+        "A10",
+        "E04",
+        "F05"
+      ],
+      "support_evidence_ids": [
+        "A04",
+        "A11"
+      ],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "Dipole accuracy, cross-axis/nonlinearity/hysteresis residual, fit coverage and saturation acceptance require approved ADCS allocations. Vendor nominal ratings alone do not establish installed acceptance. Failed identifiability or inadequate held-out fit blocks the chosen reduced model.",
+      "prerequisites": "MAG-001 document/geometry/polarity and approved initial electrical conditions; full thermal extension may follow. Test accuracy/coverage criteria must be approved before declaring acceptance."
+    },
+    {
+      "id": "ADCS-MAG-003",
+      "title": "Electrical/current/power/thermal characterization",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Resolve driver and sensing semantics and release a measured operating envelope within approved hardware limits.",
+      "required_hardware": "Actual MTA/CDH drive and EPS-equivalent supply; released schematic/BOM; calibrated per-coil current and differential winding-voltage probes, bus power measurement, logic/oscilloscope and temperature instruments; representative thermal fixture.",
+      "setup": "Instrument bus and windings independently without unrecorded return-path changes. Compare installed feedback against independent probes; capture true driver mode/carrier.",
+      "controlled_variables": "Voltage, temperature/thermal boundary, signed command, carrier/duty/enable/OFF state, burst/retrigger, individual/simultaneous coils and firmware load.",
+      "measured_channels": "Bus/winding V/I, PWM/GPIO/latch, temperature, installed monitor telemetry, limiting/fault status and actual on/off windows.",
+      "timestamp_requirements": "Bandwidth/sample rates are selected from observed switching/transients and required uncertainty, with anti-aliasing/probe limits recorded. Peak/mean/RMS windows and clock skew explicit; faster switching and slow heating share record IDs.",
+      "procedure_outline": [
+        "Release initial safe bench conditions from actual parts/schematic/thermal review before powering. Conflicting 9/12 V claims or 100% thermal-table duty are not test authorizations.",
+        "Verify pin truth table, levels, sign/magnitude/enable/idle/reset and supported recovery states; measure carrier and duty/latch resolution.",
+        "Measure winding resistance with lead/contact correction and recorded temperature; characterize command-current relation and regulation/limiting. Distinguish per-coil sensing from rail INA3221 readings; confirm absence where applicable.",
+        "Capture bus/winding instantaneous v*i before averaging/integrating; retain ripple, regeneration, baseline load and driver losses. Use I_rms^2 R only for applicable winding heat.",
+        "Measure heating and repeated-burst/duty behavior inside approved bounds; Thermal/EPS sign a restricted operating envelope. Room-air cooling is not automatically a flight thermal result."
+      ],
+      "model_outputs": [
+        "M03",
+        "M04",
+        "M10",
+        "M12",
+        "M13"
+      ],
+      "blocker_ids": [
+        "A05",
+        "A06",
+        "A08",
+        "A10",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "C03",
+        "C07",
+        "C09",
+        "C10",
+        "D01",
+        "D02",
+        "D03",
+        "D05",
+        "F05"
+      ],
+      "support_evidence_ids": [
+        "A07",
+        "D04"
+      ],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "Actual assembly voltage/current/thermal/duty limits and averaging boundaries are presently unresolved: acceptance TBD. RVM <2 W detumble / <0.4 W standby and <=11 Wh remain TBR; 60 Wh and coil/ADCS peak conflicts need disposition. This test does not verify 24-hour mission energy.",
+      "prerequisites": "MAG-001 document/fixture identification plus signed initial bench envelope. Initial bring-up enables 001-P/002; fuller electrical/thermal work follows without a circular prerequisite."
+    },
+    {
+      "id": "ADCS-MAG-004",
+      "title": "Magnetorquer command-off and coil-current decay",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Measure physical current persistence after OFF separately from command and driver timestamps.",
+      "required_hardware": "Identified driver/coil/CDH, approved supply/fixture; calibrated current/voltage probes, synchronized logic/scope and temperature; optional independent fast field reference.",
+      "setup": "Trigger on command marker and actual driver edge; measure current through the true recirculation path with adequate documented bandwidth/dynamic range.",
+      "controlled_variables": "Prior signed amplitude/history, burst, temperature, supply, brake/coast/disable/reset mode and simultaneous coils within approved limits.",
+      "measured_channels": "t_cmd_off, t_driver_off, command IDs, I(t)/V(t), temperature, mode; optional independent field/moment response.",
+      "timestamp_requirements": "Preserve both OFF origins, clock/probe skew, trigger uncertainty, noise floor and record end. Timing resolution is justified by the measured transient and acceptance uncertainty; numeric requirement TBD.",
+      "procedure_outline": [
+        "Exercise supported off states after representative signed burst/history cases inside the characterized electrical envelope.",
+        "Capture pre-OFF conditions and complete observable decay; repeat and check rebound/history dependence.",
+        "Report I(t) and threshold-crossing bounds; the acceptance current level/stable window must be approved or derived from magnetic validity.",
+        "Treat below-instrument-floor and beyond-record decay as bounded/censored evidence, not zero current or invented finite settling.",
+        "Correlate any independent magnetic response; current decay does not close the local-field/sensor recovery test."
+      ],
+      "model_outputs": [
+        "M04",
+        "M06",
+        "M09",
+        "M13"
+      ],
+      "blocker_ids": [
+        "A10",
+        "C02",
+        "C03",
+        "D02",
+        "F05"
+      ],
+      "support_evidence_ids": [],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "No accepted decay duration/current threshold exists. Threshold, stable-window definition and uncertainty/margin must come from approved magnetic-error allocation or a justified current-to-local-field bound.",
+      "prerequisites": "Verified driver truth table and initial electrical limits; a threshold is not needed to collect raw decay traces but is required to accept a quiet-time contribution."
+    },
+    {
+      "id": "ADCS-MAG-005",
+      "title": "Actuator-to-magnetometer interference and local-field settling",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Measure local contamination/remanence and establish when an entire flight-sensor acquisition becomes usable.",
+      "required_hardware": "Flight-like MTA/sensor/structure/harness, selected magnetic sensor, calibrated independent ambient/local vector reference, synchronous current/logic capture, controlled field and temperature.",
+      "setup": "Use surveyed intended geometry. Characterize the reference probe's own coil pickup; preserve raw/corrected flight data and independent local field so subtraction cannot erase contamination.",
+      "controlled_variables": "Per-coil and simultaneous-coil signed command/current/moment, prior history, temperature/background vector, mounting state and burst conditions.",
+      "measured_channels": "Command/current/driver events, independent ambient/local B, flight raw/calibrated B and acquisition/availability, temperature/config IDs.",
+      "timestamp_requirements": "Synchronize all channels and use MAG-006 physical aperture/filter history, not nearest-time pairing without age bounds. Record command-off, current decay and field/sensor recovery separately.",
+      "procedure_outline": [
+        "Measure off-state baseline/drift/noise; repeat after positive, negative and alternating histories; retain any persistent change as remanence until explained.",
+        "Exercise individual axes/polarities and approved simultaneous cases across the characterized envelope; test rather than assume linear superposition.",
+        "Measure local vector contamination during/after drive with independent reference and actual flight sensor; separate physical field recovery from sensor filter recovery.",
+        "Apply the approved error metric/frame/window/coverage to the entire effective acquisition history. Find earliest valid acquisition with uncertainty, rebound and repeatability included.",
+        "Publish conditional validity bounds, raw traces, failures and geometry limits. Without a threshold or identifiable acquisition window, report traces only and retain quiet/settling TBD."
+      ],
+      "model_outputs": [
+        "M01",
+        "M05",
+        "M06",
+        "M07",
+        "M08",
+        "M12",
+        "M13"
+      ],
+      "blocker_ids": [
+        "A10",
+        "C02",
+        "C04",
+        "E01",
+        "E03",
+        "E04",
+        "F05"
+      ],
+      "support_evidence_ids": [
+        "C01"
+      ],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "ACCEPTANCE CRITERION TBD for contamination magnitude, coverage, margin and valid window; ADCS/Systems must supply the allocation. I1's qualitative burst-then-zero-current intent (C01) is documented, but software zero command does not prove physical validity.",
+      "prerequisites": "MAG-001 geometry, MAG-002/003 command envelope, MAG-004 off behavior and MAG-006 acquisition semantics. Data collection may precede allocation; accepted quiet time may not."
+    },
+    {
+      "id": "ADCS-MAG-006",
+      "title": "Magnetometer sampling, filtering and timestamp characterization",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Identify the real magnetic data source and measure its calibration, effective acquisition/filter response and epoch semantics.",
+      "required_hardware": "Flight sensor/firmware/interface; calibrated controlled vector field or equivalent stimulus with independent reference, survey fixture, common-clock packet/logic capture and temperature measurement.",
+      "setup": "Read back actual registers/packets/calibration state. Apply independently measured field changes/rotations at varied phase relative to output; distinguish physical response from transport.",
+      "controlled_variables": "Sensor/config/firmware, output/filter settings, field magnitude/direction/stimulus phase, temperature/orientation, static/dynamic fields and recovery history.",
+      "measured_channels": "Reference B, raw/corrected sensor B, packet sequence/content, data-ready if available, transmit/receive/decode, device/host clock events and temperature.",
+      "timestamp_requirements": "Measure clock offsets/drift/wrap, acquisition start/reference/end or bounded response kernel, filter history and availability separately. 200 Hz capability is not a 5 ms aperture.",
+      "procedure_outline": [
+        "Confirm actual VN-100/internal or external source and flight selection; dispose of interface contradictions through hardware/firmware evidence.",
+        "Preserve register dumps/raw readings and calibration state; measure scale/cross-axis/bias with known vector fields and quiet residual noise/drift with an independent reference.",
+        "Identify/bound aperture and filter response using phase-varied timed stimuli; reference actual generated field, not the field-generator command.",
+        "Trace sample IDs, publication/transport age, losses/repeats/out-of-order behavior and recovery; retain acquisition uncertainty if no direct marker exists.",
+        "Validate calibration/response on held-out stimuli; publish supported bias/noise/timing models and limitations. No estimator/noise code is implemented now."
+      ],
+      "model_outputs": [
+        "M01",
+        "M07",
+        "M08",
+        "M09",
+        "M12",
+        "M13"
+      ],
+      "blocker_ids": [
+        "B03",
+        "B05",
+        "B06",
+        "C02",
+        "C04",
+        "C05",
+        "C06",
+        "C08",
+        "E02",
+        "E03",
+        "E04",
+        "E06",
+        "F05"
+      ],
+      "support_evidence_ids": [
+        "B02",
+        "B04",
+        "E05"
+      ],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "Sensor/model error and epoch uncertainty acceptance TBD from ADCS allocation. H4 rates/noise are vendor capability, not installed validation. I1 serial latency <one 10 Hz period is conditional <0.1 s; applicability/endpoints and 5/10 Hz conflict remain TBC.",
+      "prerequisites": "Identified sensor/fixture and permitted power/interface settings; independently calibrated stimulus/reference. May run alongside actuator tests once these prerequisites exist."
+    },
+    {
+      "id": "ADCS-MAG-007",
+      "title": "Flight-software magnetic-control timing and jitter",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Resolve the schedule and measure actual sample-to-compute-to-physical-application timing.",
+      "required_hardware": "Flight-like CDH, actual sensor and driver/MTA (initial dummy load explicitly labeled), firmware/topology/PrmDb/pinmux, common-clock trace/logic/packet capture and current probes.",
+      "setup": "Instrument actual code events with sample/command IDs and cross-checked GPIO markers; quantify instrumentation overhead and correlate real driver/current transitions.",
+      "controlled_variables": "Supported approved 5/10 Hz candidate configurations, flight workload/mode/queues, sensor settings, burst/retrigger and late/stale/reset cases.",
+      "measured_channels": "Acquisition reference/bounds, availability, compute start/end and consumed sample/nav IDs, publication, PWM latch/on/off/current rise, scheduler and carrier events.",
+      "timestamp_requirements": "Mapped monotonic clocks and measured skew/drift/overhead. Retain actual ordered events and correlated jitter, not intended scheduler ticks; numeric resolution allocated before acceptance.",
+      "procedure_outline": [
+        "Obtain a version-controlled map distinguishing manager, acquisition, control and complete-cycle rate; compare 5/10 Hz only as controlled supported alternatives.",
+        "Trace acquisition-to-availability-to-compute-to-publication-to-driver/current under representative workload.",
+        "Exercise supported late/stale/duplicate input and replace/retrigger/expiry/reset behavior; demonstrate which sample generated each applied command.",
+        "Separate transport, queue, compute, publication/latch/current-rise delays and their joint variability; retain MAG-006 bounds on unobservable epochs.",
+        "Review simulation representability without rounding away offsets or changing source timestamps; unsupported hardware timing requires separately authorized architecture work."
+      ],
+      "model_outputs": [
+        "M04",
+        "M07",
+        "M09",
+        "M10",
+        "M12",
+        "M13"
+      ],
+      "blocker_ids": [
+        "B01",
+        "B03",
+        "B06",
+        "B07",
+        "C06",
+        "C07",
+        "C08",
+        "C09",
+        "D01",
+        "D03",
+        "E06",
+        "F05"
+      ],
+      "support_evidence_ids": [
+        "C12"
+      ],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "Loop mapping, worst-case age/jitter/expiry and recovery criteria are TBD pending ADCS/CDH/Systems approval. Conditional I1 serial allocation retains its endpoints and conflict; it cannot substitute for total acquisition-to-current acceptance.",
+      "prerequisites": "MAG-006 acquisition semantics, MAG-003 driver envelope and released candidate firmware settings. Existing TEST-ONLY delays are not acceptance limits."
+    },
+    {
+      "id": "ADCS-MAG-008",
+      "title": "Integrated magnetic-control cycle / HIL validation",
+      "plan_status": "ASSUMED",
+      "execution_status": "NOT EXECUTED",
+      "result_record": null,
+      "objective": "Independently verify clean sampling, admissible actuation and correct event timing with real assembly/software on reserved cases.",
+      "required_hardware": "Identified flight controller/sensor/driver/MTA; calibrated field stimulus and independent reference; current/voltage/timing instruments; separately authorized Basilisk replay/HIL harness. Physical torque/rate claims additionally need calibrated independent torque or free-body/rate instrumentation.",
+      "setup": "Freeze calibration before validation. Begin integrated bench cycles; later HIL maps external B_N through truth attitude into cage B_B and independently verifies stimulus tracking. Cage feedback must not silently cancel coil contamination.",
+      "controlled_variables": "Reserved field/command/polarity histories, electrical/thermal conditions, firmware loads and supported stale/reset cases inside the characterized envelope.",
+      "measured_channels": "Actual sensor acquisitions/availability, command/current, independent background/local field or moment, bus/winding power/temperature and events. Native/analytical torque and simulated state explicitly labeled.",
+      "timestamp_requirements": "Carry clock maps/epoch bounds end-to-end; measure cage/HIL transport separately from flight delay. Preserve exact event/sample IDs, with no hidden time shifts to improve fit.",
+      "procedure_outline": [
+        "Freeze accepted MAG-001..007 packages, configuration and predeclared physical validation limits; reserve cases never used for fitting or tuning.",
+        "Run real integrated cycles over reserved histories; verify actual OFF-current history and entire clean acquisition window plus power/duty and freshness.",
+        "For separately authorized HIL, label injected gyro/nav as substitutions when a fixed fixture cannot rotate. Physical sensor sees applied environment plus local contamination; native torque uses external environment only.",
+        "Compare predictions against independent reserved field/dipole/current/power/timing evidence. Fitted m=f(I) is not independently measured m; computed m x B/state are not physical torque/rate observations.",
+        "Evaluate approved criteria with uncertainty; preserve failures and exclusions. Sign a restricted validity envelope or leave acceptance TBD; do not tune on validation data."
+      ],
+      "model_outputs": [
+        "M01",
+        "M02",
+        "M03",
+        "M05",
+        "M06",
+        "M07",
+        "M09",
+        "M10",
+        "M11",
+        "M12",
+        "M13"
+      ],
+      "blocker_ids": [
+        "A14",
+        "B07",
+        "C09",
+        "C10",
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05"
+      ],
+      "support_evidence_ids": [],
+      "acceptance_criterion": "ACCEPTANCE CRITERION TBD",
+      "existing_criteria_and_qualification": "Acceptance TBD until calibration, magnetic, electrical/duty and timing criteria are approved. Duplicated equations or simulator self-consistency cannot pass physical validation. No 24-hour detumble/pointing requirement verification here; uninstrumented torque/rate and injected channels remain explicit limitations.",
+      "prerequisites": "Accepted configuration/MAG-001..007 measurements and independent reserved-case instrumentation/criteria. This document authorizes planning only, not code or hardware execution."
+    }
+  ],
+  "timing_quantities": [
+    {
+      "id": "TIME-01",
+      "quantity": "Actuator command-off timestamp",
+      "blockers": [
+        "C03",
+        "D02",
+        "B07"
+      ],
+      "observable": "t_cmd_off and associated command ID in mapped clock; t_driver_off measured separately",
+      "model": "M09 event stream; command hold endpoint, not a decay duration",
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE"
+    },
+    {
+      "id": "TIME-02",
+      "quantity": "Coil-current decay",
+      "blockers": [
+        "C03"
+      ],
+      "observable": "I(t) after command/driver OFF and stable crossing of an approved current criterion",
+      "model": "M04 transient response; M06 validity contribution",
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD"
+    },
+    {
+      "id": "TIME-03",
+      "quantity": "Local magnetic-field decay/settling",
+      "blockers": [
+        "C04",
+        "E04",
+        "E03"
+      ],
+      "observable": "Independent local Delta B(t) and flight sensor response versus background/history",
+      "model": "M05 contamination and M06 valid acquisition rule",
+      "sweep_class": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD"
+    },
+    {
+      "id": "TIME-04",
+      "quantity": "Magnetometer aperture/filter history",
+      "blockers": [
+        "C05",
+        "B05"
+      ],
+      "observable": "Effective acquisition start/end or bounded response kernel from independent timed stimulus",
+      "model": "M07 finite acquisition/filter behavior, not packet interval",
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE"
+    },
+    {
+      "id": "TIME-05",
+      "quantity": "Magnetometer sample timestamp",
+      "blockers": [
+        "B05",
+        "B06",
+        "B07"
+      ],
+      "observable": "Acquisition reference/bounds, sample ID and clock mapping distinct from availability",
+      "model": "M07/M09 measurement epoch and age",
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE"
+    },
+    {
+      "id": "TIME-06",
+      "quantity": "Controller compute delay",
+      "blockers": [
+        "C06",
+        "B07"
+      ],
+      "observable": "t_compute_start/end and consumed sample ID; queue and execution separated from transport",
+      "model": "M09 future sample_to_compute contract",
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE"
+    },
+    {
+      "id": "TIME-07",
+      "quantity": "Actuator application delay",
+      "blockers": [
+        "C07",
+        "B07"
+      ],
+      "observable": "Compute end, command publication, driver latch/on and physical current rise",
+      "model": "M09 plus M04; future compute_to_actuate/actuator response",
+      "sweep_class": "BLOCKED — NO DEFENSIBLE RANGE"
+    }
+  ],
+  "characterization_set": [
+    {
+      "id": "CHAR-01",
+      "category": "Actuator identity and geometry",
+      "tests": [
+        "ADCS-MAG-001"
+      ],
+      "must_know": "Released installed identities, body datum, channel/polarity and surveyed sensor/coil transforms/positions.",
+      "can_remain_parametric": "Only residual measured survey uncertainty inside the approved envelope.",
+      "blocked": "Choosing COTS/in-house/air-coil variant or actual axes from assumption.",
+      "outputs": [
+        "M01"
+      ],
+      "format": "geometry.json and signed survey/BOM"
+    },
+    {
+      "id": "CHAR-02",
+      "category": "Per-axis dipole/current calibration",
+      "tests": [
+        "ADCS-MAG-002"
+      ],
+      "must_know": "Signed command-to-current-to-vector-moment curves; direction, nonlinearity/history and validated domain.",
+      "can_remain_parametric": "Measured calibration uncertainty and accepted model discrepancy.",
+      "blocked": "Unmeasured gain, saturation clamp, assumed linearity or variant-mixed capability.",
+      "outputs": [
+        "M02"
+      ],
+      "format": "long-form calibration table and fit metadata"
+    },
+    {
+      "id": "CHAR-03",
+      "category": "Electrical limits and thermal/duty behavior",
+      "tests": [
+        "ADCS-MAG-003"
+      ],
+      "must_know": "Driver/feedback truth table, supply/winding limits, carrier, power boundary and admissible thermal/burst/duty envelope.",
+      "can_remain_parametric": "Measured variability within that envelope; later environmental extension remains excluded.",
+      "blocked": "Using rail voltage as coil DC drive or treating historical duty as a thermal rating.",
+      "outputs": [
+        "M03",
+        "M10",
+        "M12"
+      ],
+      "format": "electrical.json plus synchronous waveforms/envelope tables"
+    },
+    {
+      "id": "CHAR-04",
+      "category": "Coil current decay",
+      "tests": [
+        "ADCS-MAG-004"
+      ],
+      "must_know": "Separate command-off/driver-off events and actual winding-current persistence for used off modes.",
+      "can_remain_parametric": "Measured conditional transient repeatability; detailed R-L fit optional if a bounded equivalent is justified.",
+      "blocked": "Numeric acceptable decay without threshold/uncertainty or proof that zero command equals zero current.",
+      "outputs": [
+        "M04",
+        "M09"
+      ],
+      "format": "current/logic traces and conditional transient tables"
+    },
+    {
+      "id": "CHAR-05",
+      "category": "Interference and magnetic settling",
+      "tests": [
+        "ADCS-MAG-005"
+      ],
+      "must_know": "Installed local coupling/remanence and entire valid acquisition window against an approved magnetic-error allocation.",
+      "can_remain_parametric": "Measured residual uncertainty/condition dependence; explicitly excluded untested geometries.",
+      "blocked": "Contamination magnitude, magnetic separation or accepted quiet duration from intuition.",
+      "outputs": [
+        "M05",
+        "M06",
+        "M12"
+      ],
+      "format": "interference table, raw B traces and validity.json"
+    },
+    {
+      "id": "CHAR-06",
+      "category": "Magnetometer configuration and timestamps",
+      "tests": [
+        "ADCS-MAG-006"
+      ],
+      "must_know": "Actual sensor/data source, packet/filter/calibration settings, acquisition window/epoch/availability and enough baseline error characterization to assess cleanliness.",
+      "can_remain_parametric": "Measured residual bias/noise and epoch uncertainty; complex long-term stochastic tails need more data.",
+      "blocked": "Hardware maximum as flight output rate/aperture, receipt time as acquisition time.",
+      "outputs": [
+        "M07",
+        "M08",
+        "M09"
+      ],
+      "format": "sensor.json, register dump and stimulus/packet records"
+    },
+    {
+      "id": "CHAR-07",
+      "category": "Flight software control/timing/jitter",
+      "tests": [
+        "ADCS-MAG-007"
+      ],
+      "must_know": "Approved 5/10 Hz disposition and full event map; measured latency/phase/jitter/staleness/retrigger behavior.",
+      "can_remain_parametric": "Measured joint timing distribution or bounded variability, not unknown delays.",
+      "blocked": "Treating manager rate as whole cycle or inventing ranges around 0.1 s test delays.",
+      "outputs": [
+        "M09",
+        "M10"
+      ],
+      "format": "schedule.json and common-clock events table"
+    },
+    {
+      "id": "CHAR-08",
+      "category": "Integrated cycle verification",
+      "tests": [
+        "ADCS-MAG-008"
+      ],
+      "must_know": "Independent reserved-case evidence that real assembly/software obeys accepted magnetic/electrical/timing rules.",
+      "can_remain_parametric": "Only supported model discrepancy within an explicit candidate validity envelope.",
+      "blocked": "Passing on duplicated equations, calibrated-current dipole used as independent dipole, or simulated rate treated as physical measurement.",
+      "outputs": [
+        "M11",
+        "M13"
+      ],
+      "format": "validation manifest, reserved raw/replay traces and signed decision"
+    }
+  ],
+  "measurement_contract": {
+    "status": "ASSUMED / proposed test-record structure; all results NOT EXECUTED",
+    "raw_trace_schema": "Run/case/config ID; sample/command/event ID; physical channel and origin_kind (measured, inferred, simulated); clock ID/raw ticks/scale; mapped reference time and uncertainty; value/units/frame; acquisition start/reference/end or bounds; validity/saturation/missing flags; condition/history IDs.",
+    "manifest": "Installed serial/BOM/PCB/firmware/register/pinmux/PrmDb revisions; fixture/body/reference transforms and harness geometry; instrument serial/calibration/date/bandwidth/noise floor; operating limits; thermal/background/command histories; clock mapping/offset/drift; raw-data and processing/fit checksums; source/requirement criteria; repeats, failures/exclusions and reviewer disposition.",
+    "resolution": "No numerical timestamp resolution, probe bandwidth, sample rate, repetition count, dwell duration or equipment tolerance is invented. Test owner allocates these from the smallest event/magnetic-error margin to be resolved and instrument uncertainty. A pilot trace may establish bandwidth/dwell needs inside approved limits; justify settings before acceptance. Integer t_ns is a storage unit, not a claim of nanosecond accuracy.",
+    "repetition": "Repeat signed amplitudes/histories and independent sessions over the declared envelope; choose sample count/coverage from the approved uncertainty objective. Preserve correlated timing/magnetic histories and censored/no-settle cases; do not silently select only favorable repeats.",
+    "independence": "Independent reference measurement and held-out cases are required for calibration/model acceptance. Never overwrite measured current/field or native torque with expected calculations. HIL simulated rate/torque is labeled simulated; actual physical torque/rate needs independent measurement.",
+    "units_and_frames": "SI data plus preserved original units/conversions; declared right-handed body datum, coil sign, C_SB B-to-S transform, external B_N and simulated C_BN N-to-B direction. Sensor local contamination never substitutes for external magnetic field in plant torque.",
+    "future_use": "Record formats named here are proposed future evidence packages only; none are created now except the two planning artifacts. Candidate parameter source/revision/status/config/frame/uncertainty must reference executed evidence; no unmeasured runtime parameters."
+  },
+  "sweep_plan": [
+    {
+      "id": "SW-01",
+      "classification": "RESPONSIBLE PARAMETRIC SWEEP",
+      "quantity": "Competing scheduler/control assumptions",
+      "evidence_ids": [
+        "B01"
+      ],
+      "anchors": "5 Hz versus 10 Hz, with their respective documented contexts; no new intermediate physical rates.",
+      "design": "Future controlled comparison changes only the declared scheduler hypothesis while freezing profile/gains/environment and replay/initial cases. First define manager, sample, control and complete-cycle rates independently.",
+      "limits": "Not a physical rate uncertainty distribution. Present 0.1 s-grid cycle requires >=0.4 s total; do not implement full 0.1/0.2 s cycles through silent rounding.",
+      "metrics": "Event/sample age, command hold/on fraction, validation failures and later short-run rate/energy sensitivity; no requirement-compliance claim."
+    },
+    {
+      "id": "SW-02",
+      "classification": "RESPONSIBLE PARAMETRIC SWEEP",
+      "quantity": "Existing architecture anchors",
+      "evidence_ids": [
+        "C11",
+        "C12"
+      ],
+      "anchors": "Unchanged continuous regression and opt-in TEST-ONLY diagnostic: quiet0.2 s + settling0.2 s; instant sample0.4 s; compute0.5 s; apply0.6 s; burst0.4 s; period1.0 s; duty40%.",
+      "design": "Only existing cases provide anchors; preserve their full phase relationship and label non-flight. No invented perturbation band around 0.1 s delays.",
+      "limits": "A single diagnostic delay does not define a physical sweep range. An ideal sensor comparison cannot quantify real contamination or accepted quiet time.",
+      "metrics": "Architecture invariants, actual command timing and labeled development response; simulations are not run in Phase 6C."
+    },
+    {
+      "id": "SW-03",
+      "classification": "RESPONSIBLE PARAMETRIC SWEEP",
+      "quantity": "Historical burst-duty hypotheses",
+      "evidence_ids": [
+        "C10"
+      ],
+      "anchors": "PDR80%; budget detumble50%, experiment20%, standby10%; retain mode/provenance. Phase6A40% is separately TEST-ONLY.",
+      "design": "Future feasible burst/period pairs must honor every phase and clock constraint. Compare one effect at a time, then relevant coupled effects; do not fix period and silently shorten quiet/compute phases.",
+      "limits": "These are budget/analysis hypotheses, not permitted hardware duty/thermal ranges or PWM carrier duty. Reject infeasible timing combinations; do not force every anchor into the 1 s diagnostic cycle.",
+      "metrics": "Time-averaged applied moment, power/duty, sample age/validity and rate/energy sensitivity; no assumed flight acceptability."
+    },
+    {
+      "id": "SW-04",
+      "classification": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "quantity": "Actuator numerical capability envelope",
+      "evidence_ids": [
+        "A02",
+        "A04",
+        "A05",
+        "A08",
+        "A09"
+      ],
+      "anchors": "Conditional CR0002 vendor 0.2 A m^2 at5 V/20 degC, gain2.3 A m^2/A, R51 ohm. MT01A >0.395 at3.3 V / >0.790 at9 V conflict with heading; older MT01 >0.85 is separate.",
+      "design": "Retain categorical evidence branches and exact source specifications. No numerical flight range for the in-house or MT01A branch is established.",
+      "limits": "Vendor lower bounds and incompatible variants/operating points cannot form min/max clamps or an uncertainty distribution. Actual selection/transfer/limits need measurements.",
+      "metrics": "After identity/calibration: delivered torque/saturation and power sensitivity over measured bounds."
+    },
+    {
+      "id": "SW-05",
+      "classification": "BLOCKED — NEEDS ACCEPTANCE THRESHOLD",
+      "quantity": "Quiet time, current/field settling and contamination",
+      "evidence_ids": [
+        "C02",
+        "C03",
+        "C04",
+        "E03",
+        "E04"
+      ],
+      "anchors": "No accepted physical range. Existing TEST-ONLY zero-command history is not such a range.",
+      "design": "Collect independent current/local-field/filter response and approve a validity metric first; sensitivity only over supported measured conditions thereafter.",
+      "limits": "Do not invent residual T/A thresholds, decay constants, remanence or quiet-time bounds.",
+      "metrics": "Full-acquisition validity, residual field and time-to-valid-window with uncertainty."
+    },
+    {
+      "id": "SW-06",
+      "classification": "BLOCKED — NO DEFENSIBLE RANGE",
+      "quantity": "Aperture, sample age, compute/application delay and jitter",
+      "evidence_ids": [
+        "B05",
+        "B07",
+        "C05",
+        "C06",
+        "C07",
+        "C09"
+      ],
+      "anchors": "No measured distribution/range; diagnostic0.1 s delays and vendor200 Hz capability do not provide one.",
+      "design": "Use synchronized physical event records first. A later sensitivity generator preserves measured joint timing and phase constraints.",
+      "limits": "Phase6B identified potential sensitivity topics; Phase6C distinguishes a topic from an evidence-supported numerical range. Do not generate Gaussian jitter or arbitrary latency bands.",
+      "metrics": "Acquisition-to-current age, worst observed/bounded delay, command expiry and controller stability indicators."
+    },
+    {
+      "id": "SW-07",
+      "classification": "BLOCKED — NEEDS HARDWARE IDENTITY FIRST",
+      "quantity": "Physical mounting/alignment and sensor selection",
+      "evidence_ids": [
+        "A03",
+        "E01",
+        "E02",
+        "E06"
+      ],
+      "anchors": "RVM3 deg knowledge bound and tighter B3 allocations are requirements/predictions, not measured actual error distributions.",
+      "design": "Survey actual geometry/source first; later apply measured uncertainty and explicitly separate requirement-budget sensitivity.",
+      "limits": "No guessed separation, axis rotation, sensor count or stochastic mounting distribution.",
+      "metrics": "Frame/polarity consistency, delivered torque direction, magnetic validity and eventual pointing readiness."
+    },
+    {
+      "id": "SW-08",
+      "classification": "BLOCKED — NO DEFENSIBLE RANGE",
+      "quantity": "Sensor noise/bias and electrical/thermal dynamic extensions",
+      "evidence_ids": [
+        "A10",
+        "A15",
+        "E05",
+        "E04"
+      ],
+      "anchors": "Vendor noise/ranges and thermal claims remain contextual capability evidence; no installed stochastic/dynamic envelope.",
+      "design": "Future use of measured calibration/noise/transient distributions is conditional on MAG-002..006; no estimator implementation now.",
+      "limits": "Noise density requires filter/bandwidth before RMS conversion; approved limits and measured conditions must precede thermal/current sweeps.",
+      "metrics": "Residual validity/error, power/duty and model discrepancy; no ranges or simulations created here."
+    }
+  ],
+  "impact_rankings": [
+    {
+      "area": "Detumble time",
+      "ranked_groups": [
+        {
+          "rank": 1,
+          "blockers": [
+            "A02",
+            "A05",
+            "A09",
+            "A15",
+            "C09"
+          ],
+          "effect": "Delivered magnetic moment and usable duty determine average control authority."
+        },
+        {
+          "rank": 2,
+          "blockers": [
+            "B07",
+            "C06",
+            "C07",
+            "E04"
+          ],
+          "effect": "Sample age/contamination alters command usefulness during a held burst."
+        },
+        {
+          "rank": 3,
+          "blockers": [
+            "A03",
+            "E02"
+          ],
+          "effect": "Axis/polarity errors redirect torque; a sign error can dominate every other term."
+        }
+      ]
+    },
+    {
+      "area": "Magnetic-sample validity",
+      "ranked_groups": [
+        {
+          "rank": 1,
+          "blockers": [
+            "E03",
+            "C04",
+            "E04",
+            "C05"
+          ],
+          "effect": "Need an error allocation and physical field/filter recovery across the whole aperture."
+        },
+        {
+          "rank": 2,
+          "blockers": [
+            "C03",
+            "E01",
+            "B05"
+          ],
+          "effect": "Current recirculation, installation geometry and device settings set observed contamination/history."
+        },
+        {
+          "rank": 3,
+          "blockers": [
+            "B06",
+            "B07"
+          ],
+          "effect": "Correct source/epoch identifies whether the apparently clean sample is actually fresh."
+        }
+      ]
+    },
+    {
+      "area": "Controller stability",
+      "ranked_groups": [
+        {
+          "rank": 1,
+          "blockers": [
+            "A03",
+            "D02"
+          ],
+          "effect": "Wrong polarity/frame can reverse the intended control action."
+        },
+        {
+          "rank": 2,
+          "blockers": [
+            "B01",
+            "B07",
+            "C06",
+            "C07",
+            "C09"
+          ],
+          "effect": "Cadence, age, jitter and hold/retrigger behavior affect closed-loop phase and authority."
+        },
+        {
+          "rank": 3,
+          "blockers": [
+            "E04",
+            "A09"
+          ],
+          "effect": "Biased field and nonlinear/history-dependent actuation change the assumed feedback/plant relationship."
+        }
+      ]
+    },
+    {
+      "area": "Actuator saturation",
+      "ranked_groups": [
+        {
+          "rank": 1,
+          "blockers": [
+            "A05",
+            "A09",
+            "A12",
+            "D05"
+          ],
+          "effect": "Actual variant, calibration, driver limiting and feedback determine achievable moment."
+        },
+        {
+          "rank": 2,
+          "blockers": [
+            "A08",
+            "A13",
+            "A15"
+          ],
+          "effect": "Supply/temperature/duty limits constrain usable current and headroom."
+        }
+      ]
+    },
+    {
+      "area": "Actuator power/duty",
+      "ranked_groups": [
+        {
+          "rank": 1,
+          "blockers": [
+            "A08",
+            "A13",
+            "A15"
+          ],
+          "effect": "Measured voltage/current/power and thermal envelope establish admissible operation."
+        },
+        {
+          "rank": 2,
+          "blockers": [
+            "C09",
+            "C10",
+            "D02",
+            "D03"
+          ],
+          "effect": "Burst/carrier/off-state semantics change average power and transient heat."
+        },
+        {
+          "rank": 3,
+          "blockers": [
+            "A14"
+          ],
+          "effect": "System allocation/boundary reconciliation is needed before a compliance claim."
+        }
+      ]
+    },
+    {
+      "area": "Eventual pointing readiness",
+      "ranked_groups": [
+        {
+          "rank": 1,
+          "blockers": [
+            "A03",
+            "E02",
+            "A09"
+          ],
+          "effect": "Known actuator/sensor frames, polarity and controllable moment are prerequisites."
+        },
+        {
+          "rank": 2,
+          "blockers": [
+            "E03",
+            "E04",
+            "B05",
+            "B06"
+          ],
+          "effect": "Valid magnetic measurements and known data path are prerequisites for later estimation."
+        },
+        {
+          "rank": 3,
+          "blockers": [
+            "B07",
+            "C06",
+            "C07",
+            "F04"
+          ],
+          "effect": "Timing and independent integrated evidence are needed before acquisition/hold development."
+        }
+      ]
+    }
+  ],
+  "top_uncertainty_reduction": [
+    "Resolve installed actuator/driver/sensor identity and body-axis/polarity first; these define which tests and vendor statements apply.",
+    "Measure command-current-vector-dipole and electrical/thermal envelope together; this resolves delivered torque, saturation and usable duty.",
+    "Approve magnetic-error allocation and measure independent current/local-field/sensor recovery with a known acquisition window; this makes quiet time physically meaningful.",
+    "Trace actual acquisition-availability-compute-command-driver-current timing under flight-like workload; resolve the 5/10 Hz mapping and joint jitter.",
+    "Validate the frozen characterization on independent reserved integrated cycles; retain model discrepancy, failures and exclusions."
+  ],
+  "exit_gates": [
+    {
+      "id": "G01",
+      "item": "Confirmed installed actuator/driver/sensor BOM",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Signed part/variant/serial/BOM/PCB/firmware/configuration and conflict dispositions.",
+      "test_ids": [
+        "ADCS-MAG-001"
+      ],
+      "rationale": "Identity cannot remain a categorical guess in a named flight-candidate profile."
+    },
+    {
+      "id": "G02",
+      "item": "Body axes, sensor/actuator transforms and polarity",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Released datum, survey/uncertainty, channel map and independently checked sign/direction; allocation and transforms consistent.",
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-002",
+        "ADCS-MAG-006"
+      ],
+      "rationale": "An identity matrix or known design label is insufficient."
+    },
+    {
+      "id": "G03",
+      "item": "Per-axis command-current-dipole calibration",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Measured usable transfer function, direction/nonlinearity/history limits and held-out validation with uncertainty within the declared domain.",
+      "test_ids": [
+        "ADCS-MAG-002"
+      ],
+      "rationale": "No guessed gain or vendor lower-bound maximum clamp."
+    },
+    {
+      "id": "G04",
+      "item": "Electrical interface and operating limits",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Verified driver/pin/OFF/carrier/feedback semantics and approved bus/winding voltage/current/power boundaries and limits.",
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-004"
+      ],
+      "rationale": "Open-loop current control is permissible only if documented and characterized; a closed feedback loop is not invented as a requirement."
+    },
+    {
+      "id": "G05",
+      "item": "Identified flight magnetometer and configuration",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Actual source/variant, connector/protocol/packet/filter/raw/calibration settings and minimum baseline error characterization for validity.",
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-006"
+      ],
+      "rationale": "Hardware maximum sample rate and generic sensor names do not close this gate."
+    },
+    {
+      "id": "G06",
+      "item": "Acquisition aperture and timestamp semantics",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Measured or bounded physical acquisition/filter history and timestamp reference/availability, clock mapping and uncertainty.",
+      "test_ids": [
+        "ADCS-MAG-006",
+        "ADCS-MAG-007"
+      ],
+      "rationale": "Packet receipt cannot substitute for acquisition epoch."
+    },
+    {
+      "id": "G07",
+      "item": "Magnetic allocation and measured current/field settling",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Approved cleanliness/error metric and independent current/local-field/sensor recovery establishing a full valid acquisition window with margins over the intended envelope.",
+      "test_ids": [
+        "ADCS-MAG-004",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006"
+      ],
+      "rationale": "Zero command/current alone does not prove clean magnetic data."
+    },
+    {
+      "id": "G08",
+      "item": "Approved control rate and complete event map",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "5/10 Hz disposition plus separate manager/sample/control/burst mapping, reset/expiry/retrigger behavior and measured cadence.",
+      "test_ids": [
+        "ADCS-MAG-007"
+      ],
+      "rationale": "A manager tick is not a whole-cycle definition."
+    },
+    {
+      "id": "G09",
+      "item": "Measured sample-compute-application timing and jitter",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Actual component delays and supported joint jitter bounds/coverage under relevant load, including latch/current response and clock/instrument uncertainty.",
+      "test_ids": [
+        "ADCS-MAG-004",
+        "ADCS-MAG-006",
+        "ADCS-MAG-007"
+      ],
+      "rationale": "Unmeasured timing cannot remain parametric simply to pass the gate."
+    },
+    {
+      "id": "G10",
+      "item": "Thermal/burst/duty envelope and cycle power admissibility",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Signed admissible envelope under intended flight-relevant thermal boundary or justified conservative bound, with scope/exclusions and applicable cycle power allocation.",
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-008"
+      ],
+      "rationale": "Room-air data or historical duty estimates alone cannot approve a flight-like burst."
+    },
+    {
+      "id": "G11",
+      "item": "Representable calibrated model and independent integrated cycle evidence",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Frozen calibration and predeclared limits pass reserved integrated physical/interface cases; current model represents measured behavior or a reviewed bounded approximation. Any needed software changes are separately authorized and verified.",
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-002",
+        "ADCS-MAG-003",
+        "ADCS-MAG-004",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006",
+        "ADCS-MAG-007",
+        "ADCS-MAG-008"
+      ],
+      "rationale": "No candidate is created through silent time rounding, omitted aperture, self-referential torque checks or a failed scalar actuator reduction."
+    },
+    {
+      "id": "G12",
+      "item": "Provenance, reproducibility and team disposition",
+      "classification": "REQUIRED",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Executed record packages, calibration/analysis revisions, raw traces, failures/exclusions and ADCS/Systems/CDH/EPS/Structures/Thermal review as applicable.",
+      "test_ids": [
+        "ADCS-MAG-001",
+        "ADCS-MAG-002",
+        "ADCS-MAG-003",
+        "ADCS-MAG-004",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006",
+        "ADCS-MAG-007",
+        "ADCS-MAG-008"
+      ],
+      "rationale": "All values retain provenance/status; every applicable P0 blocker has an accepted resolution."
+    },
+    {
+      "id": "G13",
+      "item": "Independent physical torque/rate and expanded dynamical HIL correlation",
+      "classification": "HIGHLY DESIRABLE",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Calibrated physical torque/free-body/rate measurements with fixture inertia/friction uncertainty and independent truth; accurately scoped channel substitutions.",
+      "test_ids": [
+        "ADCS-MAG-008"
+      ],
+      "rationale": "Strengthens plant/performance validation. Absence forbids physical rigid-body performance claims; the limited integrated-cycle gate still requires real sensor/driver evidence."
+    },
+    {
+      "id": "G14",
+      "item": "Longer-term drift/aging and wider environmental characterization",
+      "classification": "HIGHLY DESIRABLE",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Additional measured environmental/aging/long-duration records beyond the accepted candidate envelope.",
+      "test_ids": [
+        "ADCS-MAG-002",
+        "ADCS-MAG-003",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006",
+        "ADCS-MAG-008"
+      ],
+      "rationale": "May extend validity later; any condition actually required by the initial candidate envelope is REQUIRED, not deferred here."
+    },
+    {
+      "id": "G15",
+      "item": "Residual calibrated parameter and timing uncertainty",
+      "classification": "CAN REMAIN PARAMETRIC",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Measured uncertainty/bounds/distributions and declared correlations inside the accepted envelope; sensitivity demonstrates robustness to those supported variations.",
+      "test_ids": [
+        "ADCS-MAG-002",
+        "ADCS-MAG-003",
+        "ADCS-MAG-005",
+        "ADCS-MAG-006",
+        "ADCS-MAG-007",
+        "ADCS-MAG-008"
+      ],
+      "rationale": "The distribution's supported variability may remain parametric; nominal identity, limits, clean window and timing bounds may not remain unknown."
+    },
+    {
+      "id": "G16",
+      "item": "Later mission-level energy/performance hypotheses",
+      "classification": "CAN REMAIN PARAMETRIC",
+      "current_state": "UNSATISFIED / evidence not provided in Phase 6C",
+      "required_evidence": "Retain unresolved global energy/mission assumptions with statuses; release before the relevant mission verification campaign.",
+      "test_ids": [
+        "ADCS-MAG-003",
+        "ADCS-MAG-008"
+      ],
+      "rationale": "No 24-hour detumble, energy or pointing compliance is claimed. This does not relax required local cycle power/thermal limits."
+    }
+  ],
+  "hard_gate": "Do not create hs2_candidate magnetic_cycle until every REQUIRED gate is satisfied for a declared flight-relevant validity envelope and every P0 blocker is closed by measured/approved evidence. HIGHLY DESIRABLE items cannot substitute for REQUIRED ones; CAN REMAIN PARAMETRIC means bounded supported uncertainty, not invented values. A test with undefined criteria remains characterization-only, not PASS.",
+  "execution_sequence": [
+    "001-D: document identity/body datum/schematic and initial fixture survey; ADCS/EPS/Thermal approve the initial bench envelope and instrumentation/criteria plan.",
+    "003 initial bring-up: verify power/pin/OFF limits; then 001-P verifies physical polarity. 002 dipole calibration and full 003 electrical/thermal characterization proceed within approved limits.",
+    "006 sensor acquisition/calibration may proceed in parallel with actuator work once sensor identity/power and independent field reference are established.",
+    "004 current decay and 005 local-field/sensor recovery use characterized drive, geometry and aperture; Systems/ADCS allocation must exist before accepting a quiet interval.",
+    "007 confirms flight schedule and measured age/jitter. 008 uses frozen packages and reserved data; no recalibration/tuning on that validation set."
+  ],
+  "supporting_evidence": [
+    {
+      "evidence_id": "A01",
+      "parameter": "Design actuator count",
+      "status": "CONFIRMED",
+      "current_candidate_values": 3,
+      "units": "actuators",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "A04",
+      "parameter": "CR0002 vendor dipole, gain, resistance and voltage",
+      "status": "CONFIRMED",
+      "current_candidate_values": {
+        "nominal_dipole_Am2": 0.2,
+        "nominal_voltage_V": 5,
+        "reference_temperature_degC": 20,
+        "gain_Am2_per_A": 2.3,
+        "resistance_ohm": 51,
+        "linear_voltage_range_V": [
+          -5,
+          5
+        ]
+      },
+      "units": "A m^2; A m^2/A; ohm; V; degC",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "A07",
+      "parameter": "Rod nominal current and power calculation",
+      "status": "ASSUMED",
+      "current_candidate_values": {
+        "ICD_per_rod": {
+          "voltage_V": 5,
+          "current_A": 0.098,
+          "power_W": 0.49
+        }
+      },
+      "units": "V; A; W",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "A11",
+      "parameter": "Current runtime actuator assumptions",
+      "status": "ASSUMED",
+      "current_candidate_values": {
+        "dipole_clamps_Am2": [
+          0.2,
+          0.2,
+          0.85
+        ],
+        "resistance_ohm": [
+          51,
+          51,
+          4.4
+        ],
+        "current_limits_A": [
+          "5/51",
+          "5/51",
+          "sqrt(1.75/4.4)"
+        ],
+        "rod_effective_current_clamp_A": "0.2/2.3",
+        "gains_Am2_per_A": [
+          2.3,
+          2.3,
+          "0.85/sqrt(1.75/4.4)"
+        ]
+      },
+      "units": "A m^2; ohm; A; A m^2/A",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "B02",
+      "parameter": "VN-100 selection and intended magnetic data use",
+      "status": "CONFIRMED",
+      "current_candidate_values": {
+        "IMU_count": 1,
+        "model": "VN-100 Rugged",
+        "ADCS_intent": "raw gyro and internal magnetometer measurements"
+      },
+      "units": "count/model/data role",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "B04",
+      "parameter": "Vendor internal sensor rates",
+      "status": "CONFIRMED",
+      "current_candidate_values": {
+        "gyro_internal_sample_Hz": 800,
+        "gyro_bandwidth_Hz": 265,
+        "magnetometer_sample_Hz": 200
+      },
+      "units": "Hz",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "C01",
+      "parameter": "Coil-off sampling intent",
+      "status": "CONFIRMED",
+      "current_candidate_values": "Burst, then return coil current to zero to permit uncontaminated magnetic sampling",
+      "units": "sequence",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "C11",
+      "parameter": "Phase 6A diagnostic cycle",
+      "status": "ASSUMED",
+      "current_candidate_values": {
+        "quiet_s": 0.2,
+        "additional_settling_s": 0.2,
+        "required_zero_command_history_s": 0.4,
+        "sample_offset_s": 0.4,
+        "sample_integration_s": 0,
+        "compute_offset_s": 0.5,
+        "actuation_offset_s": 0.6,
+        "sample_to_compute_s": 0.1,
+        "compute_to_actuate_s": 0.1,
+        "burst_s": 0.4,
+        "coil_off_total_s": 0.6,
+        "period_s": 1,
+        "duty_percent": 40
+      },
+      "units": "s; %",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "C12",
+      "parameter": "Current implementation clock and minimum supported cycle",
+      "status": "ASSUMED",
+      "current_candidate_values": {
+        "plant_step_s": 0.1,
+        "minimum_each_quiet_compute_delay_actuation_delay_burst_s": 0.1,
+        "minimum_optional_settling_s": 0,
+        "derived_minimum_cycle_period_s": 0.4
+      },
+      "units": "s",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "D04",
+      "parameter": "EPS current/voltage sensing",
+      "status": "CONFIRMED",
+      "current_candidate_values": {
+        "monitor": "INA3221 on PDS",
+        "rails_V": [
+          12,
+          5,
+          3.3
+        ],
+        "allocated_poll_Hz": 1,
+        "interface": "I2C",
+        "reported_units": "current mA; voltage mV"
+      },
+      "units": "model; V; Hz; mA; mV",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    },
+    {
+      "evidence_id": "E05",
+      "parameter": "VN-100 vendor magnetic range/noise/resolution",
+      "status": "CONFIRMED",
+      "current_candidate_values": {
+        "range_uT": [
+          -250,
+          250
+        ],
+        "noise_density_nT_per_sqrt_Hz": 14,
+        "resolution_uT": 0.15
+      },
+      "units": "uT; nT/sqrt(Hz)",
+      "role": "Context/anchor retained from Phase 6B; not a new installed measurement or flight timing value."
+    }
+  ],
+  "markdown_current_value_summaries": {
+    "A02": "ICD: 2 CR0002 +1 MT01A; MDD: 3 in-house cells.",
+    "A03": "Installed mapping/sign TBD; regression identity/X-Y rods/Z coil ASSUMED.",
+    "A05": "MT01A >0.395 A m^2 at3.3 V; >0.790 at9 V versus heading1.25-5 V. Older MT01 >0.19 nominal/>0.85 saturation.",
+    "A06": "Claim4.1-4.7 ohm at25 degC; regression4.4 ohm ASSUMED.",
+    "A08": "ICD12 V,0.07-1.1 A,0.84-13.2 W; budget5 V/1.75 W; thermal1.75 W; H2 50-1500 mW and invalid mAh current label.",
+    "A09": "Measured per-axis gain/m(I,T), Z gain TBD.",
+    "A10": "Inductance, rise/history/hysteresis/temperature dynamics TBD.",
+    "A12": "B3 DRV8231; ICD voltage amplifiers TBR; released PCB/BOM absent.",
+    "A13": "Rails3.3/5/12 V; rod5 V; coil-driver boost12 V; PWM0-5 V description.",
+    "A14": "RVM<2 W detumble/<0.4 W standby and <=11 Wh, TBR; derivation60 Wh; ICDpeak12 W; PDR2.97 W/6.27 Wh estimates.",
+    "A15": "Rod qualification -20..80 degC; coil operating claim -55..85 degC; thermal calculation100% duty; flight envelope TBD.",
+    "B01": "5 Hz MDD/SW1 versus10 Hz ICD (0.2/0.1 s ticks).",
+    "B03": "LVTTL UART; UART/RS-232 at115200 bit/s; I2C manager; MDD RS-422 TBR.",
+    "B05": "Configured raw rate, filters, packet/trigger/acquisition epoch TBD.",
+    "B06": "IMU table names rate/acceleration/time; BDot requires current/previous B; producer/B epoch unclosed.",
+    "B07": "Measured execution order, queue latency, jitter and period TBD.",
+    "C02": "Quiet duration TBD; diagnostic0.4 s zero-command history TEST-ONLY.",
+    "C03": "Current decay/threshold and off mode TBD.",
+    "C04": "Field settling/threshold TBD; RESET_WAIT_TICKS is reset recovery only.",
+    "C05": "Physical aperture/filter window/phase/reference TBD.",
+    "C06": "Flight sample-to-compute TBD; diagnostic0.1 s TEST-ONLY.",
+    "C07": "Flight compute-to-application TBD; diagnostic0.1 s TEST-ONLY.",
+    "C08": "ICD serial latency <one10 Hz loop period; conditional<0.1 s.",
+    "C09": "BURST_TICKS absent; manager10 Hz; burst length/start/retrigger TBD.",
+    "C10": "PDR80%; budget detumble50%, experiment20%, standby10%; ASSUMED.",
+    "D01": "6 PWM software versus3 PWM +3 GPIO pin table/comment; EPS corroborates GPIO/PWM.",
+    "D02": "Six-PWM text defines +/- pair/duty/enable; actual3PWM+3GPIO truth table TBD.",
+    "D03": "PWM_FREQUENCY/carrier/resolution/waveforms TBD.",
+    "D05": "Per-coil sensing, regulation/feedback bandwidth and dipole feedback TBD; rail monitor is distinct.",
+    "E01": "IMMU payload lateral plate; MTA between PDS/transceiver; separation/transform TBD;15.24 mm stack pitch only.",
+    "E02": "RVM orientation knowledge3 deg; B3 actuator prediction/allocation0.10/0.25 deg and sensor0.25/0.50 deg.",
+    "E03": "Magnetic-error/cleanliness metric, allowable bias/residual/gradient and threshold TBD.",
+    "E04": "Remanence/local residual, hard/soft-iron and coupling map TBD.",
+    "E06": "VN-100 internal3-axis sensor documented; additional external models/count TBD.",
+    "F01": "PCB delivered/done No; rods/IMU/sun sensors ordered/done No; amplifier/coil/integrated entries incomplete.",
+    "F02": "Current written procedures; measurements/results/initials unfilled.",
+    "F03": "Older template; results/signatures/data/graphs unfilled.",
+    "F04": "Budget calibration/MC/HIL assertions; supporting completed records not located.",
+    "F05": "No qualifying measured dipole/current/power/noise/interference/settling/timing/HIL records located."
+  }
+}
