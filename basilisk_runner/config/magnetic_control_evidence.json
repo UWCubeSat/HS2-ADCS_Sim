@@ -1,0 +1,901 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "evidence_register_not_runtime_configuration",
+  "review_date": "2026-09-06",
+  "baseline_commit": "e919c3f94b0a6a7beeda6f84706932ef0e82535c",
+  "runtime_usable": false,
+  "drive_scope": {
+    "name": "Husky Satellite Lab",
+    "id": "0AC8raEVvalZjUk9PVA",
+    "access": "read-only",
+    "method": "Known exact document IDs; one verified Subsystem Testing folder listing; no broad/global search or write actions",
+    "test_folder_url": "https://drive.google.com/drive/folders/1o9RDaA9tNw5xUdk6-2wKnNmG2G6rKoYH",
+    "test_folder_listing": "Nine direct children; current and older ADCS procedures read, unrelated subsystem files not opened."
+  },
+  "decision": {
+    "flight_candidate_timing_profile_supported": false,
+    "profile_created": false,
+    "reason": "Documented coil-off intent and competing manager rates do not constrain actual current/field decay, sensor acquisition/filter age, driver electrical envelope or full event timing. No qualifying completed hardware measurements were located.",
+    "current_candidate_scope": "Three-actuator topology, raw VN-100 magnetic-data intent, qualitative coil-off sampling, conditional vendor component capabilities and EPS rail-monitor design facts only; no numerical flight-cycle timing adopted.",
+    "minimum_missing_inputs": [
+      {
+        "owner": "ADCS / Structures / configuration control",
+        "input": "Released installed BOM/part revisions, PCB/schematic and coil/sensor-to-body positions, matrices and positive-current polarity; disposition of COTS versus in-house and MT01A versus MT01."
+      },
+      {
+        "owner": "ADCS / EPS / CDH / Thermal",
+        "input": "Driver part/mode and pin truth table, actual rails/winding voltage, current limiting or feedback, configured carrier/burst parameters; measured per-axis m(I,T), current/power, saturation and safe thermal/duty envelope."
+      },
+      {
+        "owner": "ADCS / CDH",
+        "input": "VN-100 variant/interface/register packet and filter/output settings, internal magnetic acquisition epoch/aperture, raw data producer and delivery latency/freshness policy; external sensor inventory if any."
+      },
+      {
+        "owner": "ADCS / magnetic test lead",
+        "input": "Approved magnetic-error/cleanliness threshold plus synchronized current and field-versus-time after representative/worst-case bursts at installed geometry; measured valid quiet/settling window including filter recovery."
+      },
+      {
+        "owner": "CDH / ADCS integration",
+        "input": "Approved 5/10 Hz rate-group/control/cycle mapping; trace of acquisition, compute, command latch and physical current on/off under flight firmware, including clock offset, worst-case queue latency and jitter."
+      }
+    ],
+    "recommended_parametric_sweeps": [
+      {
+        "quantity": "Manager/control cadence",
+        "candidates": "5 and 10 Hz are competing documented design assumptions.",
+        "constraint": "First distinguish rate-group tick from raw acquisition and full burst-cycle period. Current distinct-phase 0.1 s-grid implementation has minimum whole cycle 0.4 s."
+      },
+      {
+        "quantity": "Burst duty and period",
+        "candidates": "Historical 80% PDR and 50/20/10% mode-budget values can be labeled sensitivity anchors; Phase 6A 40% remains TEST-ONLY.",
+        "constraint": "Vary feasible burst/period pairs; separate carrier PWM duty. No proposed setting is declared thermally/electrically flight-admissible."
+      },
+      {
+        "quantity": "Sample age and actuation latency",
+        "candidates": "Sample-to-compute and compute-to-actuation delay/jitter versus burst/period; explicit synthetic assumptions only.",
+        "constraint": "No measured numerical range available; do not silently adopt diagnostic 0.1 s delays or serial allocation as measured delays."
+      },
+      {
+        "quantity": "Quiet/settling and acquisition phase",
+        "candidates": "Software gate and acquisition-age sensitivity; hardware-valid range pending current/field/filter measurements.",
+        "constraint": "The present ideal sensor cannot predict contamination validity. Do not invent a physical decay constant, aperture or cleanliness magnitude."
+      },
+      {
+        "quantity": "Delivered moment and electrical/power envelope",
+        "candidates": "Separate conditional CR0002+MT01A, older MT01 and in-house evidence branches; vary effective duty and calibrated gain/limits once bounded.",
+        "constraint": "Never mix mismatched voltage/dipole/resistance endpoints into a claimed real actuator; keep uncalibrated sensitivity explicitly ASSUMED."
+      },
+      {
+        "quantity": "Alignment uncertainty",
+        "candidates": "Separate documented 3 degree knowledge bounds and tighter budget allocations as labeled scenarios.",
+        "constraint": "No measured mounting/error distribution or known body mapping; sweeps do not certify actual geometry."
+      }
+    ],
+    "dominant_uncertainties": [
+      {
+        "quantity": "Delivered torque and usable actuation duty",
+        "effect": "Unknown actual air-coil/driver dipole, gain, current and thermal limits directly change available magnetic torque and average control authority."
+      },
+      {
+        "quantity": "Magnetic sample validity",
+        "effect": "Unmeasured local residual field/remanence, coil decay and sensor filtering can corrupt sampled B even when the simulation has zero commanded dipole."
+      },
+      {
+        "quantity": "Sample age, cadence and burst phase",
+        "effect": "Long/variable delay and held commands change the relationship of measured B/rate to actuation; 5/10 Hz manager labels alone do not constrain this."
+      },
+      {
+        "quantity": "Axes and polarity",
+        "effect": "Incorrect coil/sensor transforms or sign can redirect torque and invalidate the controller's field/command relationship."
+      }
+    ]
+  },
+  "status_definitions": {
+    "CONFIRMED": "The named evidence establishes the scoped statement, not installed acceptance or compliance.",
+    "TBR": "Explicit source review flag remains open.",
+    "TBC": "Conflicting or uncertain applicability/selection requires confirmation.",
+    "TBD": "No supported definition/value/measurement in reviewed evidence.",
+    "ASSUMED": "Budget, software, analytical or unverified prediction; not measured flight input."
+  },
+  "treatment_definitions": {
+    "USE AS CURRENT CANDIDATE": "Retain only the row's explicitly limited design/specification fact for candidate reasoning; not authorization to activate a timing profile.",
+    "KEEP TEST-ONLY": "Regression or diagnostic use only; preserve provenance and do not promote to hardware evidence.",
+    "PARAMETRIC SWEEP": "Future labeled sensitivity study; no simulation executed or physical admissibility established in this phase.",
+    "BLOCKED PENDING HARDWARE INPUT": "Need the specified team/hardware disposition or measurement before assigning a flight value.",
+    "NOT MODELED YET": "No supported model parameters; retain omission explicitly rather than inventing effects."
+  },
+  "sources": {
+    "R1": {
+      "title": "Working RVM",
+      "url": "https://docs.google.com/spreadsheets/d/11IF6Z258qsOcPkMAP1GGssFSR6CSEYRHTrowt0nhDzM/edit",
+      "revision_date": "Cover 2025-09-28; tracker through rev 9, 2026-03-21; audited modified 2026-09-03",
+      "authority": "Requirement/traceability evidence; ADCS review flags and verification remain open.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "R2": {
+      "title": "HS-2 Requirements Document",
+      "url": "https://docs.google.com/document/d/1ndJqcboajU4Jl_xzJY8hvECOCxZaLUuu2n2bvZ4lSzM/edit",
+      "revision_date": "REQ-001/REQ-002 both appear; rev E 2025-10-05; audited Drive rev 34576, 2026-07-08",
+      "authority": "Requirement evidence; A-C approvals named, D/E blank; conflicting derivations preserved.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "M1": {
+      "title": "Working HS-2 Mission Design Document",
+      "url": "https://docs.google.com/document/d/1ERQ7L8lpUAOpvaVY-v4of7ee1vO7vtSrgt6Sk4kwgAU/edit",
+      "revision_date": "MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02",
+      "authority": "Mission design source; less specific than model-specific ICD, with unresolved hardware/rate conflicts.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "I1": {
+      "title": "HuskySat-2 ADCS Interface Control Document",
+      "url": "https://docs.google.com/document/d/1hLtnfIFSr0lpA1G06h1QUmzP6TUkJwez6NtpzFYbtBY/edit",
+      "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z",
+      "authority": "Strongest reviewed model-specific selection and interface candidate; approval fields blank and internal electrical/software contradictions persist.",
+      "review_basis": "Targeted read-only fetch 2026-09-06; file membership verified in Husky Satellite Lab. Prior audit cited Drive rev 16403 at 2026-09-04; that revision ID is not asserted for this newer fetch."
+    },
+    "I5": {
+      "title": "HuskySat-2 EPS Interface Control Document",
+      "url": "https://docs.google.com/document/d/1bnfNJGvO283E8RFnzkQVy5H58ZAzqiigyk1cTYZS-WQ/edit",
+      "revision_date": "ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z",
+      "authority": "Electrical interface candidate; rev 3 approval blank. Rail telemetry is not coil feedback.",
+      "review_basis": "Targeted read-only fetch 2026-09-06; Shared Drive membership verified."
+    },
+    "B1": {
+      "title": "OFFICIAL UNP BUDGETS",
+      "url": "https://docs.google.com/spreadsheets/d/1QjB3b6N_8ApnokAY7mx5-lb7i-Ln06A943hU4ePlcwg/edit",
+      "revision_date": "Template cover 2025-07-31; audited modified 2026-09-03; HS-2 release revision not established",
+      "authority": "Mixed template/budget estimates and unresolved hardware; not released operating limits.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "B3": {
+      "title": "Pointing_Payload_Budgets_CDR.docx",
+      "url": "https://drive.google.com/file/d/1ruAMFUOjwCCmeaTXRkqRnvfjvYuLqsIY/view",
+      "revision_date": "No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z",
+      "authority": "Specific raw-sensor and driver design claims; predictions and verification assertions lack located completed measurement records.",
+      "review_basis": "Targeted read-only fetch 2026-09-06; Shared Drive membership verified."
+    },
+    "SW1": {
+      "title": "ADCS Software Design Document",
+      "url": "https://docs.google.com/document/d/15a2GrN6oSJ5obUN1S6sxZ1JvkFbdp3SOwh22T2Br-Ug/edit",
+      "revision_date": "No numbered release/date; audited modified 2026-04-21",
+      "authority": "RTEMS/F' proposal explicitly described as slightly outdated and not wholly accurate.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "P1": {
+      "title": "ADCS Preliminary Design Review",
+      "url": "https://docs.google.com/presentation/d/1bWG-Q-g4478csJb8kl6YpiZLU0KtIes1wHr5YpLo8NI/edit",
+      "revision_date": "No numbered release/cover date established; audited modified 2025-12-13",
+      "authority": "Historical sizing and simulation assumptions, not measured acceptance evidence.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "H1": {
+      "title": "CubeSpace CR0002 datasheet",
+      "url": "https://drive.google.com/file/d/1aPEP8ZH1pR268A1Y9b7ZGr2sMazNASKM/view",
+      "revision_date": "Internal revision/date not established; audited modified 2026-07-29",
+      "authority": "Vendor component capability only; I1 separately identifies candidate selection.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "H2": {
+      "title": "MT01 datasheet.pdf (MT01A content)",
+      "url": "https://drive.google.com/file/d/1LU4-HwiNK-LN4jqoV1HWQ0DZbjjopd1W/view",
+      "revision_date": "Internal revision/date not established; audited modified 2026-07-29",
+      "authority": "I1-linked variant; voltage/current/performance statements internally inconsistent.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "H3": {
+      "title": "MT01 User Guide (MT01 Compact)",
+      "url": "https://drive.google.com/file/d/1ScHLr4ZUKw3jq0-InU8G66odAAlWNRJl/view",
+      "revision_date": "Rev B, 2020",
+      "authority": "Older/different variant; cannot silently substitute for MT01A.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "H4": {
+      "title": "VN-100 Rugged datasheet",
+      "url": "https://drive.google.com/file/d/1LEekbzz2LuTFYMBSQvNY-sX1FVPAtqm2/view",
+      "revision_date": "DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established",
+      "authority": "Vendor capability; does not establish installed calibration, transport settings or intended flight rates.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "T1": {
+      "title": "Hardware Test Tracking",
+      "url": "https://docs.google.com/spreadsheets/d/1RwvsRkzPaZftcbcFuLMexglIOU14P74Qi7rl-4YHkvs/edit",
+      "revision_date": "No released revision; current modified 2026-09-01T20:08:13.619Z",
+      "authority": "Procurement and test-status tracker, not a measured result.",
+      "review_basis": "Targeted read-only fetch 2026-09-06; Shared Drive membership verified. Flattened export embeds the column headings after component rows; interpreted using those explicit headings."
+    },
+    "T2": {
+      "title": "NEW ADCS HuskySat-2 Avionics Verification Procedures",
+      "url": "https://docs.google.com/document/d/1MsIS6hL0CcfJpajEntyaY438vQCkFLmYpLsk5qAA-rA/edit",
+      "revision_date": "Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank",
+      "authority": "Unexecuted procedure evidence in reviewed copy; section numbering also contains generic subsystem placeholders.",
+      "review_basis": "Targeted read-only fetch 2026-09-06; Shared Drive membership verified."
+    },
+    "T3": {
+      "title": "HuskySat-2 Avionics Verification Procedures - ADCS",
+      "url": "https://docs.google.com/document/d/1TEtTKIcnGu1hCtoOHhkGA3DWo8ytEOMVL4YUA_GRhdw/edit",
+      "revision_date": "Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z",
+      "authority": "Older template/procedure; result tables, signatures and graph/data appendices empty.",
+      "review_basis": "Targeted read-only fetch 2026-09-06 after locating beside T2 in the verified Subsystem Testing folder."
+    },
+    "D1": {
+      "title": "Committed physical-parameter audit register",
+      "url": "docs/PHYSICAL_PARAMETERS.md",
+      "revision_date": "Git e919c3f, 2026-09-06; historical audit rows retain their original anchors",
+      "authority": "Source register and previous audit findings; later Phase 6A section describes current timing architecture.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "D2": {
+      "title": "Committed requirements baseline",
+      "url": "docs/REQUIREMENTS_BASELINE.md",
+      "revision_date": "Git e919c3f, 2026-09-06; historical audit rows retain their original anchors",
+      "authority": "Requirement conflicts, not adopted flight-cycle values or demonstrated compliance.",
+      "review_basis": "Committed audit register at e919c3f; not fetched again in Phase 6B"
+    },
+    "C1": {
+      "title": "Runtime simulation configuration",
+      "url": "basilisk_runner/hs2_sim_config.py",
+      "revision_date": "Git e919c3f, 2026-09-06",
+      "authority": "Authoritative current runtime assumptions; not flight hardware evidence.",
+      "review_basis": "Focused local inspection in Phase 6B."
+    },
+    "C2": {
+      "title": "Magnetic control cycle architecture",
+      "url": "basilisk_runner/magnetic_control_cycle.py",
+      "revision_date": "Git e919c3f, 2026-09-06",
+      "authority": "Software architecture and TEST-ONLY timing; no electrical transient or interference model.",
+      "review_basis": "Focused local inspection in Phase 6B."
+    }
+  },
+  "entries": [
+    {
+      "id": "A01",
+      "area": "Actuator configuration",
+      "parameter": "Design actuator count",
+      "candidate_values": 3,
+      "units": "actuators",
+      "status": "CONFIRMED",
+      "evidence_type": "HS-2 documented design count",
+      "sources": [{"source_id":"I1","section":"Table 01","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"M1","section":"section 4.1","revision_date":"MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"}],
+      "conflict": "Both sources describe three actuators; model selection and installed inventory remain unconfirmed.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "notes": "Use only the three-actuator design topology. This does not confirm models, directions or acceptance."
+    },
+    {
+      "id": "A02",
+      "area": "Actuator configuration",
+      "parameter": "Intended actuator models",
+      "candidate_values": {"ICD":"2 CubeSpace CR0002 rods + 1 EXA MT01A air coil","MDD":"3 in-house MTA cells"},
+      "units": "model/count",
+      "status": "TBC",
+      "evidence_type": "Conflicting HS-2 design/interface selections",
+      "sources": [{"source_id":"I1","section":"Table 01","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"M1","section":"section 4.1","revision_date":"MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"},{"source_id":"T1","section":"Torque Rods / Air coils / Magnetorquer Voltage Amplifiers rows","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"}],
+      "conflict": "I1 is model-specific and corroborated by vendor links/procurement entries; no released BOM or approved disposition closes the MDD conflict.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "COTS assembly is the strongest candidate branch, not an established installed flight assembly. Air-coil procurement/testing is incomplete in T1."
+    },
+    {
+      "id": "A03",
+      "area": "Actuator configuration",
+      "parameter": "Physical actuator axes, origin and polarity",
+      "candidate_values": {"flight_body_axis_mapping":null,"as_built_mounting_matrix":null,"regression_layout":"X/Y rods, Z coil; identity axes"},
+      "units": "body unit vectors / rotation matrix",
+      "status": "TBD",
+      "evidence_type": "Missing as-built geometry; separate software assumption",
+      "sources": [{"source_id":"I1","section":"sections 2.1-2.3","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"section 2.6","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"D1","section":"Actuators and power: Repo actuator directions","revision_date":"Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"}],
+      "conflict": "A software X/Y/Z label is not an as-built mounting or polarity survey.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need signed sensor/actuator-to-body transforms and positive-current dipole directions. Preserve the current identity mapping as ASSUMED."
+    },
+    {
+      "id": "A04",
+      "area": "Actuator configuration",
+      "parameter": "CR0002 vendor dipole, gain, resistance and voltage",
+      "candidate_values": {"nominal_dipole_Am2":0.2,"nominal_voltage_V":5,"reference_temperature_degC":20,"gain_Am2_per_A":2.3,"resistance_ohm":51,"linear_voltage_range_V":[-5,5]},
+      "units": "A m^2; A m^2/A; ohm; V; degC",
+      "status": "CONFIRMED",
+      "evidence_type": "Vendor component ratings, conditional on CR0002 selection",
+      "sources": [{"source_id":"H1","section":"p. 2 CR0002 family-table row","revision_date":"Internal revision/date not established; audited modified 2026-07-29"},{"source_id":"I1","section":"Table 01","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "Nominal 0.2 A m^2 differs from (5/51)*2.3 = approximately 0.22549 A m^2; ratings do not define a mutually calibrated installed transfer law.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "notes": "Retain as conditional CR0002 specification evidence only. Do not change runtime constants or claim per-unit measured saturation, polarity or gain."
+    },
+    {
+      "id": "A05",
+      "area": "Actuator configuration",
+      "parameter": "Air-coil dipole and nominal/saturation voltage claims",
+      "candidate_values": {"MT01A":[{"dipole_lower_bound_Am2":0.395,"voltage_V":3.3},{"dipole_lower_bound_Am2":0.79,"voltage_V":9}],"MT01A_voltage_heading_V":[1.25,5],"older_MT01_Compact":{"nominal_lower_bound_Am2":0.19,"saturation_lower_bound_Am2":0.85}},
+      "units": "A m^2; V",
+      "status": "TBC",
+      "evidence_type": "Conflicting vendor statements and variants",
+      "sources": [{"source_id":"H2","section":"performance table and voltage heading","revision_date":"Internal revision/date not established; audited modified 2026-07-29"},{"source_id":"H3","section":"performance table, rev B","revision_date":"Rev B, 2020"},{"source_id":"I1","section":"Table 01","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "H2's 9 V entry conflicts with its 1.25-5 V heading; H3 describes a different variant. Lower bounds are not upper saturation clamps.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Do not use 0.85 A m^2 as confirmed MT01A hardware capability. Need exact part revision and applicable operating/calibration curves."
+    },
+    {
+      "id": "A06",
+      "area": "Actuator configuration",
+      "parameter": "Air-coil resistance",
+      "candidate_values": {"claimed_range_ohm":[4.1,4.7],"reference_temperature_degC":25,"regression_ohm":4.4},
+      "units": "ohm; degC",
+      "status": "TBC",
+      "evidence_type": "Vendor variant evidence and midpoint-like legacy assumption",
+      "sources": [{"source_id":"H2","section":"resistance specification","revision_date":"Internal revision/date not established; audited modified 2026-07-29"},{"source_id":"H3","section":"resistance specification","revision_date":"Rev B, 2020"},{"source_id":"C1","section":"MagnetorquerConfig resistance","revision_date":"Git e919c3f, 2026-09-06"}],
+      "conflict": "Installed winding/variant and temperature dependence are not established.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "4.4 ohm remains ASSUMED in the regression model, not measured flight resistance."
+    },
+    {
+      "id": "A07",
+      "area": "Actuator configuration",
+      "parameter": "Rod nominal current and power calculation",
+      "candidate_values": {"ICD_per_rod":{"voltage_V":5,"current_A":0.098,"power_W":0.49}},
+      "units": "V; A; W",
+      "status": "ASSUMED",
+      "evidence_type": "Interface table calculation, not measured current limit",
+      "sources": [{"source_id":"I1","section":"section 1.1, magnetorquer 1/2 rows","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "Calculated from nominal resistance; not a driver current limit, current regulation setting or calibrated delivered dipole.",
+      "recommended_simulation_treatment": "KEEP TEST-ONLY",
+      "notes": "Retain as an electrical consistency estimate only; obtain winding/bus measurement boundaries."
+    },
+    {
+      "id": "A08",
+      "area": "Actuator configuration",
+      "parameter": "Air-coil voltage, current and power",
+      "candidate_values": {"ICD":{"rail_V":12,"current_A":[0.07,1.1],"power_W":[0.84,13.2]},"budget":{"voltage_V":5,"power_W":1.75},"ICD_thermal_power_W":1.75,"MT01A_power_mW":[50,1500],"datasheet_current_units_as_printed":"mAh"},
+      "units": "V; A; W; mW; mAh (invalid for current)",
+      "status": "TBC",
+      "evidence_type": "Conflicting interface, budget and vendor operating points",
+      "sources": [{"source_id":"I1","section":"sections 1.1, 1.1.1 and 3 thermal table","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B1","section":"Power Draw, air-coil row","revision_date":"Template cover 2025-07-31; audited modified 2026-09-03; HS-2 release revision not established"},{"source_id":"H2","section":"voltage/current/power tables","revision_date":"Internal revision/date not established; audited modified 2026-07-29"},{"source_id":"H3","section":"performance table","revision_date":"Rev B, 2020"}],
+      "conflict": "12 V is a boost/driver supply description, not established DC winding voltage; 13.2 W coil maximum exceeds the same ICD's 12 W ADCS peak. Datasheet mAh labels cannot be treated as A or mA.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need coil variant, bus versus winding voltage/current, PWM/current limiting and peak/average definitions. Do not infer a flight clamp from this table."
+    },
+    {
+      "id": "A09",
+      "area": "Actuator configuration",
+      "parameter": "Installed magnetic gain and dipole transfer function",
+      "candidate_values": {"measured_per_axis_gain":null,"air_coil_gain":null,"temperature_current_dependence":null},
+      "units": "A m^2/A; function of current/temperature",
+      "status": "TBD",
+      "evidence_type": "Missing calibration",
+      "sources": [{"source_id":"H1","section":"vendor gain only","revision_date":"Internal revision/date not established; audited modified 2026-07-29"},{"source_id":"B3","section":"section 2.6 proposed magnetic-moment/current-command characterization","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"T1","section":"ADCS component test status","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"},{"source_id":"T2","section":"MTA PWM procedure and blank results","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "Vendor rod gain and inferred software coil gain do not validate the installed drive chain.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Require m(I,T), sign, cross-axis response, saturation and uncertainty for each installed actuator/driver."
+    },
+    {
+      "id": "A10",
+      "area": "Actuator configuration",
+      "parameter": "Actuator dynamics and residual dipole",
+      "candidate_values": {"inductance_H":null,"rise_time_s":null,"hysteresis":null,"temperature_model":null},
+      "units": "H; s; A m^2; degC dependence",
+      "status": "TBD",
+      "evidence_type": "No characterized electrical/magnetic dynamics in reviewed evidence",
+      "sources": [{"source_id":"D1","section":"Actuators and power","revision_date":"Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"},{"source_id":"I1","section":"section 4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"C2","section":"module contract","revision_date":"Git e919c3f, 2026-09-06"}],
+      "conflict": "Algebraic native torque and I=m/gain do not establish current rise/decay or magnetic memory.",
+      "recommended_simulation_treatment": "NOT MODELED YET",
+      "notes": "Do not create an R-L or hysteresis model with invented constants. Current decay and contamination require separate measurements below."
+    },
+    {
+      "id": "A11",
+      "area": "Actuator configuration",
+      "parameter": "Current runtime actuator assumptions",
+      "candidate_values": {"dipole_clamps_Am2":[0.2,0.2,0.85],"resistance_ohm":[51,51,4.4],"current_limits_A":["5/51","5/51","sqrt(1.75/4.4)"],"rod_effective_current_clamp_A":"0.2/2.3","gains_Am2_per_A":[2.3,2.3,"0.85/sqrt(1.75/4.4)"]},
+      "units": "A m^2; ohm; A; A m^2/A",
+      "status": "ASSUMED",
+      "evidence_type": "Regression implementation/provenance",
+      "sources": [{"source_id":"C1","section":"MagnetorquerConfig and derived current/gain properties","revision_date":"Git e919c3f, 2026-09-06"},{"source_id":"D1","section":"Actuators and power","revision_date":"Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"}],
+      "conflict": "Z gain is inferred from legacy dipole and power assumptions; current and dipole clipping both constrain rods.",
+      "recommended_simulation_treatment": "KEEP TEST-ONLY",
+      "notes": "Leave unchanged. Normalized cycle command is not measured PWM duty, current or dipole."
+    },
+    {
+      "id": "A12",
+      "area": "Actuator configuration",
+      "parameter": "Driver/H-bridge selection",
+      "candidate_values": {"budget_driver":"TI DRV8231","ICD_voltage_amplifiers":"TBR","released_PCB_BOM":null},
+      "units": "model",
+      "status": "TBC",
+      "evidence_type": "Budget design claim versus unresolved interface item",
+      "sources": [{"source_id":"B3","section":"section 2.6","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"I1","section":"Table 01 and section 1.1.1","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"T1","section":"Magnetorquer Voltage Amplifiers row","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"}],
+      "conflict": "No reviewed released schematic/BOM or measured drive-chain record establishes DRV8231 installation/configuration.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "DRV8231 is a candidate named in an HS-2 source. Do not import a vendor capability as an HS-2 operating limit."
+    },
+    {
+      "id": "A13",
+      "area": "Actuator configuration",
+      "parameter": "Power rails and coil-drive boundary",
+      "candidate_values": {"ADCS_rails_V":[3.3,5,12],"rod_supply_V":5,"air_coil_driver_supply_V":12,"logic_signal_description_V":"0-5 PWM / LVTTL elsewhere"},
+      "units": "V",
+      "status": "TBC",
+      "evidence_type": "Electrical interface settings",
+      "sources": [{"source_id":"I1","section":"sections 1.1, 1.1.1, 1.2","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"I5","section":"sections 1 and 4.2.5","revision_date":"ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z"}],
+      "conflict": "Supply rail, logic amplitude and switched winding voltage are different quantities; actual driver drops, logic compatibility and duty/enable truth table remain unclosed.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Use rail labels to request/interface-check the schematic; do not apply 12 V directly to an assumed winding."
+    },
+    {
+      "id": "A14",
+      "area": "Actuator configuration",
+      "parameter": "ADCS power and energy allocation",
+      "candidate_values": {"RVM_detumble_power_upper_bound_W":2,"RVM_standby_power_upper_bound_W":0.4,"RVM_detumble_energy_upper_bound_Wh":11,"requirements_derivation_energy_Wh":60,"ICD_ADCS_peak_W":12,"PDR_torquer_power_W":2.97,"PDR_detumble_energy_Wh":6.27},
+      "units": "W; Wh",
+      "status": "TBR",
+      "evidence_type": "Review-flagged requirements, conflicting derivation and estimates",
+      "sources": [{"source_id":"R1","section":"ADCS-2 and ADCS-10","revision_date":"Cover 2025-09-28; tracker through rev 9, 2026-03-21; audited modified 2026-09-03"},{"source_id":"R2","section":"section 4.5 derivation","revision_date":"REQ-001/REQ-002 both appear; rev E 2025-10-05; audited Drive rev 34576, 2026-07-08"},{"source_id":"I1","section":"section 1.1.1","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"P1","section":"slide 20","revision_date":"No numbered release/cover date established; audited modified 2025-12-13"}],
+      "conflict": "RVM limits retain TBR; 60 Wh derivation and 11 Wh allocation conflict. Peak/average, winding/bus and included loads are not reconciled.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Keep requirements separate from predictions. These values do not define an admissible magnetic duty cycle."
+    },
+    {
+      "id": "A15",
+      "area": "Actuator configuration",
+      "parameter": "Thermal/continuous-duty envelope",
+      "candidate_values": {"rod_qualification_degC":[-20,80],"air_coil_operating_claim_degC":[-55,85],"ICD_thermal_table_duty_percent":100,"verified_flight_thermal_duty_limit":null},
+      "units": "degC; %",
+      "status": "TBC",
+      "evidence_type": "Vendor/ICD thermal claims and thermal calculation assumption",
+      "sources": [{"source_id":"H1","section":"thermal-vacuum qualification","revision_date":"Internal revision/date not established; audited modified 2026-07-29"},{"source_id":"H2","section":"temperature limits","revision_date":"Internal revision/date not established; audited modified 2026-07-29"},{"source_id":"H3","section":"temperature limits","revision_date":"Rev B, 2020"},{"source_id":"I1","section":"section 3 thermal table","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "Rod qualification range is not a flight operating duty envelope. The ICD 100% duty heat calculation is not evidence of accepted continuous operation.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need temperature-dependent allowed currents/burst lengths/duty and driver losses for the selected assembly."
+    },
+    {
+      "id": "B01",
+      "area": "Rates and sensor interfaces",
+      "parameter": "Flight control/manager rate",
+      "candidate_values": {"MDD_and_software_proposal_Hz":5,"ICD_manager_and_application_tick_Hz":10,"derived_tick_periods_s":[0.2,0.1]},
+      "units": "Hz; s",
+      "status": "TBC",
+      "evidence_type": "Conflicting design/scheduler interface settings; not measured execution",
+      "sources": [{"source_id":"M1","section":"section 2.4","revision_date":"MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"},{"source_id":"SW1","section":"sections 2.2-3.1","revision_date":"No numbered release/date; audited modified 2026-04-21"},{"source_id":"I1","section":"sections 4.1.1, 4.1.3, AdcsApplication and 4.2","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "I1 is the stronger specific interface candidate; SW1 admits staleness, but no approved supersession or flight timing trace closes the conflict.",
+      "recommended_simulation_treatment": "PARAMETRIC SWEEP",
+      "notes": "Treat 5/10 Hz as labeled competing scheduler assumptions only. Manager tick, raw acquisition, controller invocation and whole burst-cycle period need separate definitions."
+    },
+    {
+      "id": "B02",
+      "area": "Rates and sensor interfaces",
+      "parameter": "VN-100 selection and intended magnetic data use",
+      "candidate_values": {"IMU_count":1,"model":"VN-100 Rugged","ADCS_intent":"raw gyro and internal magnetometer measurements"},
+      "units": "count/model/data role",
+      "status": "CONFIRMED",
+      "evidence_type": "Documented selection/design intent",
+      "sources": [{"source_id":"I1","section":"Table 01","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"sections 2.4 and 2.8","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"T2","section":"IMMU data-acquisition objective/results headings","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"},{"source_id":"T1","section":"IMU row","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"}],
+      "conflict": "B3 explicitly uses raw VN-100 magnetic data; I1 manager ports do not fully express that path. Ordered/test-incomplete is not installed acceptance.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "notes": "Use the raw internal magnetometer as documented candidate intent, not a released sample-rate/packet configuration or demonstrated estimator."
+    },
+    {
+      "id": "B03",
+      "area": "Rates and sensor interfaces",
+      "parameter": "IMU transport and configured serial rate",
+      "candidate_values": {"ICD_electrical":"LVTTL UART","ICD_detailed":"UART / RS-232 full duplex","ICD_detailed_bps":115200,"ICD_manager_ports":"Drv.I2cWrite / Drv.I2cWriteRead","MDD":"RS-422 TBR","vendor":"RS-232/TTL UART options"},
+      "units": "protocol; bit/s",
+      "status": "TBC",
+      "evidence_type": "Conflicting hardware/interface/software descriptions",
+      "sources": [{"source_id":"I1","section":"sections 1.2, 4.1.1 and 4.2.1","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"H4","section":"interfaces","revision_date":"DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"},{"source_id":"M1","section":"section 4.1","revision_date":"MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"},{"source_id":"SW1","section":"IMU interface discussion","revision_date":"No numbered release/date; audited modified 2026-04-21"},{"source_id":"T2","section":"IMMU communication procedure","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "Vendor and detailed ICD/procedure support a serial candidate; I2C manager text and MDD RS-422 remain inconsistent. Baud rate alone does not establish sampling/latency.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need exact VN-100 variant, logic levels/transceiver, connector pins, register/packet settings, output rate and timestamp semantics."
+    },
+    {
+      "id": "B04",
+      "area": "Rates and sensor interfaces",
+      "parameter": "Vendor internal sensor rates",
+      "candidate_values": {"gyro_internal_sample_Hz":800,"gyro_bandwidth_Hz":265,"magnetometer_sample_Hz":200},
+      "units": "Hz",
+      "status": "CONFIRMED",
+      "evidence_type": "Hardware capability",
+      "sources": [{"source_id":"H4","section":"pp. 5-6","revision_date":"DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"}],
+      "conflict": "These are not the intended flight message, control or whole magnetic-cycle rates.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "notes": "Retain as vendor capability evidence for future acquisition design. Do not set a 200 Hz control loop or assume a 5 ms physical aperture."
+    },
+    {
+      "id": "B05",
+      "area": "Rates and sensor interfaces",
+      "parameter": "Actual magnetometer acquisition/output settings",
+      "candidate_values": {"raw_output_rate_Hz":null,"internal_filter_settings":null,"packet_contents":null,"sample_trigger_and_timestamp_semantics":null},
+      "units": "Hz; configuration; clock/epoch",
+      "status": "TBD",
+      "evidence_type": "Missing device configuration and timing evidence",
+      "sources": [{"source_id":"I1","section":"sections 4.1.1 and 4.2.1","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"section 2.8","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"T2","section":"IMMU acquisition procedure, blank results","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "10 Hz manager sampling and 200 Hz vendor sample capability do not establish which uncontaminated magnetic sample is delivered after coil-off.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need on-demand versus free-running behavior, filter/window history, packet age and whether the raw magnetic acquisition epoch is available."
+    },
+    {
+      "id": "B06",
+      "area": "Rates and sensor interfaces",
+      "parameter": "Magnetic measurement software path",
+      "candidate_values": {"ImuManager_published_fields":"angular rate, linear acceleration, timestamp","BDot_inputs":"current B, previous B, angular rate","current_B_provider_and_B_timestamp_contract":null},
+      "units": "port payload / epoch",
+      "status": "TBD",
+      "evidence_type": "Unclosed subsystem software interface",
+      "sources": [{"source_id":"I1","section":"sections 4.1.1, 4.1.4-4.1.5 and AdcsApplication port table","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"sections 2.4 and 2.8","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"}],
+      "conflict": "Documented raw magnetic use is not fully connected in the manager/filter/application interface tables; previous-field getters do not establish current-field acquisition/freshness.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Require the flight magnetic-data producer, raw-field payload, frames, acquisition timestamp, validity and staleness criteria. This is a documentation/interface gap, not proof the flight implementation lacks a producer."
+    },
+    {
+      "id": "B07",
+      "area": "Rates and sensor interfaces",
+      "parameter": "Flight scheduler jitter and end-to-end timing trace",
+      "candidate_values": {"execution_order":null,"queue_latency_s":null,"jitter_s":null,"measured_control_period_s":null},
+      "units": "s; execution order",
+      "status": "TBD",
+      "evidence_type": "Missing measured timing evidence",
+      "sources": [{"source_id":"I1","section":"section 4, queued managers and application","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"T1","section":"ADCS integrated test row","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"},{"source_id":"T2","section":"blank procedure results","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "A scheduled 10 Hz rate does not validate actual source age or cross-component execution order.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need synchronized acquisition/compute/driver/coil-current traces and clock definitions."
+    },
+    {
+      "id": "C01",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Coil-off sampling intent",
+      "candidate_values": "Burst, then return coil current to zero to permit uncontaminated magnetic sampling",
+      "units": "sequence",
+      "status": "CONFIRMED",
+      "evidence_type": "Qualitative HS-2 interface behavior",
+      "sources": [{"source_id":"I1","section":"sections 4.1.3 and 4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "No numerical zero-current threshold, quiet duration or contamination acceptance criterion is provided.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "notes": "Retain this sequencing intent. Zero commanded dipole is not physical proof that current or local magnetic contamination has decayed."
+    },
+    {
+      "id": "C02",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Required quiet period",
+      "candidate_values": null,
+      "units": "s",
+      "status": "TBD",
+      "evidence_type": "Qualitative intent only; no specified or measured duration",
+      "sources": [{"source_id":"I1","section":"section 4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"T2","section":"MTA/IMMU procedures","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"},{"source_id":"D1","section":"Phase 6A timing section","revision_date":"Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"}],
+      "conflict": "TEST-ONLY 0.4 s zero-command history is not hardware evidence.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Measure elapsed off-time to a defined valid magnetic acquisition across voltage, current, temperature and polarity; separate current, field and filter effects."
+    },
+    {
+      "id": "C03",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Current-decay time and off-state behavior",
+      "candidate_values": {"current_decay_s":null,"current_threshold_A":null,"off_state_mode":null},
+      "units": "s; A; brake/coast/recirculation state",
+      "status": "TBD",
+      "evidence_type": "No measured winding-current decay or driver off-state truth table",
+      "sources": [{"source_id":"I1","section":"sections 4.1.3 and 4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"section 2.6","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"T2","section":"PWM verification procedure","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "Commanded zero current and PWM success telemetry do not measure physical decay.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need scope traces at worst relevant drive conditions and the actual H-bridge recirculation/disable configuration."
+    },
+    {
+      "id": "C04",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Magnetic settling time",
+      "candidate_values": {"settling_s":null,"residual_field_threshold_T":null,"reset_wait_ticks":"named, numeric value absent; device reset wait only"},
+      "units": "s; T; ticks",
+      "status": "TBD",
+      "evidence_type": "Missing magnetic measurement; separate software recovery parameter",
+      "sources": [{"source_id":"I1","section":"sections 4.1.3 parameter table and 4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "RESET_WAIT_TICKS explicitly waits after reset. It is not a specified post-actuation settling interval.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need post-burst field-versus-time at the sensor, including remanence and internal sensor filtering, against an accepted threshold."
+    },
+    {
+      "id": "C05",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Magnetometer sample aperture and phase",
+      "candidate_values": {"aperture_s":null,"trigger_phase_s":null,"sample_window_reference":null},
+      "units": "s; epoch definition",
+      "status": "TBD",
+      "evidence_type": "Missing acquisition specification",
+      "sources": [{"source_id":"H4","section":"p. 6 sample capability","revision_date":"DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"},{"source_id":"I1","section":"section 4.2.1","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"C2","section":"to_dict sample_model","revision_date":"Git e919c3f, 2026-09-06"}],
+      "conflict": "Vendor sample rate does not establish aperture; the simulation's instantaneous TAM sample is an ideal assumption.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Define start/midpoint/end of acquisition, sensor filtering and output delay. Entire effective acquisition history must satisfy the cleanliness criterion."
+    },
+    {
+      "id": "C06",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Sample-to-compute delay",
+      "candidate_values": null,
+      "units": "s",
+      "status": "TBD",
+      "evidence_type": "Missing flight timing setting/measurement",
+      "sources": [{"source_id":"I1","section":"section 4, ImuManager / AttitudeFilter / AdcsApplication","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"C2","section":"diagnostic_cycle_config","revision_date":"Git e919c3f, 2026-09-06"}],
+      "conflict": "Diagnostic 0.1 s delay is TEST-ONLY. Caching and manager timestamps do not specify worst-case flight delay.",
+      "recommended_simulation_treatment": "PARAMETRIC SWEEP",
+      "notes": "Sweep explicitly hypothetical age/jitter after defining a feasible acquisition contract; do not call a chosen delay flight-candidate evidence."
+    },
+    {
+      "id": "C07",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Compute-to-actuation delay",
+      "candidate_values": null,
+      "units": "s",
+      "status": "TBD",
+      "evidence_type": "Missing flight execution/driver latency",
+      "sources": [{"source_id":"I1","section":"sections 4.1.3, AdcsApplication and 4.2.3","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"C2","section":"diagnostic_cycle_config","revision_date":"Git e919c3f, 2026-09-06"}],
+      "conflict": "Diagnostic 0.1 s delay is TEST-ONLY; queue, PWM latch and winding rise delays are not established.",
+      "recommended_simulation_treatment": "PARAMETRIC SWEEP",
+      "notes": "Separate command transport, PWM latch and physical current response in future timing evidence."
+    },
+    {
+      "id": "C08",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Serial latency interface allocation",
+      "candidate_values": {"ICD_latency":"less than one ADCS control-loop period","conditional_upper_bound_s":0.1},
+      "units": "s",
+      "status": "TBC",
+      "evidence_type": "Interface allocation, conditional on the same section's 10 Hz schedule",
+      "sources": [{"source_id":"I1","section":"section 4.2.1 Timing","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"M1","section":"section 2.4 competing 5 Hz design","revision_date":"MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"}],
+      "conflict": "This is an end-to-end serial latency allocation, not a measured sample-to-compute delay or aperture. 5/10 Hz conflict remains.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Preserve the conditional <0.1 s interpretation without substituting it for a measured nominal delay."
+    },
+    {
+      "id": "C09",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Burst duration and actuation window",
+      "candidate_values": {"BURST_TICKS":null,"burst_duration_s":null,"start_phase_s":null,"ICD_manager_tick_Hz":10},
+      "units": "ticks; s; Hz",
+      "status": "TBD",
+      "evidence_type": "Named configurable parameter and qualitative state sequence",
+      "sources": [{"source_id":"I1","section":"sections 4.1.3 and 4.2.3-4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "No PrmDb numeric value, re-command/retrigger policy or measured actuation window was found. Manager tick does not equal burst-cycle period.",
+      "recommended_simulation_treatment": "PARAMETRIC SWEEP",
+      "notes": "For later software sensitivity only, vary feasible burst/period pairs with documented assumptions. Hardware-candidate limits remain blocked."
+    },
+    {
+      "id": "C10",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Historical mode duty assumptions",
+      "candidate_values": {"PDR_percent":80,"budget_detumble_percent":50,"budget_experiment_percent":20,"budget_standby_percent":10},
+      "units": "%",
+      "status": "ASSUMED",
+      "evidence_type": "Analysis and power-budget assumptions",
+      "sources": [{"source_id":"P1","section":"slide 20","revision_date":"No numbered release/cover date established; audited modified 2025-12-13"},{"source_id":"B1","section":"Power Draw, mode duty entries","revision_date":"Template cover 2025-07-31; audited modified 2026-09-03; HS-2 release revision not established"}],
+      "conflict": "Different modes/scenarios and power boundaries; none is a demonstrated thermal duty limit. PWM carrier duty and burst active fraction are distinct.",
+      "recommended_simulation_treatment": "PARAMETRIC SWEEP",
+      "notes": "May label these as historical sensitivity anchors only; do not combine them into one accepted schedule or assume all are physically admissible."
+    },
+    {
+      "id": "C11",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Phase 6A diagnostic cycle",
+      "candidate_values": {"quiet_s":0.2,"additional_settling_s":0.2,"required_zero_command_history_s":0.4,"sample_offset_s":0.4,"sample_integration_s":0,"compute_offset_s":0.5,"actuation_offset_s":0.6,"sample_to_compute_s":0.1,"compute_to_actuate_s":0.1,"burst_s":0.4,"coil_off_total_s":0.6,"period_s":1,"duty_percent":40},
+      "units": "s; %",
+      "status": "ASSUMED",
+      "evidence_type": "Software architecture TEST-ONLY configuration",
+      "sources": [{"source_id":"C2","section":"diagnostic_cycle_config, to_dict and acquire","revision_date":"Git e919c3f, 2026-09-06"},{"source_id":"D1","section":"Phase 6A timing section","revision_date":"Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"}],
+      "conflict": "No value in this diagnostic sequence is evidence of physical quiet, settling, aperture, driver delay or thermal duty.",
+      "recommended_simulation_treatment": "KEEP TEST-ONLY",
+      "notes": "Keep opt-in and unchanged. Logical zero dipole/torque plus elapsed time validates the software gate, not installed magnetic cleanliness."
+    },
+    {
+      "id": "C12",
+      "area": "Coil-off and cycle timing",
+      "parameter": "Current implementation clock and minimum supported cycle",
+      "candidate_values": {"plant_step_s":0.1,"minimum_each_quiet_compute_delay_actuation_delay_burst_s":0.1,"minimum_optional_settling_s":0,"derived_minimum_cycle_period_s":0.4},
+      "units": "s",
+      "status": "ASSUMED",
+      "evidence_type": "Current software architecture constraint, derived from validation rules",
+      "sources": [{"source_id":"C2","section":"MagneticCycleConfig.validate and period_ns","revision_date":"Git e919c3f, 2026-09-06"},{"source_id":"D1","section":"Phase 6A timing section","revision_date":"Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"},{"source_id":"C1","section":"TimingConfig","revision_date":"Git e919c3f, 2026-09-06"}],
+      "conflict": "The present distinct-phase cycle on a 0.1 s grid cannot represent a complete 0.1 or 0.2 s cycle. A 5/10 Hz manager can still orchestrate a longer cycle.",
+      "recommended_simulation_treatment": "KEEP TEST-ONLY",
+      "notes": "Do not equate manager tick with whole cycle or silently change the plant clock. Resolve event mapping before implementing any future 5/10 Hz cycle sensitivity study."
+    },
+    {
+      "id": "D01",
+      "area": "PWM and feedback",
+      "parameter": "PWM/GPIO channel allocation",
+      "candidate_values": {"ICD_software":"6 PWM: X+/X-, Y+/Y-, Z+/Z-","ICD_PC104_and_review_comment":"3 PWM + 3 GPIO","EPS_support":"ADCS GPIO_1/2/3 and PWM_3 named in connector table"},
+      "units": "signal channels",
+      "status": "TBC",
+      "evidence_type": "Conflicting interface tables; review comment; cross-subsystem corroboration",
+      "sources": [{"source_id":"I1","section":"section 1.3.1 PC104 table; sections 4.1.3, 4.2.3; comment [i]","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"I5","section":"connector pin table, ADCS H-Bridge GPIO/PWM labels","revision_date":"ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z"}],
+      "conflict": "I1 pin table supports three PWM signals at a9/a11/a15 and GPIO at a10/a12/a16 (GPIO_2 label has ACS typo); software still describes six PWM. Comment [i] explicitly flags the discrepancy.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Three PWM + three GPIO is the stronger wiring candidate, not a released truth table. Confirm schematic, CDH pinmux and firmware revision together."
+    },
+    {
+      "id": "D02",
+      "area": "PWM and feedback",
+      "parameter": "PWM polarity, magnitude, enable and off semantics",
+      "candidate_values": {"six_PWM_description":"positive/negative pair selects direction; duty sets drive; configure enables; idle/reset duty zero","three_PWM_three_GPIO_truth_table":null},
+      "units": "truth table / signed duty / enable state",
+      "status": "TBC",
+      "evidence_type": "Software-interface description with unresolved hardware mapping",
+      "sources": [{"source_id":"I1","section":"sections 4.1.3 and 4.2.3-4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"section 2.6","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"}],
+      "conflict": "The six-channel description cannot be silently translated into GPIO polarity/enable/brake behavior. 'AppliedDutyCycles' telemetry is documented as signed commands.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need per-pin truth table including sign, magnitude, enable, OFF/RESET/error and brake/coast; do not infer it from a driver model name."
+    },
+    {
+      "id": "D03",
+      "area": "PWM and feedback",
+      "parameter": "PWM carrier frequency and resolution",
+      "candidate_values": {"PWM_FREQUENCY_Hz":null,"timer_resolution_bits":null,"measured_waveform":null},
+      "units": "Hz; bits",
+      "status": "TBD",
+      "evidence_type": "Named parameter and unexecuted waveform test",
+      "sources": [{"source_id":"I1","section":"section 4.1.3 parameter table","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"T2","section":"MTA PWM Frequency/Duty/Peak Voltage fields","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "10 Hz schedule is not PWM carrier frequency. No configured value or completed waveform record was found.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Obtain PrmDb/firmware values and measured carrier/duty/dead-time behavior; no detailed electrical model added."
+    },
+    {
+      "id": "D04",
+      "area": "PWM and feedback",
+      "parameter": "EPS current/voltage sensing",
+      "candidate_values": {"monitor":"INA3221 on PDS","rails_V":[12,5,3.3],"allocated_poll_Hz":1,"interface":"I2C","reported_units":"current mA; voltage mV"},
+      "units": "model; V; Hz; mA; mV",
+      "status": "CONFIRMED",
+      "evidence_type": "Documented electrical/telemetry design, not completed calibration",
+      "sources": [{"source_id":"I5","section":"sections 4.1.2 and 4.2.5","revision_date":"ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z"}],
+      "conflict": "Per-rail telemetry does not isolate three coil currents, certify OFF-current decay or establish feedback control. I2C address/packetization remain TBD.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "notes": "Retain the rail monitoring design fact for future power-interface correlation; do not feed it into a simulated per-coil current loop."
+    },
+    {
+      "id": "D05",
+      "area": "PWM and feedback",
+      "parameter": "Per-coil current sensing and dipole feedback",
+      "candidate_values": {"per_coil_sensor":null,"control_feedback_bandwidth_Hz":null,"current_regulation_configuration":null,"measured_dipole_feedback":null},
+      "units": "topology; Hz; A; A m^2",
+      "status": "TBD",
+      "evidence_type": "No demonstrated closed electrical/dipole feedback path",
+      "sources": [{"source_id":"I1","section":"MagnetorquerManager ports and telemetry","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"I5","section":"sections 4.1.2 and 4.2.5","revision_date":"ICD-EPS-001 rev 3 / cover 2026-07-15; current modified 2026-09-03T08:20:24.592Z"},{"source_id":"B3","section":"section 2.6","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"}],
+      "conflict": "I1 describes moment-to-duty commands and command telemetry; I5 describes rail measurements. Neither proves absence of local driver regulation nor establishes a calibrated closed current/dipole loop.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Documented software command path is open-loop with respect to measured coil current in the reviewed tables. Actual hardware feedback/regulation remains unconfirmed."
+    },
+    {
+      "id": "E01",
+      "area": "Magnetometer validity",
+      "parameter": "Magnetometer placement and separation",
+      "candidate_values": {"IMMU_location":"payload-structure lateral plate","MTA_stack_location":"between PDS and S-band transceiver","minimum_MTA_IMMU_separation_m":null,"magnetometer_body_transform":null,"stack_pitch_mm":15.24},
+      "units": "location; m; rotation; mm",
+      "status": "TBD",
+      "evidence_type": "Qualitative placement with explicit missing geometry",
+      "sources": [{"source_id":"I1","section":"sections 2.1-2.3","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"}],
+      "conflict": "0.6 in = 15.24 mm is PCB stack pitch, explicitly separate from magnetic MTA-IMMU separation. It is not a magnetic keep-out distance.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Require as-built sensor locations/orientations, coil centers/axes and magnetic material/return-current paths. No contamination magnitude can be inferred from qualitative placement."
+    },
+    {
+      "id": "E02",
+      "area": "Magnetometer validity",
+      "parameter": "Alignment knowledge requirement versus budget predictions",
+      "candidate_values": {"RVM_actuator_knowledge_deg":3,"RVM_sensor_knowledge_deg":3,"B3_actuator_prediction_allocation_deg":[0.1,0.25],"B3_sensor_prediction_allocation_deg":[0.25,0.5]},
+      "units": "deg",
+      "status": "TBC",
+      "evidence_type": "Documented requirement versus tighter unverified budget predictions/allocations",
+      "sources": [{"source_id":"R1","section":"ADCS-6/ADCS-7","revision_date":"Cover 2025-09-28; tracker through rev 9, 2026-03-21; audited modified 2026-09-03"},{"source_id":"I1","section":"sections 2.1-2.2","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"sections 2.4 and 2.6","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"}],
+      "conflict": "Knowledge bounds, physical mounting errors and residual calibrated uncertainty are different. Tighter budget values have no reviewed as-built survey.",
+      "recommended_simulation_treatment": "PARAMETRIC SWEEP",
+      "notes": "Preserve the 3 degree documented knowledge obligation and separate predictions. Future alignment-error sweeps must declare assumed distributions; no measured distribution is available."
+    },
+    {
+      "id": "E03",
+      "area": "Magnetometer validity",
+      "parameter": "Magnetic cleanliness and allowable contamination",
+      "candidate_values": {"allowable_residual_field_T":null,"allowable_sample_bias_T":null,"allowable_gradient_T_per_m":null,"cleanliness_allocation":null},
+      "units": "T; T/m; acceptance rule",
+      "status": "TBD",
+      "evidence_type": "Qualitative uncontaminated-sampling intent only",
+      "sources": [{"source_id":"I1","section":"sections 2.3 and 4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"B3","section":"sections 2.4, 2.8","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"T2","section":"IMMU/MTA procedures","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "No reviewed numeric contamination or cleanliness criterion links coil-off time to valid ADCS samples.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "ADCS must define an accepted magnetic error allocation and test conditions before quiet time can be validated."
+    },
+    {
+      "id": "E04",
+      "area": "Magnetometer validity",
+      "parameter": "Remanence, residual field and interference map",
+      "candidate_values": {"remanent_dipole_Am2":null,"local_post_burst_residual_T":null,"hard_soft_iron_calibration":null,"actuator_to_sensor_transfer":null},
+      "units": "A m^2; T; calibration matrices",
+      "status": "TBD",
+      "evidence_type": "Missing installation measurements",
+      "sources": [{"source_id":"I1","section":"sections 2.3 and 4.2.4","revision_date":"ICD-ADCS-001; cover 2026-02-06; internal rev 5, 2026-09-01; current modified 2026-09-05T10:23:19.376Z"},{"source_id":"T1","section":"ADCS test status","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"},{"source_id":"T2","section":"blank IMMU/MTA results","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"},{"source_id":"T3","section":"blank results and appendices","revision_date":"Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"}],
+      "conflict": "No located measurement bounds contamination, remanence or decay. Missing values do not mean zero effects.",
+      "recommended_simulation_treatment": "NOT MODELED YET",
+      "notes": "Do not infer contamination or add invented noise/bias. Request calibrated field-vs-time measurements at the installed sensor for each coil and polarity."
+    },
+    {
+      "id": "E05",
+      "area": "Magnetometer validity",
+      "parameter": "VN-100 vendor magnetic range/noise/resolution",
+      "candidate_values": {"range_uT":[-250,250],"noise_density_nT_per_sqrt_Hz":14,"resolution_uT":0.15},
+      "units": "uT; nT/sqrt(Hz)",
+      "status": "CONFIRMED",
+      "evidence_type": "Vendor specification with SI conversions",
+      "sources": [{"source_id":"H4","section":"p. 6","revision_date":"DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"},{"source_id":"D1","section":"Magnetometer capability","revision_date":"Git e919c3f, 2026-09-06; historical audit rows retain their original anchors"}],
+      "conflict": "Original +/-2.5 G, 140 uG/sqrt(Hz), 1.5 mG values are component specifications, not measured mounted bias/noise or a flight cleanliness allocation.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "notes": "Retain vendor capability evidence; do not implement noise/estimation or infer RMS noise without bandwidth/filter information."
+    },
+    {
+      "id": "E06",
+      "area": "Magnetometer validity",
+      "parameter": "External magnetometers and total installed count",
+      "candidate_values": {"VN100_internal":"one three-axis magnetometer per documented candidate VN-100","additional_external_models":null,"additional_external_count":null},
+      "units": "model/count",
+      "status": "TBD",
+      "evidence_type": "Known internal sensor capability; unresolved external inventory",
+      "sources": [{"source_id":"H4","section":"p. 6","revision_date":"DS100-CR-70-R1; footer 25-100-CR-70-R1; copyright 2023; issue date not established"},{"source_id":"M1","section":"section 4.1","revision_date":"MIS-00-06 cover 2025-11-05; log rev 8, 2026-08-17; audited modified 2026-09-02"},{"source_id":"B3","section":"sections 2.4 and 2.8","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"T3","section":"Functional Tests Overview: Magnetometer and IMU","revision_date":"Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"}],
+      "conflict": "Generic/plural 'magnetometers' and separate test headings do not establish separate installed devices or their count.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "B3 specifically intends the VN-100 raw magnetic data; external hardware requires a released BOM/connector map. Three magnetic axes are not three separate sensors."
+    },
+    {
+      "id": "F01",
+      "area": "Test and verification evidence",
+      "parameter": "ADCS hardware test tracker",
+      "candidate_values": {"PCB":"delivered; Unit Test done? No","torque_rods":"ordered; procedure Yes; internal review; done No","IMU":"ordered; procedure Yes; internal review; done No","sun_sensors":"ordered; procedure Yes; internal review; done No","voltage_amplifiers":"incomplete row","air_coils":"incomplete row","integrated_ADCS_test":"blank completion cell"},
+      "units": "tracker states",
+      "status": "CONFIRMED",
+      "evidence_type": "Tracker entry only",
+      "sources": [{"source_id":"T1","section":"component table and integrated subsystem table","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"}],
+      "conflict": "Procurement, procedure-written and updated-format flags are not completed-test measurements. ADCS air-coil/amplifier rows do not establish acceptance.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "This confirms only what the reviewed tracker records; it is not proof that no test exists elsewhere."
+    },
+    {
+      "id": "F02",
+      "area": "Test and verification evidence",
+      "parameter": "Current ADCS verification procedure",
+      "candidate_values": "IMMU magnetic/data acquisition, MTA PWM frequency/duty/voltage, detumble and power checks planned; measurement/result/initial fields unfilled in the reviewed copy",
+      "units": "procedure state",
+      "status": "CONFIRMED",
+      "evidence_type": "Procedure, not completed result",
+      "sources": [{"source_id":"T2","section":"functional overview; IMMU procedure/results; MTA PWM procedure/results; energy/power procedure/results","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"}],
+      "conflict": "PWM waveform verification alone would not measure magnetic dipole, physical current decay or local magnetic settling even after execution.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Need executed records with hardware/firmware revisions, calibration, raw synchronized data, uncertainty and sign-off; resolve placeholder test numbering when supplied."
+    },
+    {
+      "id": "F03",
+      "area": "Test and verification evidence",
+      "parameter": "Older ADCS verification record",
+      "candidate_values": "Template procedures; no filled results or signed execution; graph/data appendices contain placeholders or are empty",
+      "units": "procedure state",
+      "status": "CONFIRMED",
+      "evidence_type": "Older template/procedure",
+      "sources": [{"source_id":"T3","section":"sections 2.8-2.13 in functional/performance blocks; appendices A/B","revision_date":"Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"}],
+      "conflict": "Separate magnetometer and IMU test headings do not prove additional hardware or completed calibration.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "No measured parameter can be extracted from this reviewed copy."
+    },
+    {
+      "id": "F04",
+      "area": "Test and verification evidence",
+      "parameter": "Budget MC/HIL/calibration assertions",
+      "candidate_values": "Claims/verification descriptions for coil-axis/polarity/current characterization and Monte Carlo/HIL sensor/control budgets; no linked completed measurement record located",
+      "units": "verification claim",
+      "status": "ASSUMED",
+      "evidence_type": "Budget prediction and asserted/planned verification",
+      "sources": [{"source_id":"B3","section":"sections 2.4, 2.6, 2.8-2.9","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"},{"source_id":"T1","section":"ADCS integrated test row","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"},{"source_id":"T2","section":"results and graph sections","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"},{"source_id":"T3","section":"appendices","revision_date":"Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"}],
+      "conflict": "Declarative 'verified' prose is not a traceable test result; reviewed budget provides no run IDs, measured data, uncertainties or signed acceptance.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Do not claim completed HIL, calibrated dipole or magnetic sample validity based on B3 wording."
+    },
+    {
+      "id": "F05",
+      "area": "Test and verification evidence",
+      "parameter": "Completed measurements constraining a flight cycle",
+      "candidate_values": {"dipole":null,"current_power":null,"magnetometer_noise_bias":null,"interference":null,"quiet_settling":null,"control_timing":null,"HIL":null},
+      "units": "measurement records",
+      "status": "TBD",
+      "evidence_type": "No qualifying completed result located in reviewed evidence",
+      "sources": [{"source_id":"T1","section":"ADCS rows","revision_date":"No released revision; current modified 2026-09-01T20:08:13.619Z"},{"source_id":"T2","section":"blank measurements/results","revision_date":"Overview HS2_ADCS_TEST-001 through -007; current modified 2026-07-30T22:16:52.867Z; execution dates/results blank"},{"source_id":"T3","section":"blank measurements/results","revision_date":"Cover ADCS_TEST-001, 2026-07-28; template revision tracker A, 2025-09-09; modified 2026-07-29T18:26:35.729Z"},{"source_id":"B3","section":"verification assertions","revision_date":"No release ID/date/approval established; current modified 2026-09-03T08:33:14.114Z"}],
+      "conflict": "Bounded finding: committed audit plus targeted ICD/budget/tracker/procedure follow-up; not a claim about every unreviewed lab record.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "notes": "Only completed measured evidence can validate physical cycle parameters. Stop before creating a flight-candidate timing profile."
+    }
+  ]
+}
