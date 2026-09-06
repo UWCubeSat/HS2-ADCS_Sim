@@ -17,9 +17,11 @@ from dataclasses import asdict, dataclass, fields
 import hashlib
 import json
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 from Basilisk.architecture import messaging, sysModel
+from Basilisk.simulation import MtbEffector
 from Basilisk.utilities import RigidBodyKinematics
 
 from hs2_sim_config import Parameter
@@ -151,7 +153,7 @@ class MagneticCycleDriver(sysModel.SysModel):
         self.config = controller_config
         self.mtbCmdOutMsg = messaging.MTBCmdMsg()
         self.cmdTorqueOutMsg = messaging.CmdTorqueBodyMsg()
-        self.effector = None
+        self.effector: MtbEffector.MtbEffector | None = None
         self.history = []
 
     def Reset(self, tick):
@@ -184,7 +186,9 @@ class MagneticCycleDriver(sysModel.SysModel):
 
     def acquire(self, tick):
         command, applied = self.native_dipoles()
-        torque = np.asarray(self.effector.torqueExternalPntB_B, dtype=float).reshape(3)
+        # native_dipoles() has checked attachment; its guard is not inferred here.
+        effector = cast(MtbEffector.MtbEffector, self.effector)
+        torque = np.asarray(effector.torqueExternalPntB_B, dtype=float).reshape(3)
         start = tick // self.cycle.period_ns * self.cycle.period_ns
         quiet_age = tick - self.disabled_since if self.disabled_since >= 0 else -1
         valid = (tick == start + self.cycle.sample_offset_ns
@@ -229,8 +233,9 @@ class MagneticCycleDriver(sysModel.SysModel):
         self.flags = [bool(last[f"saturation_{a}"]) for a in "xyz"]
         self.core_used = bool(last["using_cpp_core"])
         # Confirm the unchanged controller actually consumed the frozen snapshot.
-        if (not np.array_equal([last[f"B_B_{a}_T"] for a in "xyz"], self.sample_b)
-                or not np.array_equal([last[f"omega_B_{a}_rad_s"] for a in "xyz"], self.sample_w)):
+        # These keys are written as floats in the controller's heterogeneous history.
+        if (not np.array_equal([cast(float, last[f"B_B_{a}_T"]) for a in "xyz"], self.sample_b)
+                or not np.array_equal([cast(float, last[f"omega_B_{a}_rad_s"]) for a in "xyz"], self.sample_w)):
             raise ValueError("Controller consumed a different field/state snapshot")
 
     def UpdateState(self, tick):
@@ -238,10 +243,12 @@ class MagneticCycleDriver(sysModel.SysModel):
         start = tick // self.cycle.period_ns * self.cycle.period_ns
         phase, phase_start, phase_end = self.cycle.phase(tick, self.step_ns)
         pre_command, pre_applied = self.native_dipoles()
+        # native_dipoles() has checked attachment before any effector readback.
+        effector = cast(MtbEffector.MtbEffector, self.effector)
         # Any independently observed energization interrupts the quiet history,
         # including a command injected outside this driver during a fault test.
         if (np.any(pre_command) or np.any(pre_applied)
-                or np.any(np.asarray(self.effector.torqueExternalPntB_B, dtype=float))):
+                or np.any(np.asarray(effector.torqueExternalPntB_B, dtype=float))):
             self.disabled_since = -1
         if tick == start:
             self.valid = False  # Previous cycle samples never authorize a new burst.

@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from typing import Iterable, cast
 
 import numpy as np
 import pandas as pd
@@ -46,7 +47,8 @@ def cycle_checks(df: pd.DataFrame, config: HS2SimConfig):
     def vector(prefix, suffix=""):
         return df[[f"{prefix}_{a}{suffix}" for a in "xyz"]].to_numpy(dtype=float)
 
-    for col in (c for c in df if c.startswith("cycle_") and c.endswith("_ns")):
+    # Scenario/CSV telemetry has string column labels, narrower than Pandas Hashable.
+    for col in (c for c in cast(Iterable[str], df) if c.startswith("cycle_") and c.endswith("_ns")):
         values = df[col].to_numpy(dtype=float)
         if not np.isfinite(values).all() or not np.equal(values, np.rint(values)).all():
             raise ValueError(f"Cycle timestamp must be integer nanoseconds: {col}")

@@ -3,6 +3,7 @@ import contextlib
 from dataclasses import replace
 import io
 import json
+from typing import Iterable, cast
 import unittest
 
 import numpy as np
@@ -67,11 +68,12 @@ class MagneticCycleTests(unittest.TestCase):
 
     def test_zero_native_torque_uses_completed_interval_not_new_phase_label(self):
         at = self.frame.set_index("time_ns")
-        self.assertEqual(float(at.loc[600_000_000, "applied_torque_B_mag_Nm"]), 0.)
-        self.assertGreater(float(at.loc[700_000_000, "applied_torque_B_mag_Nm"]), 0.)
-        self.assertGreater(float(at.loc[1_000_000_000, "applied_torque_B_mag_Nm"]), 0.)
-        self.assertEqual(float(at.loc[1_100_000_000, "applied_torque_B_mag_Nm"]), 0.)
-        self.assertEqual(float(at.loc[1_000_000_000, "mcmd_x_Am2"]), 0.)
+        # Unique tick/column lookups select real numeric telemetry, not arbitrary Scalar.
+        self.assertEqual(float(cast(float, at.loc[600_000_000, "applied_torque_B_mag_Nm"])), 0.)
+        self.assertGreater(float(cast(float, at.loc[700_000_000, "applied_torque_B_mag_Nm"])), 0.)
+        self.assertGreater(float(cast(float, at.loc[1_000_000_000, "applied_torque_B_mag_Nm"])), 0.)
+        self.assertEqual(float(cast(float, at.loc[1_100_000_000, "applied_torque_B_mag_Nm"])), 0.)
+        self.assertEqual(float(cast(float, at.loc[1_000_000_000, "mcmd_x_Am2"])), 0.)
 
     def test_actual_nonzero_dipole_rejects_acquisition_before_tam_executes(self):
         driver, params = self.driver_fixture()
@@ -151,7 +153,8 @@ class MagneticCycleTests(unittest.TestCase):
             b = run(stop_time_s=3., cycle=None, write_outputs=False, make_plots=False)
         pd.testing.assert_frame_equal(a, b, check_exact=True)
         self.assertEqual(int(a.telemetry_schema_version.iloc[0]), 4)
-        self.assertFalse(any(col.startswith("cycle_") for col in a))
+        # The scenario constructs string telemetry labels.
+        self.assertFalse(any(col.startswith("cycle_") for col in cast(Iterable[str], a)))
         self.assertEqual(DEFAULT_CONFIG.fingerprint(), "99de374af2f512e27d34e40fdc3327356662ef48804f7ba7945b7a703a68ad8f")
 
 

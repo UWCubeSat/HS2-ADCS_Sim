@@ -68,7 +68,7 @@ from pathlib import Path
 import math
 import json
 import hashlib
-from typing import cast
+from typing import Iterable, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -300,7 +300,8 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     effector.ModelTag = "NativeMTB" if actuator == "native" else "DirectMagneticTorqueReference"
     sc.addDynamicEffector(effector)
     if cycled_driver is not None:
-        cycled_driver.effector = effector
+        # The cycle/actuator guard above permits only native actuation here.
+        cycled_driver.effector = cast(MtbEffector.MtbEffector, effector)
 
     # Capture the previous command/field/state before propagation. These are
     # evidence for the magnetic inputs held during the interval ending now.
@@ -489,7 +490,9 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         df[col] = diag_sampled[col].to_numpy(dtype=float)
 
     if cycle is not None:
-        extra = {col: diag_sampled[col].to_numpy() for col in diag_sampled if col.startswith("cycle_")}
+        # Driver history constructs string column labels; Pandas types them as Hashable.
+        extra = {col: diag_sampled[col].to_numpy() for col in cast(Iterable[str], diag_sampled)
+                 if col.startswith("cycle_")}
         df = pd.concat([df, pd.DataFrame(extra)], axis=1)
         df["cycle_period_ns"] = cycle.period_ns
         df["cycle_config_sha256"] = cycle.fingerprint()
