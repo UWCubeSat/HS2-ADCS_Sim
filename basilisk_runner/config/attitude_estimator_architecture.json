@@ -1,0 +1,875 @@
+{
+  "schema_version": 1,
+  "document_id": "HS2-SIM-EST-ARCH-7B",
+  "revision": 1,
+  "revision_date": "2026-09-07",
+  "runtime_usable": false,
+  "status": "ASSUMED",
+  "scope": "Proposed simulation architecture and focused mathematical validation only; NOT FLIGHT VALIDATED. No runtime estimator, controller connection or numerical flight tuning.",
+  "companion_document": "docs/ATTITUDE_ESTIMATOR_ARCHITECTURE.md",
+  "baseline": {
+    "commit": "b1a21e75cdc92f5f8793648123a55adfd9999830",
+    "evidence_anchor_commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+    "provenance_note": "Phase 7A files are tracked at the verified HEAD; their internal evidence anchor is the preceding code baseline. Both evidence files and all active code remain unchanged.",
+    "evidence_register": "basilisk_runner/config/attitude_sensor_estimator_evidence.json",
+    "evidence_reference_resolution": "evidence_refs identify decision_register.id in the Phase 7A JSON. Original sources, revisions, authority and conflicts remain in that register; no new remote fetch.",
+    "source_files": [
+      {
+        "path": "docs/ATTITUDE_SENSOR_ESTIMATOR_EVIDENCE.md",
+        "sha256": "0d1e386972aa709f2ec795e310431618d264fcffac37c0b3bb686d04fba6befd",
+        "role": "committed Phase 7A evidence"
+      },
+      {
+        "path": "basilisk_runner/config/attitude_sensor_estimator_evidence.json",
+        "sha256": "c8ad069d40e67225f90708d790ebc54057bcd078284e652cb6024a80a52e8c8c",
+        "role": "committed Phase 7A evidence"
+      },
+      {
+        "path": "basilisk_runner/basilisk_adcs_adapter.py",
+        "sha256": "4e31e6fff2786e3fa9814e2f7796bda04f50370c00abad4925a2f92c434a40c1",
+        "role": "committed current interface"
+      },
+      {
+        "path": "basilisk_runner/hs2_sim_config.py",
+        "sha256": "a0d3f266669046a05b086dd03c24baaefeddb1ade45abb66400109b550d4bb97",
+        "role": "committed runtime configuration; not changed"
+      },
+      {
+        "path": "basilisk_runner/scenario_huskysat2_detumble.py",
+        "sha256": "aefb0ffe1e68638a0360806f4f68f8eaea5358d8c5827261967e3b9ec4be7daa",
+        "role": "committed current scenario; not changed"
+      },
+      {
+        "path": "basilisk_runner/magnetic_control_cycle.py",
+        "sha256": "bf173c2919d8d8dd8eb7b9b5523a256a1c6cd2b1d21722e9412a37e83c6c2cdd",
+        "role": "committed sample-epoch interface; not changed"
+      }
+    ]
+  },
+  "status_definitions": {
+    "CONFIRMED": "Only the specifically documented fact or checked mathematical behavior, not flight acceptance.",
+    "TBR": "Explicit review flag retained.",
+    "TBC": "Applicability, selection or conflicting sources require confirmation.",
+    "TBD": "Unknown; null is not zero.",
+    "ASSUMED": "Proposed architecture/model choice or explicitly synthetic mathematical input."
+  },
+  "decisions": [
+    {
+      "id": "A01",
+      "decision": "Quaternion plus residual gyro bias; six local error coordinates",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "E05",
+        "P01",
+        "P02",
+        "P03"
+      ],
+      "notes": "Bias observability requires temporal aiding; no extra calibration states."
+    },
+    {
+      "id": "A02",
+      "decision": "MEKF local filter with TRIAD two-vector acquisition",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "E03",
+        "E04",
+        "E05"
+      ],
+      "notes": "New simulation recommendation, not an approved flight algorithm."
+    },
+    {
+      "id": "A03",
+      "decision": "Raw gyro, valid magnetic vector and reconstructed Sun direction",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "S01",
+        "S05",
+        "S06",
+        "E01",
+        "E02"
+      ],
+      "notes": "Installed hardware and preprocessing unresolved."
+    },
+    {
+      "id": "A04",
+      "decision": "Independent truth tracker; exclude LOST, FOUND and vendor AHRS from baseline corrections",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "S07",
+        "S08",
+        "E02",
+        "E03",
+        "E05"
+      ],
+      "notes": "Tracker-feedback ICD versus independent-truth budget conflict remains TBC; alternative aided variant needs independent validation."
+    },
+    {
+      "id": "A05",
+      "decision": "Acquisition-epoch processing with delayed-event replay",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "T01",
+        "T02",
+        "T03",
+        "T04"
+      ],
+      "notes": "Replay all subsequent events, not just gyro; numerical timing policies TBD."
+    },
+    {
+      "id": "A06",
+      "decision": "Separate initialization, numerical health, observability and covariance credibility",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "E01",
+        "K01",
+        "V01"
+      ],
+      "notes": "Quaternion availability does not authorize pointing."
+    },
+    {
+      "id": "A07",
+      "decision": "External static calibration and mounting; defer calibration-state augmentation",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "P07",
+        "P09",
+        "T03"
+      ],
+      "notes": "Unknown systematics cannot be replaced by unsupported online bias states."
+    },
+    {
+      "id": "A08",
+      "decision": "Recommend separately authorized noise-free Phase 7C prototype",
+      "status": "ASSUMED",
+      "runtime_usable": false,
+      "evidence_refs": [
+        "E04",
+        "K01",
+        "V01"
+      ],
+      "notes": "Architecture readiness only; installed-performance and pointing work still blocked."
+    }
+  ],
+  "state": {
+    "nominal": [
+      {
+        "name": "qhat_BN",
+        "components": 4,
+        "units": "dimensionless",
+        "constraint": "unit norm; scalar-first Hamilton; C_BN maps N to B"
+      },
+      {
+        "name": "bhat_g_B",
+        "components": 3,
+        "units": "rad/s",
+        "meaning": "residual gyro bias after documented static calibration, expressed in fixed B axes"
+      }
+    ],
+    "error_order": [
+      "delta_theta_B",
+      "delta_b_g_B"
+    ],
+    "error_dimension": 6,
+    "covariance_dimension": [
+      6,
+      6
+    ],
+    "covariance_block_units": {
+      "attitude": "rad^2",
+      "attitude_bias": "rad^2/s",
+      "bias": "rad^2/s^2"
+    },
+    "alternatives": [
+      {
+        "candidate": "attitude only",
+        "disposition": "deterministic comparator",
+        "limitation": "does not represent residual gyro drift"
+      },
+      {
+        "candidate": "attitude plus gyro bias",
+        "disposition": "recommended",
+        "limitation": "bias needs aiding and excitation"
+      },
+      {
+        "candidate": "magnetic bias, scale, alignment, CSS gain, thermal or clock states",
+        "disposition": "deferred",
+        "limitation": "requires independent calibration/observability evidence"
+      }
+    ],
+    "algorithm_trade": [
+      {
+        "candidate": "TRIAD",
+        "role": "two-vector deterministic acquisition/reference",
+        "limitation": "noncollinear pairs at common attitude epoch; no bias propagation"
+      },
+      {
+        "candidate": "QUEST / Davenport q-method",
+        "role": "possible weighted acquisition",
+        "limitation": "weights and common-epoch transport need evidence"
+      },
+      {
+        "candidate": "complementary observer",
+        "role": "possible future comparator",
+        "limitation": "gains and bias observability still require evidence"
+      },
+      {
+        "candidate": "MEKF",
+        "role": "recommended propagation and local correction",
+        "limitation": "local basin, geometry and statistical model validity"
+      },
+      {
+        "candidate": "outdated SW1 Kalman / vendor AHRS / legacy standalone",
+        "role": "historical or separate-system evidence",
+        "limitation": "not a validated current own-estimator definition"
+      }
+    ]
+  },
+  "ownership": {
+    "plant": "Basilisk owns truth propagation and synthetic observation generation.",
+    "preprocessing": "Sensor managers own units, calibration, mounting and acquisition/quality provenance.",
+    "references": "Separate provider uses declared orbit/position estimate and ephemeris/field model at acquisition epoch; no truth attitude.",
+    "estimator": "Gyro propagation, local correction, bias/covariance, history and quality only.",
+    "controller": "Explicit consumer-epoch and mode permission policy; no automatic authority from an available quaternion.",
+    "independent_evaluator": "Synthetic plant truth or separately calibrated tracker/test truth; never undisclosed estimator correction.",
+    "excluded_corrections": [
+      "Sagitta/Twinkle truth tracker",
+      "LOST attitude result",
+      "FOUND position/result",
+      "VN-100 AHRS attitude",
+      "accelerometer as orbital gravity direction"
+    ]
+  },
+  "frame_contract": {
+    "status": "ASSUMED",
+    "current_software_conventions_status": "CONFIRMED",
+    "evidence_refs": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "T04"
+    ],
+    "N": "Existing Earth-centered ICRF/J2000 simulation inertial frame.",
+    "P": "Existing low-order Earth-fixed/planet-fixed frame; Earth model unchanged.",
+    "B": "Right-handed mathematical body frame; physical HS-2 mapping/origin TBD.",
+    "sensor_frames": [
+      "S_g",
+      "S_m",
+      "S_css_i",
+      "S_tracker",
+      "S_LOST",
+      "S_FOUND"
+    ],
+    "C_AB": "v_A = C_AB v_B; C_BA = transpose(C_AB)",
+    "attitude": "q_BN and sigma_BN represent C_BN, N to B.",
+    "WMM": "r_P = C_PN r_N; B_N = transpose(C_PN) B_P",
+    "sensor": "v_Sm = C_SmB C_BN B_N; v_B = transpose(C_SmB) v_Sm",
+    "gyro": "z_g_B = transpose(C_SgB) A_g (raw_g_Sg - offset_g_Sg(T))",
+    "sun": "reconstruct body direction from calibrated valid CSS intensities and surveyed normals",
+    "physical_mounts": null,
+    "physical_mounts_status": "TBD"
+  },
+  "mathematics": {
+    "interpretation": "Symbolic candidate model. Algebra validated for the stated convention; no installed stochastic parameters.",
+    "quaternion_product": "q (*) p = [q0*p0-dot(qv,pv), q0*pv+p0*qv+cross(qv,pv)]",
+    "passive_DCM": "C(q)=(q0^2-dot(qv,qv))*I+2*qv*qv^T-2*q0*[qv]x",
+    "composition": "C(q (*) p) = C(p) C(q)",
+    "exponential": "Exp_q(a)=[cos(|a|/2),sin(|a|/2)*a/|a|], continuous zero limit",
+    "error_definition": "q_true=qhat (*) Exp_q(delta_theta_B); delta_b=b_true-bhat",
+    "nominal": "omega_hat=z_g_B-bhat; qhat_dot=0.5*qhat (*) [0,omega_hat]; bhat_dot=0",
+    "constant_rate_step": "qhat(t+h)=qhat(t) (*) Exp_q(omega_hat*h)",
+    "F": "[[-[omega_hat]x,-I],[0,0]]",
+    "G": "[[-I,0],[0,I]]",
+    "continuous_covariance": "P_dot=F*P+P*F^T+G*Qc*G^T",
+    "bias_model": "b_true_dot=n_b; residual random walk is ASSUMED and requires characterization",
+    "spectral_model": "Qc positive semidefinite; diag(S_g,S_b) only under an explicit independence assumption",
+    "spectral_units": {
+      "S_g": "rad^2/s",
+      "S_b": "rad^2/s^3"
+    },
+    "discrete_covariance": "Qd=integral Phi(t1,s)*G(s)*Qc(s)*G(s)^T*Phi(t1,s)^T ds; P_minus=Phi*P_plus*Phi^T+Qd",
+    "zero_rate_Phi": "[[I,-h*I],[0,I]]",
+    "zero_rate_Qd": "[[h*S_g+h^3*S_b/3,-h^2*S_b/2],[-h^2*S_b/2,h*S_b]]",
+    "measurement": "y=v_B/|v_B|; u_N=v_ref_N/|v_ref_N|; uhat=C(qhat)*u_N",
+    "tangent_basis": "E^T*E=I2; E^T*uhat=0; E has dimension 3 by 2",
+    "residual": "r=E^T*(y-uhat)",
+    "H": "[E^T*[uhat]x,0_(2x3)]",
+    "normalization_J": "(I-u*u^T)/|v|",
+    "sensor_R_term": "E^T*J_norm*R_raw_B*J_norm^T*E; reference/systematic/correlated terms require explicit treatment",
+    "antipodal_guard": "Use full angle atan2(|cross(y,uhat)|,dot(y,uhat)); tangent residual is zero for y=-uhat and cannot authorize local correction.",
+    "gain": "S=H*P_minus*H^T+R; K=P_minus*H^T*S^(-1); implementation should solve without explicit inverse",
+    "joseph": "Pe=(I-K*H)*P_minus*(I-K*H)^T+K*R*K^T",
+    "injection": "delta_x=K*r; qhat_plus=qhat_minus (*) Exp_q(delta_theta); bhat_plus=bhat_minus+delta_b",
+    "reset_Jr": "I-(1-cos(|a|))/|a|^2*[a]x+(|a|-sin(|a|))/|a|^3*[a]x^2",
+    "reset": "Gamma=diag(Jr(a),I); P_plus=Gamma*Pe*Gamma^T; reset error mean to zero",
+    "normalization": "Reject nonfinite/zero quaternion; normalize without reducing P; internal sign continuity.",
+    "MRP": "Choose q0>=0; sigma=qv/(1+q0); shadow=-sigma/dot(sigma,sigma) for nonzero sigma."
+  },
+  "timing_contract": {
+    "evidence_refs": [
+      "T01",
+      "T02",
+      "T03",
+      "T04",
+      "E01"
+    ],
+    "status": "ASSUMED",
+    "current_timing_facts": {
+      "status": "CONFIRMED",
+      "source": "current scenario/magnetic-cycle files, hashes in baseline.source_files; Phase 7A T04",
+      "continuous_interval": {
+        "value": 0.1,
+        "units": "s"
+      },
+      "diagnostic_cycle": {
+        "acquisition_s": 0.4,
+        "compute_s": 0.5,
+        "actuation_s": 0.6,
+        "period_s": 1
+      },
+      "applicability": "Existing simulation/test-only settings, not new flight requirements; not changed."
+    },
+    "timestamp_fields": [
+      "sensor_native_clock",
+      "clock_mapping_revision",
+      "clock_uncertainty",
+      "acquisition_support_start",
+      "acquisition_support_end",
+      "effective_acquisition_epoch",
+      "sequence_id",
+      "receipt_epoch",
+      "publication_epoch"
+    ],
+    "propagation": "Use gyro packet support and physical acquisition time; distinguish point rate, interval average and delta angle. Map monotonic time to the environment epoch explicitly.",
+    "reference_epoch": "Evaluate each inertial reference at its observation epoch.",
+    "delayed_event": "Restore preceding checkpoint, propagate to acquisition, insert update, replay all subsequent gyro and measurement events chronologically.",
+    "replay_policy": "Preserve external validity; specify deterministic innovation-gate re-evaluation and original/revised dispositions, stable same-epoch order, deduplication and lineage.",
+    "unsupported_events": "Explicit rejection/status for future clock, outside history or missing gyro coverage; do not relabel as current.",
+    "asynchronous_acquisition": "Prefer a common-epoch pair. If justified gyro transport is available, pair transported observation at t0 with its original u_N(ti), retaining transport uncertainty and correlations.",
+    "output": "State epoch separate from receipt/publication and last aiding ages. No retroactive change to commands.",
+    "control_compatibility": "Future cycle facade must freeze posterior sample-epoch rate/attitude paired with sampled B if retaining existing control contract; a current-state output is a separate product.",
+    "numerical_flight_policy": null,
+    "numerical_flight_policy_status": "TBD"
+  },
+  "modes": [
+    {
+      "id": "M01",
+      "mode": "deployment detumble",
+      "inputs": "gyro + quiet magnetic; Sun conditional",
+      "response": "One vector cannot fully initialize absolute attitude; expose status without changing rate-based detumble.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M02",
+      "mode": "magnetic without Sun",
+      "inputs": "gyro + magnetic direction",
+      "response": "Two instantaneous attitude constraints; rotation about B unobserved; temporal bias observability depends on geometry/dynamics.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M03",
+      "mode": "Sun only",
+      "inputs": "gyro + reconstructed valid Sun direction",
+      "response": "Roll about Sun unobserved; insufficient CSS geometry may also invalidate reconstruction.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M04",
+      "mode": "Sun plus magnetic",
+      "inputs": "two noncollinear valid vector pairs + gyro",
+      "response": "Local attitude rank three; bias requires time/excitation; near-collinearity ill-conditioned.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M05",
+      "mode": "eclipse",
+      "inputs": "gyro and valid quiet magnetic, if available",
+      "response": "No fake zero Sun update; use single-vector or gyro-only state, no implicit tracker aiding.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M06",
+      "mode": "gyro only",
+      "inputs": "valid gyro coverage and initialized prior",
+      "response": "Propagate only; bias unobservable without aids; report age/model limitation.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M07",
+      "mode": "lost attitude",
+      "inputs": "no credible prior or outside local basin",
+      "response": "Wait for valid two-vector acquisition or approved prior; no arbitrary identity marked initialized.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M08",
+      "mode": "experiment pointing",
+      "inputs": "same baseline ownership; availability dependent",
+      "response": "Estimate availability is not pointing capability; LOST excluded, FOUND downstream, tracker independent.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    },
+    {
+      "id": "M09",
+      "mode": "fault/degraded",
+      "inputs": "remaining valid sources",
+      "response": "Reject invalid inputs with reasons; missing gyro coverage prevents fresh propagation absent separately validated fallback.",
+      "status": "ASSUMED",
+      "evidence_refs": [
+        "E01",
+        "E02",
+        "S05",
+        "S06",
+        "S08",
+        "T01",
+        "T03",
+        "K01"
+      ]
+    }
+  ],
+  "initialization": {
+    "attitude": "Valid noncollinear two-vector solution or explicit credible prior, with known frame/time support.",
+    "bias": "Separate calibrated prior and P0; TRIAD does not instantly determine bias.",
+    "flight_bias_prior": null,
+    "flight_P0": null,
+    "status": "TBD",
+    "synthetic_cases": "Zero initial bias or supplied perfect attitude prior only in explicitly labeled test cases, never hidden truth initialization.",
+    "reacquisition": "Distinguish invalid measurement, bad geometry and invalid local prior; use full angular discrepancy; explicit bias/P0 disposition and reset lineage."
+  },
+  "interfaces": {
+    "status": "ASSUMED",
+    "concrete_message_schema_status": "TBD",
+    "inputs": [
+      {
+        "name": "gyro",
+        "units": "rad/s or explicitly supported rad delta-angle",
+        "fields": "raw/calibrated value, frame/calibration revision, physical support, clock/sequence, saturation/coverage"
+      },
+      {
+        "name": "magnetic",
+        "units": "T and normalized dimensionless direction",
+        "fields": "calibrated body vector, source sensor frame, acquisition/filter support, quiet validity, reference linkage"
+      },
+      {
+        "name": "Sun",
+        "units": "dimensionless direction; calibrated intensity units depend on selected channels",
+        "fields": "reconstructed body vector or invalid, participating channels, geometry/illumination/FOV flags and physical support"
+      },
+      {
+        "name": "reference",
+        "units": "T magnetic; dimensionless Sun; m position; s/ns epoch",
+        "fields": "orbit/position source, model/ephemeris revision, acquisition epoch and uncertainty"
+      },
+      {
+        "name": "configuration",
+        "units": "mixed, explicitly typed by parameter",
+        "fields": "calibration/mounts, P0, symbolic noise, validity and history policy, provenance"
+      }
+    ],
+    "outputs": [
+      "qhat_BN",
+      "sigmahat_BN",
+      "omega_hat_BN_B",
+      "bhat_g_B",
+      "P",
+      "state_epoch",
+      "rate_support_epoch",
+      "publication_epoch",
+      "last_aiding_epochs_and_ages",
+      "gyro_coverage",
+      "initialized",
+      "source_validity_and_rejection_reasons",
+      "directional_observability",
+      "covariance_evidence_status",
+      "replay_revision",
+      "source_and_calibration_ids"
+    ],
+    "existing_adapter_fields": [
+      "NavAttMsg.sigma_BN",
+      "NavAttMsg.omega_BN_B",
+      "TAMSensorMsg.tam_S"
+    ],
+    "adapter_boundary": "Separate quality/epoch/bias/covariance metadata required; tam_S remains sensor frame unless explicitly transformed.",
+    "additional_ICD_products": "Angular acceleration needs a separate supported derived-product contract; previous B belongs to sensor history."
+  },
+  "unresolved_inputs": [
+    {
+      "id": "U01",
+      "parameter": "Initial residual gyro bias and P0",
+      "value": null,
+      "units": "rad/s; rad^2, rad^2/s, rad^2/s^2",
+      "status": "TBD",
+      "evidence_refs": [
+        "P01",
+        "P02",
+        "P03",
+        "P07",
+        "E01"
+      ],
+      "required_evidence": "Calibration/initialization method and applicable temperature/configuration."
+    },
+    {
+      "id": "U02",
+      "parameter": "S_g and PSD convention",
+      "value": null,
+      "units": "rad^2/s",
+      "status": "TBD",
+      "evidence_refs": [
+        "P01",
+        "P02",
+        "P07"
+      ],
+      "required_evidence": "Installed data with known bandwidth/filter/sample settings."
+    },
+    {
+      "id": "U03",
+      "parameter": "S_b and bias process law",
+      "value": null,
+      "units": "rad^2/s^3",
+      "status": "TBD",
+      "evidence_refs": [
+        "P03",
+        "P07"
+      ],
+      "required_evidence": "Duration/temperature-dependent drift characterization."
+    },
+    {
+      "id": "U04",
+      "parameter": "Magnetic error and quiet validity",
+      "value": null,
+      "units": "T, T^2, rad, s",
+      "status": "TBD",
+      "evidence_refs": [
+        "P04",
+        "P07",
+        "T03",
+        "F02"
+      ],
+      "required_evidence": "Powered/quiet tests, mounting, filtering and reference discrepancy."
+    },
+    {
+      "id": "U05",
+      "parameter": "CSS suite, reconstruction and direction covariance",
+      "value": null,
+      "units": "channel-specific intensity units; rad^2",
+      "status": "TBD",
+      "evidence_refs": [
+        "S05",
+        "S06",
+        "F03",
+        "P08",
+        "P09"
+      ],
+      "required_evidence": "Selection, normals, calibrated response and illumination testing."
+    },
+    {
+      "id": "U06",
+      "parameter": "Sensor/optical mounts and correlations",
+      "value": null,
+      "units": "dimensionless SO(3); rad, rad^2",
+      "status": "TBD",
+      "evidence_refs": [
+        "F01",
+        "F02",
+        "F03",
+        "F04"
+      ],
+      "required_evidence": "Physical B registration and survey revision."
+    },
+    {
+      "id": "U07",
+      "parameter": "Clocks, gyro support, delay/replay policy",
+      "value": null,
+      "units": "s/ns; rad or rad/s",
+      "status": "TBD",
+      "evidence_refs": [
+        "T01",
+        "T02",
+        "T03",
+        "T04"
+      ],
+      "required_evidence": "Packet readback, filter support, clock mapping and latency records."
+    },
+    {
+      "id": "U08",
+      "parameter": "Orbit/Sun reference provider uncertainty",
+      "value": null,
+      "units": "m, s, T, rad",
+      "status": "TBD",
+      "evidence_refs": [
+        "T01",
+        "K06",
+        "E01"
+      ],
+      "required_evidence": "Declared estimated position, model/ephemeris and uncertainty."
+    },
+    {
+      "id": "U09",
+      "parameter": "Geometry/residual/freshness thresholds and mode permissions",
+      "value": null,
+      "units": "rad, s, dimensionless statistics",
+      "status": "TBD",
+      "evidence_refs": [
+        "E01",
+        "K01",
+        "K07",
+        "V01"
+      ],
+      "required_evidence": "Requirements and validated error/availability model."
+    },
+    {
+      "id": "U10",
+      "parameter": "Cross-channel/temporal/reference correlations",
+      "value": null,
+      "units": "mixed covariance units",
+      "status": "TBD",
+      "evidence_refs": [
+        "P07",
+        "P09",
+        "T01",
+        "K06",
+        "V01"
+      ],
+      "required_evidence": "Shared channels, references, filtering and inclusion boundary."
+    },
+    {
+      "id": "U11",
+      "parameter": "Independent truth and pointing requirement closure",
+      "value": null,
+      "units": "rad, s; confidence/mode definition",
+      "status": "TBD",
+      "evidence_refs": [
+        "S08",
+        "F04",
+        "K01",
+        "K02",
+        "K03",
+        "K04",
+        "K05",
+        "K06",
+        "K07",
+        "V01"
+      ],
+      "required_evidence": "Calibrated truth chain and resolved requirements."
+    }
+  ],
+  "pointing_boundary": {
+    "evidence_refs": [
+      "K01",
+      "K02",
+      "K03",
+      "K04",
+      "K05",
+      "K06",
+      "K07",
+      "V01"
+    ],
+    "terms": [
+      "estimator knowledge",
+      "sensor/body and payload boresight knowledge",
+      "control tracking/acquisition",
+      "orbit/target/reference direction",
+      "clock/exposure/latency",
+      "thermal/flexible drift and image motion"
+    ],
+    "validation_reference": "Independent truth uncertainty retained separately.",
+    "combination": "Use frame/boresight/time Jacobians with a justified full covariance; keep systematic bounds and confidence differences separate. Prevent double counting.",
+    "total_accuracy": null,
+    "total_accuracy_status": "TBD",
+    "restriction": "No scalar RSS, flight P confidence, own-estimator accuracy or pointing performance claim."
+  },
+  "validation": {
+    "scope": "Mathematical fixtures only; not a running estimator or scenario.",
+    "test_file": "basilisk_runner/test_attitude_estimator_architecture.py",
+    "command": ".\\.venv\\Scripts\\python.exe -B -m unittest discover -s basilisk_runner -p test_attitude_estimator_architecture.py -v",
+    "executed_date": "2026-09-07",
+    "test_count": 14,
+    "passed": 14,
+    "failed": 0,
+    "status": "CONFIRMED",
+    "mathematical_checks": [
+      {
+        "id": "V01",
+        "test": "test_literal_rotation_and_wrong_transpose",
+        "independent_anchor": "literal +X to -Y"
+      },
+      {
+        "id": "V02",
+        "test": "test_composition_and_body_rate_propagation",
+        "independent_anchor": "Rodrigues and finite-difference C_dot"
+      },
+      {
+        "id": "V03",
+        "test": "test_quaternion_mrp_shadow_and_normalization",
+        "independent_anchor": "proper rotation and representation invariance"
+      },
+      {
+        "id": "V04",
+        "test": "test_sensor_earth_and_body_transform_chain",
+        "independent_anchor": "nonidentity rotations and equal-norm wrong direction"
+      },
+      {
+        "id": "V05",
+        "test": "test_vector_measurement_jacobian_sign",
+        "independent_anchor": "finite-difference perturbation"
+      },
+      {
+        "id": "V06",
+        "test": "test_normalized_covariance_and_tangent_projection",
+        "independent_anchor": "normalization derivative and rank"
+      },
+      {
+        "id": "V07",
+        "test": "test_error_dynamics_attitude_and_bias_signs",
+        "independent_anchor": "perturbed true/nominal quaternion propagation"
+      },
+      {
+        "id": "V08",
+        "test": "test_triad_acquisition_and_collinear_rejection",
+        "independent_anchor": "known rotation recovery and exact degeneracy"
+      },
+      {
+        "id": "V09",
+        "test": "test_delayed_vector_transport_retains_original_reference_epoch",
+        "independent_anchor": "moving inertial reference and body transform"
+      },
+      {
+        "id": "V10",
+        "test": "test_single_vector_and_temporal_bias_observability",
+        "independent_anchor": "linear rank/null-space cases"
+      },
+      {
+        "id": "V11",
+        "test": "test_zero_rate_discrete_noise_and_psd",
+        "independent_anchor": "positive-weight quadrature versus closed form"
+      },
+      {
+        "id": "V12",
+        "test": "test_covariance_reset_jacobian",
+        "independent_anchor": "finite-difference retraction"
+      },
+      {
+        "id": "V13",
+        "test": "test_joseph_and_reset_preserve_covariance",
+        "independent_anchor": "Schur equivalence, PSD, cross-covariance transport"
+      },
+      {
+        "id": "V14",
+        "test": "test_antipodal_vector_is_not_a_zero_error_update",
+        "independent_anchor": "zero tangent residual with pi angular error"
+      }
+    ],
+    "limitations": "No full MEKF convergence, replay manager, CSS reconstruction, sensor realism, detumble rerun or flight accuracy verification.",
+    "fixture_policy": "All numerical test angles, intervals, SPD matrices and tolerances are synthetic algebra fixtures, not HS-2 parameters or flight Q/R/gates."
+  },
+  "next_phase": {
+    "recommendation": "Separately authorized noise-free Phase 7C prototype",
+    "status": "ASSUMED",
+    "flight_performance_readiness": "BLOCKED by unresolved_inputs U01-U11",
+    "steps": [
+      "Review decisions and freeze isolated synthetic interface/convention.",
+      "Implement and test propagation, TRIAD and local MEKF kernels.",
+      "Implement chronological events/history; delayed replay includes later measurements; test duplicates and coverage.",
+      "Verify acquisition, observable bias cases, null modes, dropouts and covariance integrity against independent truth.",
+      "Keep truth out of estimator inputs and ordinary initialization.",
+      "Use labeled synthetic nonsingular algebra weights or a justified deterministic constrained solver; noise-free data is not permission for a singular zero-covariance Kalman solve.",
+      "Design later Basilisk facade only after isolated checks and explicit authorization; preserve sample-epoch control contract.",
+      "Close U01-U11 before installed performance, stochastic consistency or pointing claims."
+    ],
+    "runtime_integration_authorized": false
+  }
+}
