@@ -1,0 +1,3800 @@
+{
+  "schema_version": 1,
+  "document_id": "HS2-PHASE7A-ATTITUDE-EVIDENCE",
+  "revision_date": "2026-09-07",
+  "baseline_commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+  "runtime_usable": false,
+  "scope": "Evidence reconciliation only. No runtime model, physics, timing, controller, profile, environment, pointing or simulation-output changes.",
+  "sources": [
+    {
+      "id": "D1",
+      "path": "docs/PHYSICAL_PARAMETERS.md",
+      "title": "Physical parameters and provenance",
+      "revision_date": "2026-09-05 audit; Phase 5/6A addenda",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "a0782a37da4d58d1e090efe91c002022ff24f32538f60aca0fb1d67ff90c707a",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "D2",
+      "path": "docs/REQUIREMENTS_BASELINE.md",
+      "title": "ADCS requirements baseline and conflicts",
+      "revision_date": "2026-09-05",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "0f5245c35a41b3cb65d7e3d51aaedc8a9bc4e9f826d8acb21b3a53d40d6421ba",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "D3",
+      "path": "docs/SCENARIO_STATUS.md",
+      "title": "Scenario status",
+      "revision_date": "Audit plus Phase 5/6A addenda",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "bac281f1f58c25667f432156b75f1bcecf3328e6e642c768fc3558508071eda7",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "D4",
+      "path": "docs/MAGNETIC_CONTROL_EVIDENCE.md",
+      "title": "Phase 6B magnetic control evidence",
+      "revision_date": "2026-09-06",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "30e2a7e697883b0c3bc3802c7bb19602896975280af58630da7500692cadb1dc",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "D5",
+      "path": "docs/ADCS_MAGNETIC_TEST_PLAN.md",
+      "title": "Phase 6C ADCS magnetic test plan",
+      "revision_date": "2026-09-06; all tests NOT EXECUTED",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "a542e084e7e2f4072752fe1ed27cfbdbf8dc4ef1286658bffb464ac3642bf8b7",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "C1",
+      "path": "basilisk_runner/hs2_sim_config.py",
+      "title": "Runtime simulation configuration",
+      "revision_date": "Phase 4/5 inputs; inspected 2026-09-07",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "a0d3f266669046a05b086dd03c24baaefeddb1ade45abb66400109b550d4bb97",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "C2",
+      "path": "basilisk_runner/scenario_huskysat2_detumble.py",
+      "title": "Active detumble scenario",
+      "revision_date": "Phase 6A with static cleanup; inspected 2026-09-07",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "aefb0ffe1e68638a0360806f4f68f8eaea5358d8c5827261967e3b9ec4be7daa",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "C3",
+      "path": "basilisk_runner/magnetic_control_cycle.py",
+      "title": "Opt-in magnetic cycle",
+      "revision_date": "Phase 6A with static cleanup; inspected 2026-09-07",
+      "commit": "8341ae8cb71bafc5723876329e49e7aa2b2d3f1e",
+      "sha256": "bf173c2919d8d8dd8eb7b9b5523a256a1c6cd2b1d21722e9412a37e83c6c2cdd",
+      "access": "Committed local read, 2026-09-07",
+      "authority": "Implementation fact or audit-derived evidence only; historical audit paragraphs are not current flight validation."
+    },
+    {
+      "id": "I1",
+      "title": "ADCS ICD",
+      "url": "https://drive.google.com/file/d/1hLtnfIFSr0lpA1G06h1QUmzP6TUkJwez6NtpzFYbtBY/view",
+      "file_id": "1hLtnfIFSr0lpA1G06h1QUmzP6TUkJwez6NtpzFYbtBY",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1fx72LhlZULPKx_ns2wgPzNHa3yo4-hCY"
+      ],
+      "revision_date": "ICD-ADCS-001; cover 2026-02-06; internal rev 5 dated 2026-09-01",
+      "modified_time": "2026-09-05T10:23:19.376Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Current specific interface intent, but approval fields blank; internally conflicting hardware/software tables and explicit inaccuracies comment."
+    },
+    {
+      "id": "I3",
+      "title": "PAYLOAD ICD",
+      "url": "https://drive.google.com/file/d/1lNaU3924o3YauIkrCbEoAxai42gTTooRNMTJWuaQLno/view",
+      "file_id": "1lNaU3924o3YauIkrCbEoAxai42gTTooRNMTJWuaQLno",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1fx72LhlZULPKx_ns2wgPzNHa3yo4-hCY"
+      ],
+      "revision_date": "ICD-PAYLOAD-001 / ICD-PAY-001; cover 2025-10-06; rev 3 history 2026-09-29",
+      "modified_time": "2026-09-03T10:47:50.227Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Future-dated revision entry at this inspection; Sagitta/Twinkle, camera variant and USB conflicts; no released geometry."
+    },
+    {
+      "id": "SW1",
+      "title": "ADCS Software Design Document",
+      "url": "https://drive.google.com/file/d/15a2GrN6oSJ5obUN1S6sxZ1JvkFbdp3SOwh22T2Br-Ug/view",
+      "file_id": "15a2GrN6oSJ5obUN1S6sxZ1JvkFbdp3SOwh22T2Br-Ug",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "16Xr0Nj6JNB_3IK_foDc_S8Q2SwQritWP"
+      ],
+      "revision_date": "No numbered release; modified 2026-04-21",
+      "modified_time": "2026-04-21T01:30:50.535Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Explicitly slightly outdated and not wholly accurate; cannot select a flight Kalman architecture."
+    },
+    {
+      "id": "B3",
+      "title": "Pointing_Payload_Budgets_CDR.docx",
+      "url": "https://drive.google.com/file/d/1ruAMFUOjwCCmeaTXRkqRnvfjvYuLqsIY/view",
+      "file_id": "1ruAMFUOjwCCmeaTXRkqRnvfjvYuLqsIY",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1Tm6XkC0bRpF_YNzvTYQas3AT2CuhFzLS"
+      ],
+      "revision_date": "No release ID/date/approval established; modified 2026-09-03",
+      "modified_time": "2026-09-03T08:33:14.114Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Detailed analysis candidate; declarations of verification lack linked completed raw MC/HIL/calibration evidence."
+    },
+    {
+      "id": "H4",
+      "title": "VN100CR-Datasheet-v7.0-(DS100-CR-70-R1).pdf",
+      "url": "https://drive.google.com/file/d/1LEekbzz2LuTFYMBSQvNY-sX1FVPAtqm2/view",
+      "file_id": "1LEekbzz2LuTFYMBSQvNY-sX1FVPAtqm2",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1y67yhXRnnOE8hhZDG244vMWSxY30qPkp"
+      ],
+      "revision_date": "Hardware v7.0; DS100-CR-70-R1 / footer 25-100-CR-70-R1; copyright 2023",
+      "modified_time": "2026-03-21T00:15:44.016Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Manufacturer specification, not HS-2 installed calibration or selected firmware/packet configuration."
+    },
+    {
+      "id": "H5",
+      "title": "tensor_tech_css_10",
+      "url": "https://drive.google.com/file/d/1eavCpJA7YkNcuhxe0hNQhgPKT_kznHYu5U_ah01YpyQ/view",
+      "file_id": "1eavCpJA7YkNcuhxe0hNQhgPKT_kznHYu5U_ah01YpyQ",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1y67yhXRnnOE8hhZDG244vMWSxY30qPkp"
+      ],
+      "revision_date": "Document v1.0.2c; product v1.0; 2025-08-06 revision history",
+      "modified_time": "2026-07-28T22:21:37.417Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Manufacturer specification in stored text transcription; example calibration is not a delivered unit report; feature/table temperature conflict retained."
+    },
+    {
+      "id": "T2",
+      "title": "NEW ADCS HuskySat-2 Avionics Verification Procedures",
+      "url": "https://drive.google.com/file/d/1MsIS6hL0CcfJpajEntyaY438vQCkFLmYpLsk5qAA-rA/view",
+      "file_id": "1MsIS6hL0CcfJpajEntyaY438vQCkFLmYpLsk5qAA-rA",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1o9RDaA9tNw5xUdk6-2wKnNmG2G6rKoYH"
+      ],
+      "revision_date": "HS2_ADCS_TEST-001 through -007 overview; body uses HS2_SUBSYSTEM placeholders; revision/execution date unfilled",
+      "modified_time": "2026-07-30T22:16:52.867Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "PROCEDURE ONLY; test summary, values, graphs and sign-off fields unfilled."
+    },
+    {
+      "id": "T3",
+      "title": "HuskySat-2 Avionics Verification Procedures - ADCS",
+      "url": "https://drive.google.com/file/d/1TEtTKIcnGu1hCtoOHhkGA3DWo8ytEOMVL4YUA_GRhdw/view",
+      "file_id": "1TEtTKIcnGu1hCtoOHhkGA3DWo8ytEOMVL4YUA_GRhdw",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1o9RDaA9tNw5xUdk6-2wKnNmG2G6rKoYH"
+      ],
+      "revision_date": "ADCS_TEST-001 cover 2026-07-28; template history A 2025-09-09",
+      "modified_time": "2026-07-29T18:26:35.729Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "PROCEDURE ONLY / obsolete template details; separate magnetometer heading does not establish separate hardware."
+    },
+    {
+      "id": "T4",
+      "title": "PAY HuskySat-2 Avionics Verification Procedures",
+      "url": "https://docs.google.com/document/d/13HkKjurqi6xFdJ9b_zAmlEde0Q_CGrvWkvOoTqPmz20/edit",
+      "file_id": "13HkKjurqi6xFdJ9b_zAmlEde0Q_CGrvWkvOoTqPmz20",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1o9RDaA9tNw5xUdk6-2wKnNmG2G6rKoYH"
+      ],
+      "revision_date": "HS2_PAY_TEST-001/-002; execution/release date unfilled; modified 2026-07-31",
+      "modified_time": "2026-07-31T17:31:35.261Z",
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "PROCEDURE ONLY; camera FOV/resolution tests, no completed optical/timing/estimator performance record."
+    },
+    {
+      "id": "ADCS_FOLDER",
+      "title": "ADCS Component",
+      "url": "https://drive.google.com/drive/folders/16Xr0Nj6JNB_3IK_foDc_S8Q2SwQritWP",
+      "file_id": "16Xr0Nj6JNB_3IK_foDc_S8Q2SwQritWP",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1tTVRWsn5-SuTRBoW0sfVjrG4vpVXoRTu"
+      ],
+      "revision_date": "Listing inspected 2026-09-07",
+      "modified_time": null,
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Targeted ADCS Component folder; one listed item, SW1. Does not establish absence of software elsewhere."
+    },
+    {
+      "id": "TEST_FOLDER",
+      "title": "Subsystem Testing",
+      "url": "https://drive.google.com/drive/folders/1o9RDaA9tNw5xUdk6-2wKnNmG2G6rKoYH",
+      "file_id": "1o9RDaA9tNw5xUdk6-2wKnNmG2G6rKoYH",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "parent_ids": [
+        "1qa_uvgkPm4yFMyIYhomKaQbWGffg5VjS"
+      ],
+      "revision_date": "Listing inspected 2026-09-07",
+      "modified_time": null,
+      "access": "Targeted read-only fetch, 2026-09-07; Shared Drive membership checked",
+      "authority": "Targeted Subsystem Testing folder; nine listed documents; only ADCS and payload-relevant procedures read. No global search."
+    },
+    {
+      "id": "R1",
+      "title": "Working RVM",
+      "file_id": "11IF6Z258qsOcPkMAP1GGssFSR6CSEYRHTrowt0nhDzM",
+      "url": "https://docs.google.com/spreadsheets/d/11IF6Z258qsOcPkMAP1GGssFSR6CSEYRHTrowt0nhDzM/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "Cover 2025-09-28; tracker rev 9 2026-03-21; audited modified 2026-09-03",
+      "authority": "Controlled-folder traceability; incomplete ADCS verification and contradictory PAY knowledge fields.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "R2",
+      "title": "HS-2 Requirements Document",
+      "file_id": "1ndJqcboajU4Jl_xzJY8hvECOCxZaLUuu2n2bvZ4lSzM",
+      "url": "https://docs.google.com/document/d/1ndJqcboajU4Jl_xzJY8hvECOCxZaLUuu2n2bvZ4lSzM/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "REQ-001/REQ-002; rev E 2025-10-05; audited Drive rev 34576, 2026-07-08",
+      "authority": "A-C named approvals; D/E blank; derivation/table conflicts.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "Working HS-2 Mission Design Document",
+      "file_id": "1ERQ7L8lpUAOpvaVY-v4of7ee1vO7vtSrgt6Sk4kwgAU",
+      "url": "https://docs.google.com/document/d/1ERQ7L8lpUAOpvaVY-v4of7ee1vO7vtSrgt6Sk4kwgAU/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "MIS-00-06 cover 2025-11-05; log rev 8 2026-08-17",
+      "authority": "Mission intent with stale hardware, rate and FOV passages.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "B1",
+      "title": "OFFICIAL UNP BUDGETS",
+      "file_id": "1QjB3b6N_8ApnokAY7mx5-lb7i-Ln06A943hU4ePlcwg",
+      "url": "https://docs.google.com/spreadsheets/d/1QjB3b6N_8ApnokAY7mx5-lb7i-Ln06A943hU4ePlcwg/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "Template cover 2025-07-31; audited modified 2026-09-03; HS-2 release TBD",
+      "authority": "Mixed estimates/template/old hardware; title does not establish released BOM.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "ADCS Preliminary Design Review",
+      "file_id": "1bWG-Q-g4478csJb8kl6YpiZLU0KtIes1wHr5YpLo8NI",
+      "url": "https://docs.google.com/presentation/d/1bWG-Q-g4478csJb8kl6YpiZLU0KtIes1wHr5YpLo8NI/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "Numbered revision/date TBD; audited modified 2025-12-13",
+      "authority": "Historical design intent, not installed evidence.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "T1",
+      "title": "Hardware Test Tracking",
+      "file_id": "1RwvsRkzPaZftcbcFuLMexglIOU14P74Qi7rl-4YHkvs",
+      "url": "https://docs.google.com/spreadsheets/d/1RwvsRkzPaZftcbcFuLMexglIOU14P74Qi7rl-4YHkvs/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "No released revision; audited modified 2026-09-01",
+      "authority": "Tracker state only, not signed raw measurements.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "I2",
+      "title": "STR ICD",
+      "file_id": "19OYepvNrMGA2Q5ppwQZsvyE5AeaLBhPCMuBoY2KrNd0",
+      "url": "https://docs.google.com/document/d/19OYepvNrMGA2Q5ppwQZsvyE5AeaLBhPCMuBoY2KrNd0/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "ICD-STR-001; cover 2026-07-07; rev 3 2026-07-15",
+      "authority": "Committed audit found largely template and missing referenced mounting details.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "Assembly Procedure",
+      "file_id": "1N8c_Cdke-shybAeaORkgEBtXeVX5PAKX4PMQoI_tHNo",
+      "url": "https://docs.google.com/document/d/1N8c_Cdke-shybAeaORkgEBtXeVX5PAKX4PMQoI_tHNo/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "Cover 2026-09-18, future-dated at audit; audited modified 2026-08-18",
+      "authority": "Committed audit verified empty Axis Definition section.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    },
+    {
+      "id": "OP1",
+      "title": "CDR Mission Operations Plan",
+      "file_id": "1qFJCzb4mRiTEUGQtsd-Gb1qKJJWku_0albkJb_S2UpE",
+      "url": "https://docs.google.com/document/d/1qFJCzb4mRiTEUGQtsd-Gb1qKJJWku_0albkJb_S2UpE/edit",
+      "drive_id": "0AC8raEVvalZjUk9PVA",
+      "revision_date": "MOP-001 cover 2026-08-20; history through 2026-08-28",
+      "authority": "Committed audit: ADCS operations unfilled, preliminary flight rules.",
+      "access": "Reused committed D1/D2/D4 audit; not refetched in Phase 7A",
+      "trace_sources": [
+        "D1",
+        "D2",
+        "D4"
+      ]
+    }
+  ],
+  "status_definitions": {
+    "CONFIRMED": "Only the specifically cited documentation, vendor capability or implementation fact; never implicit flight acceptance.",
+    "TBR": "Explicit review flag retained.",
+    "TBC": "Applicability, selection or conflict requires confirmation.",
+    "TBD": "Not established in reviewed evidence; null is unknown, never zero.",
+    "ASSUMED": "Design prediction, analytical input or legacy/model assumption."
+  },
+  "simulation_treatments": [
+    "USE AS CURRENT CANDIDATE",
+    "VENDOR PRIOR ONLY",
+    "PARAMETRIC SWEEP",
+    "BLOCKED PENDING HARDWARE INPUT",
+    "BLOCKED PENDING SOFTWARE DECISION",
+    "BLOCKED PENDING CALIBRATION",
+    "NOT MODELED YET"
+  ],
+  "performance_classes": [
+    "VENDOR SPECIFICATION",
+    "SELECTED CONFIGURATION",
+    "MEASURED INSTALLED PERFORMANCE",
+    "DESIGN ASSUMPTION",
+    "UNRESOLVED"
+  ],
+  "test_classes": [
+    "COMPLETED MEASURED RESULT",
+    "PROCEDURE ONLY",
+    "PLANNED TEST",
+    "TRACKER ENTRY",
+    "ASSERTION WITHOUT DATA",
+    "OBSOLETE EVIDENCE"
+  ],
+  "decision_register": [
+    {
+      "id": "S01",
+      "group": "Inventory and interfaces",
+      "decision": "VN-100 flight candidate and raw channel roles",
+      "candidates": [
+        {
+          "value": "One VN-100 Rugged IMMU; raw gyro and internal magnetometer feed own estimator in B3; I1 also publishes acceleration",
+          "units": "model/count/roles",
+          "status": "CONFIRMED",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "Table 01, 4.1.1"
+            },
+            {
+              "source": "B3",
+              "section": "2.4, 2.8"
+            },
+            {
+              "source": "T1",
+              "section": "IMU row"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Documented selection is not delivered/installed acceptance; accelerometer use and tracker feedback policy unresolved.",
+      "recommended_simulation_treatment": "USE AS CURRENT CANDIDATE",
+      "simulation_note": "Retain candidate identity and raw-channel intent only. Need part/serial/firmware/BOM, wiring and configuration readback before flight-like use.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S02",
+      "group": "Inventory and interfaces",
+      "decision": "External magnetometer inventory",
+      "candidates": [
+        {
+          "value": null,
+          "units": "model/count/location/interface",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "D4",
+              "section": "E06"
+            },
+            {
+              "source": "M1",
+              "section": "4.1"
+            },
+            {
+              "source": "T3",
+              "section": "Functional Tests Overview"
+            },
+            {
+              "source": "H4",
+              "section": "2.3 p6"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Plural magnetometers/separate test headings do not prove additional devices; three axes are one triad.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "simulation_note": "Do not instantiate a separate external magnetometer without BOM, physical location, channel map and role.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S03",
+      "group": "Inventory and interfaces",
+      "decision": "VN-100 transport, framing and serial speed",
+      "candidates": [
+        {
+          "value": "LVTTL UART (electrical); UART/RS-232 full duplex, 115200 default, 8 data bits/1 stop bit (detailed); I2C register manager (software)",
+          "units": "interface; bit/s",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "1.2, 4.1.1, 4.2.1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "RS-422 TBR",
+          "units": "interface",
+          "status": "TBR",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "M1",
+              "section": "4.1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "UART1 RS-232; UART2 3 V TTL; each 9600-921600",
+          "units": "interface; bit/s",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "4 p9, 4.3 p11"
+            }
+          ],
+          "frame": "Vendor connector frame",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "I2C and RS-422 descriptions conflict with model-specific serial interfaces. 115200 is described as a default, not verified register state.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "simulation_note": "Resolve connector pins/transceiver/port, packet fields, firmware settings, binary/ASCII format and clock data. Do not infer acquisition rate from baud.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S04",
+      "group": "Inventory and interfaces",
+      "decision": "Configured sensor/control output rates and filters",
+      "candidates": [
+        {
+          "value": "10 Hz IMU and sun-manager sampling/application schedule; GYRO_RANGE, ACCEL_RANGE, DLPF_CONFIG and SAMPLE_RATE_DIV have no supplied values",
+          "units": "Hz; register settings",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "4.1.1, 4.1.2, 4.1.8, 4.2.1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "5 Hz estimate-control-actuate tick; 200 ms deadline",
+          "units": "Hz; ms",
+          "status": "TBC",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "SW1",
+              "section": "2.2, 3.1"
+            },
+            {
+              "source": "M1",
+              "section": "2.4"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Specific 10 Hz ICD intent is stronger interface evidence than outdated SW1, but no approved disposition; device sample, output packet, manager and estimator rates remain distinct.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Need actual output-rate/filter readback and approved schedule; never set flight sensors to the hardware maximum or change the existing 0.1 s plant.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S05",
+      "group": "Inventory and interfaces",
+      "decision": "Sun sensor model and physical count",
+      "candidates": [
+        {
+          "value": "TensorCSS-10: PDR 2; I1 three physical/manager channels; B1 mass-budget 6",
+          "units": "model/count",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "D1",
+              "section": "Sensors and timing"
+            },
+            {
+              "source": "P1",
+              "section": "slide 11"
+            },
+            {
+              "source": "I1",
+              "section": "1.1.4, 1.2, 3, 4.1.2"
+            },
+            {
+              "source": "B1",
+              "section": "Mass Budget row 21"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Four SLCD61N8 coarse sun sensors",
+          "units": "model/count",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.4"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "2/3/6 TensorCSS-10 versus 4 SLCD61N8; a software channel mask or budget quantity does not prove populated hardware. TensorCSS-10S is a vendor variant, not established selection.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "simulation_note": "Obtain installed BOM, photographs, PCB channel population and deployment configuration. Retain all candidates.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S06",
+      "group": "Inventory and interfaces",
+      "decision": "Sun sensor ADC, intensity/vector and calibration interface",
+      "candidates": [
+        {
+          "value": "MCP3204/3208 SPI ADC, 12-bit; 3 channels at 10 Hz; scale/offset names 0-5, CHANNEL_MASK default 0x3F, raw U16[6], calibrated F32[3]",
+          "units": "part; bit; Hz; channels",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "4.1.2, 4.1.4, 4.2.2"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Analog irradiance-correlated output; ADC external, 0-2.4 V feature range",
+          "units": "V; interface",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "1.1, 1.2"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Three-channel descriptions conflict with six-channel fields. Manager publishes intensities while filter input calls the data a body-frame Sun vector; inversion and mounting transform are not defined.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "simulation_note": "Resolve exact ADC/channel/reference/gain/filter/scan order and intensity-to-vector algorithm; a port name does not prove a calibrated vector measurement.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S07",
+      "group": "Inventory and interfaces",
+      "decision": "LOST and FOUND camera/lens selection and ADCS role",
+      "candidates": [
+        {
+          "value": "Table: xiC MC031CG-SY; mechanical: MC031MG-SY-FL; software: MC031MG-SY. FOUND Edmund Cr 6 mm f/4; LOST Cr 16 mm f/16",
+          "units": "models; mm; f-number",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I3",
+              "section": "Table 01, 2.1, 2.2, 4.1.1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "LOST independently estimates attitude for payload characterization; FOUND uses an attitude input to estimate position",
+          "units": "measurement roles",
+          "status": "CONFIRMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.8, 3, 4.1"
+            },
+            {
+              "source": "I3",
+              "section": "4.1 ScienceInferenceApplication"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Budgets retain xiQ-S7 and older MDD/ICD table-of-contents camera names; obsolete SW1 routes LOST/FOUND as truth to ADCS.",
+      "recommended_simulation_treatment": "NOT MODELED YET",
+      "simulation_note": "Treat payload algorithms separately from spacecraft estimator. No approved current LOST-to-ADCS update path established; FOUND is not an independent full-attitude input.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S08",
+      "group": "Inventory and interfaces",
+      "decision": "Sagitta versus Twinkle and truth independence",
+      "candidates": [
+        {
+          "value": "Arcsec Sagitta attitude truth measure; B3 excludes it from the credited flight attitude estimate",
+          "units": "model/role",
+          "status": "CONFIRMED",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I3",
+              "section": "Table 01, 2.3"
+            },
+            {
+              "source": "B3",
+              "section": "2.5, 2.8, 3"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "AttitudeFilter accepts absolute quaternion from StarTrackerManager; PAY StarTrackerManager text names Arcsec Twinkle, manual v11.5",
+          "units": "model/role",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "4.1.4"
+            },
+            {
+              "source": "I3",
+              "section": "4.1.2"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "LOST/FOUND truth correction in Kalman update",
+          "units": "role",
+          "status": "TBC",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "SW1",
+              "section": "2.1, 2.2"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Truth-only Sagitta versus tracker feedback are incompatible validation policies until source, mode and estimator boundaries are stated; Twinkle software text is stale relative to Sagitta hardware table.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Decide data ownership and feedback policy. If a tracker enters the filter, its same measurements cannot provide independent validation of that filter.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "S09",
+      "group": "Inventory and interfaces",
+      "decision": "Camera/tracker interfaces and capture settings",
+      "candidates": [
+        {
+          "value": "Camera table USB2.0/hub/BBB versus CameraManager USB3.0 hardware description; trigger IN active high, OUT active low. Sagitta full-duplex RS-485 transceived to UART; CSP in Twinkle prose versus NSP/SLIP in data table",
+          "units": "interface/polarity",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I3",
+              "section": "1.2, 4.1.1, 4.1.2, 4.2.3"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "No confirmed exposure duration/output cadence, synchronization wiring/firmware readback or tracker protocol disposition.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "simulation_note": "Preserve specified signal polarities as interface intent only; verify edges against exposure/strobe and actual tracker model. Do not infer sample epochs from USB/serial receipt.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "F01",
+      "group": "Frames and alignment",
+      "decision": "Physical body axes and datum",
+      "candidates": [
+        {
+          "value": null,
+          "units": "axis definition/origin",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "D1",
+              "section": "Spacecraft frames and geometry"
+            },
+            {
+              "source": "I2",
+              "section": "mounting sections"
+            },
+            {
+              "source": "S2",
+              "section": "Axis Definition"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "R1 CAL2.2.1 geometric-center coordinate-system obligation",
+          "units": "datum requirement",
+          "status": "CONFIRMED",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "D1",
+              "section": "Coordinate origin requirement"
+            },
+            {
+              "source": "R1",
+              "section": "CalPoly row 14"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Geometric center need not equal COM; code X/Y/Z labels do not identify installed spacecraft faces.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "simulation_note": "Require released right-handed body frame, origin and optical/mechanical datums before any C_SB or boresight is instantiated.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "F02",
+      "group": "Frames and alignment",
+      "decision": "VN-100 sensor-to-body transform and polarity",
+      "candidates": [
+        {
+          "value": "Payload lateral-plate mounting; numeric C_SB, position, positive-axis/polarity map, survey/calibration residual all TBD",
+          "units": "m; rotation; deg",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "2.2, 2.2.1, 2.3"
+            },
+            {
+              "source": "H4",
+              "section": "3.1, 5.1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Runtime C_SB=identity only; S=B",
+          "units": "dimensionless DCM",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "C1",
+              "section": "SensorConfig, validate"
+            },
+            {
+              "source": "C2",
+              "section": "telemetry contract"
+            }
+          ],
+          "frame": "C_SB maps B to S",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Vendor housing alignment/cross-axis errors are not as-built HS-2 mounting errors; no identity transform is released.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Get sensor-datum definition plus CAD/as-built survey and channel-specific calibration. Keep current simulation identity explicitly ASSUMED.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "F03",
+      "group": "Frames and alignment",
+      "decision": "Sun-sensor boresights, deployment and sign convention",
+      "candidates": [
+        {
+          "value": "I1 locations: solar +X, solar +Y, FOUND camera; no numeric boresights/mount matrices",
+          "units": "locations",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "3 thermal-interface connections"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Deployed solar-panel axes approximately 30 deg from an unspecified spacecraft axis",
+          "units": "deg",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.4"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "TensorCSS zenith is local +Z; output correlated with irradiance and incident angle",
+          "units": "sensor-axis convention",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "2.3, 3.1"
+            }
+          ],
+          "frame": "Sensor-local +Z",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Different models/counts/deployed geometries; no released face-to-body mapping, sign/ADC channel association or calibrated array response.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Need design normals, deployed geometry, as-built vector survey and illumination response per channel. A one-axis intensity cannot be substituted for a measured three-axis Sun vector.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "F04",
+      "group": "Frames and alignment",
+      "decision": "Payload relative mounting versus calibrated optical transforms",
+      "candidates": [
+        {
+          "value": "FOUND 90 +/-1 from LOST; FOUND face +X/-X/+Y/-Y pending. LOST lateral plate; Sagitta four lateral-plate brackets",
+          "units": "deg; mounting",
+          "status": "CONFIRMED",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY physical mounting row 11"
+            },
+            {
+              "source": "I3",
+              "section": "2.1-2.3"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": null,
+          "units": "C_camera_B; C_tracker_B; pixel/optical-axis signs; calibrated uncertainty",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "I3",
+              "section": "2.1-2.3"
+            },
+            {
+              "source": "D1",
+              "section": "Camera alignment knowledge"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "90 +/-1 is physical placement requirement, not alignment-knowledge accuracy. No complete nominal, surveyed or calibrated body/optical transform.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Keep mechanical design intent, CAD, assembled survey, optical calibration and thermal change separate.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P01",
+      "group": "Performance evidence",
+      "decision": "VN-100 gyro range and resolution",
+      "candidates": [
+        {
+          "value": {
+            "range_plus_minus": 2000,
+            "resolution": 0.02
+          },
+          "units": "deg/s",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.2 Table 3 p5"
+            }
+          ],
+          "frame": "Vendor gyro axes",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": 400,
+          "units": "deg/s",
+          "status": "TBC",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "M1",
+              "section": "4.1"
+            },
+            {
+              "source": "D1",
+              "section": "Gyro range"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "MDD 400 conflicts with model-specific +/-2000 capability; neither establishes actual configured register or estimator rate limit.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "Use +/-2000 and 0.02 only as labeled vendor capability priors in a separately authorized component study.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P02",
+      "group": "Performance evidence",
+      "decision": "VN-100 gyro stochastic specifications",
+      "candidates": [
+        {
+          "value": {
+            "in_run_bias_stability_typical": 5,
+            "in_run_bias_stability_maximum": 10
+          },
+          "units": "deg/h",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.2 Table 3 p5"
+            }
+          ],
+          "frame": "Vendor gyro axes",
+          "confidence": "Typical/maximum, not an initial-bias distribution"
+        },
+        {
+          "value": 0.0035,
+          "units": "deg/s/sqrt(Hz)",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.2 Table 3 p5"
+            }
+          ],
+          "frame": "Vendor gyro axes",
+          "confidence": "Noise density; bandwidth/convention needed"
+        },
+        {
+          "value": "Cover summarizes 5-7 deg/h typical; detailed Table 3 gives 5 typical / 10 maximum",
+          "units": "deg/h",
+          "status": "TBC",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "cover and Table 3"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "In-run stability is not initial bias, a random-walk coefficient, or a covariance; cover/table summary differs.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "Do not copy density into per-sample standard deviation. Need PSD convention, effective filter bandwidth, decimation/correlations and measured Allan/bias data.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P03",
+      "group": "Performance evidence",
+      "decision": "VN-100 gyro sampling and cross-axis capability",
+      "candidates": [
+        {
+          "value": {
+            "internal_sample_rate": 800,
+            "bandwidth": 265
+          },
+          "units": "Hz",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.2 Table 3 p5"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": 0.05,
+          "units": "deg",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.2 Table 3 p5"
+            }
+          ],
+          "frame": "Vendor gyro axes",
+          "confidence": "Cross-axis sensitivity as stated, not percent"
+        },
+        {
+          "value": 800,
+          "units": "Hz maximum IMU data capability",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "Cover sensor summary"
+            }
+          ],
+          "frame": "Vendor IMU output",
+          "confidence": "Maximum capability, not selected packet rate"
+        }
+      ],
+      "status": "CONFIRMED",
+      "conflict": "Hardware sampling/bandwidth do not define selected output/filter settings or inter-axis installed alignment.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "Retain units as published; no generated misalignment distribution or sample-rate substitution.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P04",
+      "group": "Performance evidence",
+      "decision": "VN-100 internal magnetometer capability",
+      "candidates": [
+        {
+          "value": {
+            "range_plus_minus": 2.5,
+            "noise_density": 140,
+            "resolution": 1.5,
+            "sample_rate": 200,
+            "cross_axis": 0.05
+          },
+          "units": "G; uG/sqrt(Hz); mG; Hz; deg",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.3 Table 4 p6"
+            }
+          ],
+          "frame": "Vendor magnetometer axes",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": {
+            "range_plus_minus": 0.00025,
+            "noise_density": 1.4e-8,
+            "resolution": 1.5e-7
+          },
+          "units": "T; T/sqrt(Hz); T",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.3 Table 4 p6"
+            },
+            {
+              "source": "D4",
+              "section": "E05"
+            }
+          ],
+          "frame": "Vendor magnetometer axes",
+          "confidence": "Exact unit conversion only"
+        }
+      ],
+      "status": "CONFIRMED",
+      "conflict": "Not local-field cleanliness limit, installed bias/noise or flight acquisition rate.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "No magnetic bias, hard/soft-iron matrix, filter, latency or post-burst recovery can be inferred from these numbers.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P05",
+      "group": "Performance evidence",
+      "decision": "VN-100 accelerometer capability and orbital role",
+      "candidates": [
+        {
+          "value": {
+            "range_plus_minus": 16,
+            "bias_stability": 0.04,
+            "noise_density": 0.14,
+            "resolution": 0.5
+          },
+          "units": "g; mg; mg/sqrt(Hz); mg",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.1 Table 2 p4"
+            }
+          ],
+          "frame": "Vendor accelerometer axes",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": {
+            "internal_sample_rate": 800,
+            "bandwidth": 230,
+            "cross_axis": 0.05
+          },
+          "units": "Hz; Hz; deg",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "2.1 Table 2 p4"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "CONFIRMED",
+      "conflict": "I1 carries acceleration but does not define its attitude-estimator role; terrestrial AHRS aiding assumptions do not establish an orbital gravity reference.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "In free fall an accelerometer measures specific force, not the local gravity direction. Do not use it as a second attitude vector without an applicable measurement model.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P06",
+      "group": "Performance evidence",
+      "decision": "VN-100 onboard AHRS performance versus own raw-sensor estimator",
+      "candidates": [
+        {
+          "value": {
+            "magnetic_heading": 2,
+            "static_pitch_roll": 0.5,
+            "dynamic_pitch_roll": 1
+          },
+          "units": "deg RMS",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "1 Table 1 p3"
+            }
+          ],
+          "frame": "Vendor heading/pitch/roll frame",
+          "confidence": "RMS; conditional magnetic environment/calibration; dynamic aiding caveat"
+        },
+        {
+          "value": {
+            "heading_mount_misalignment": 0.15,
+            "pitch_roll_mount_misalignment": 0.1
+          },
+          "units": "deg (1 sigma)",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "1 Table 1 notes p3"
+            }
+          ],
+          "frame": "Sensor housing / vendor attitude frame",
+          "confidence": "Per-part constant; calibratable"
+        },
+        {
+          "value": {
+            "attitude_output_min": 1,
+            "attitude_output_max": 400,
+            "angular_resolution": 0.001
+          },
+          "units": "Hz; Hz; deg",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "1 Table 1 p3"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "CONFIRMED",
+      "conflict": "B3 explicitly uses raw sensors and own estimator. Vendor AHRS results and mounting specifications are different quantities from HS-2 knowledge.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "Do not use 2/0.5/1 deg as HS-2 filter noise, accuracy or total pointing. Orbital free-fall applicability and truth independence require separate evidence.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P07",
+      "group": "Performance evidence",
+      "decision": "VN-100 installed calibration, filtering and thermal residuals",
+      "candidates": [
+        {
+          "value": "Manufacturer states bias/scale/misalignment/gyro g-sensitivity calibration across -40 to +85 C; hard/soft-iron compensation available",
+          "units": "capability; C",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "cover, 3.2, 5.2, 5.5"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": null,
+          "units": "bias; scale; covariance; noise PSD; random walk; temperature residual; calibration coefficients",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "T2",
+              "section": "IMMU acquisition procedure/results"
+            },
+            {
+              "source": "D4",
+              "section": "E03, E04, F05"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Factory calibration statement is not a serial-number certificate or mounted HS-2 error map. Dynamic magnetic interference is not removed by a generic static calibration.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Obtain serial-specific calibration/readback, zero-rate and temperature records, rate-table scale/cross-axis data and installed hard/soft-iron/dynamic magnetic tests.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P08",
+      "group": "Performance evidence",
+      "decision": "TensorCSS angular response, FOV and output specifications",
+      "candidates": [
+        {
+          "value": {
+            "full_fov": 120,
+            "half_fov_plus_minus": 60,
+            "typical_angle_error": 5
+          },
+          "units": "deg",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "1.2, 2, 2.3"
+            }
+          ],
+          "frame": "Sensor zenith +Z",
+          "confidence": "Typical error, no sigma/RMS confidence specified"
+        },
+        {
+          "value": {
+            "feature_output_range": [
+              0,
+              2.4
+            ],
+            "normal_incidence_typical_output": 2.2
+          },
+          "units": "V",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "1.2, 2"
+            }
+          ],
+          "frame": "Analog output",
+          "confidence": "Normal-incidence value under AM0 solar simulator"
+        }
+      ],
+      "status": "CONFIRMED",
+      "conflict": "Scalar intensity/angle response depends on irradiance; FOV is not whole-array coverage. Not applicable to unconfirmed SLCD61N8 alternative.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "Vendor response envelope may support a future candidate study; no automatic Gaussian 5-deg noise or flight-calibrated vector reconstruction.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P09",
+      "group": "Performance evidence",
+      "decision": "TensorCSS thermal limits and response calibration",
+      "candidates": [
+        {
+          "value": {
+            "operational": [
+              -25,
+              70
+            ],
+            "unpowered_survival": [
+              -40,
+              100
+            ]
+          },
+          "units": "C",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "2 specification table"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Feature list calls -40 to +100 operating; I1 thermal table repeats that wider range",
+          "units": "C",
+          "status": "TBC",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "1.2"
+            },
+            {
+              "source": "I1",
+              "section": "3"
+            },
+            {
+              "source": "D2",
+              "section": "Thermal operation"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Temperature compensation described; unit-specific response report/lookup and coefficients for installed sensors not located",
+          "units": "calibration data",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "3.1, 3.2"
+            },
+            {
+              "source": "T2",
+              "section": "sun acquisition results"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Detailed vendor table distinguishes operation from survival even though feature prose conflicts. Datasheet example at 60 C is not a unit calibration.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Use vendor limits as priors, preserve conflicting prose; characterize mounted response, dark offset, gain, temperature, irradiance/albedo and ADC chain before selecting coefficients.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P10",
+      "group": "Performance evidence",
+      "decision": "Missing sensor performance dimensions",
+      "candidates": [
+        {
+          "value": null,
+          "units": "bias; bias instability; random walk; scale factor; cross-axis residual; saturation/recovery; latency; filtering; calibration uncertainty",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "D1",
+              "section": "Sensors and timing"
+            },
+            {
+              "source": "T2",
+              "section": "IMMU/sun results"
+            },
+            {
+              "source": "T3",
+              "section": "results"
+            },
+            {
+              "source": "T4",
+              "section": "results"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "No complete installed performance characterization found for gyro/internal mag/CSS; external sensor identity unresolved; optical performance budgets are assumptions.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Coverage matrix below explicitly distinguishes published capability from missing installed quantities; unknown is never assigned zero.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P11",
+      "group": "Performance evidence",
+      "decision": "LOST/FOUND optical FOV configuration",
+      "candidates": [
+        {
+          "value": {
+            "LOST": "20-25 TBR",
+            "FOUND": "78-90 TBR"
+          },
+          "units": "deg full FOV",
+          "status": "TBR",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-2/4"
+            },
+            {
+              "source": "T4",
+              "section": "HS2_PAY_TEST-001/-002"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": {
+            "LOST": 25,
+            "FOUND": 76
+          },
+          "units": "deg full FOV",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "FOUND 110-140",
+          "units": "deg full FOV",
+          "status": "TBC",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "M1",
+              "section": "4.1"
+            },
+            {
+              "source": "D1",
+              "section": "Camera hardware / FOV"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Camera/lens variants and FOV values differ; no measured flight-lens/boresight response package.",
+      "recommended_simulation_treatment": "BLOCKED PENDING HARDWARE INPUT",
+      "simulation_note": "Do not derive accepted target visibility or total pointing allowance from an arbitrarily chosen FOV.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "T01",
+      "group": "Timing and validity",
+      "decision": "Acquisition, publication, receipt and estimator epoch",
+      "candidates": [
+        {
+          "value": "I1 per-source timestamps/freshness getters; serial latency below one control period; numeric acquisition aperture, timestamp origin, clock offset/jitter, age limits and estimator target epoch TBD",
+          "units": "s; epoch semantics",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "4.1.1, 4.1.4, 4.1.8, 4.2.1"
+            },
+            {
+              "source": "D4",
+              "section": "C05-C09"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Timestamp presence does not define physical acquisition epoch; cached gyro/sun/tracker can belong to different times. No MAX_STALE_TICKS_FATAL value established.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Specify clock domains, acquisition start/mid/end, output readiness, receipt, propagation/update epoch, stale/out-of-sequence handling and admissible sample age.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "T02",
+      "group": "Timing and validity",
+      "decision": "VN-100 synchronization hardware capability",
+      "candidates": [
+        {
+          "value": {
+            "sync_out_frequency": [
+              1,
+              1000
+            ],
+            "sync_out_jitter": 20
+          },
+          "units": "Hz; us",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "4.2 Table 10 pp10-11"
+            }
+          ],
+          "frame": "Vendor sync pin events",
+          "confidence": "Specification; not end-to-end installed timestamp error"
+        },
+        {
+          "value": "SYNC_IN can synchronize measurements or output; SYNC_OUT can indicate ADC/IMU/attitude availability; configurable edges/modes/skip factors",
+          "units": "capability",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "4 Table 7 p9; 4.2 pp10-11"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "CONFIRMED",
+      "conflict": "Flight wiring/configuration and timestamp-to-exposure relationship unverified.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "Do not use 20 us as flight latency/jitter or assume sync pins are wired. Request oscilloscope/logic traces and register readback.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "T03",
+      "group": "Timing and validity",
+      "decision": "Magnetic measurement validity during actuation",
+      "candidates": [
+        {
+          "value": "Burst then idle intended; valid aperture, contamination allocation, settling, current decay, recovery and sample/filter history unknown",
+          "units": "s; T; validity criteria",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "4.2.4"
+            },
+            {
+              "source": "D4",
+              "section": "C04-C05, E03-E04"
+            },
+            {
+              "source": "D5",
+              "section": "ADCS-MAG-006, ADCS-MAG-007"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Zero command/current is not proof of an uncontaminated field; unknown filter history may straddle actuation.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Keep current diagnostic cycle TEST-ONLY. Hardware characterization must establish clean acquisition history and validity flags; do not invent a quiet duration.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "T04",
+      "group": "Timing and validity",
+      "decision": "Current simulation sensor/navigation timing boundary",
+      "candidates": [
+        {
+          "value": "Continuous: ideal truth SimpleNav and aligned ideal TAM on 0.1 s plant/sensor/control clock. Diagnostic: TAM/nav snapshot at 0.4 s offset, compute at 0.5 s, actuation at 0.6 s in a 1.0 s TEST-ONLY cycle",
+          "units": "s",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "C1",
+              "section": "TimingConfig, SensorConfig"
+            },
+            {
+              "source": "C2",
+              "section": "schemas 4/5"
+            },
+            {
+              "source": "C3",
+              "section": "diagnostic_cycle_config"
+            }
+          ],
+          "frame": "N=ICRF/J2000; C_BN N-to-B; C_SB B-to-S",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "ASSUMED",
+      "conflict": "Software timing is explicit and repaired; it is not real gyro propagation or a physical sensor aperture/filter/latency model.",
+      "recommended_simulation_treatment": "NOT MODELED YET",
+      "simulation_note": "No runtime changes. Retain truth/measured/estimated distinctions and following-interval command timing. Old audit timing-defect paragraphs at 833b015 are historical.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "E01",
+      "group": "Estimator decisions",
+      "decision": "Current AttitudeFilter interface definition",
+      "candidates": [
+        {
+          "value": "Caches valid IMU, sun-vector and star-tracker data with independent timestamps; returns quaternion/rate/angular acceleration and previous B",
+          "units": "interface/state storage",
+          "status": "CONFIRMED",
+          "evidence_type": "SELECTED CONFIGURATION",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "4.1.4, 4.1.8"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Names estimated attitude/filter do not define propagation, fusion, estimator state, noise/covariance or initialization; current B producer missing from listed IMU payload.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Current intent supports designing interfaces/freshness decisions only. No current complete algorithm, code revision or executed estimator test is established by these sources.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "E02",
+      "group": "Estimator decisions",
+      "decision": "Own raw-sensor attitude estimator intent",
+      "candidates": [
+        {
+          "value": "Raw VN-100 gyro/magnetometer plus CSS; Sagitta independent truth; nominal 10 arcsec knowledge prediction",
+          "units": "architecture intent; arcsec",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.4, 2.5, 2.8"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Own estimator named but no algorithm/equations/state/Q/R/P0/initialization/update schedule supplied; tracker-feedback policy conflicts with I1.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Agree estimator measurement ownership, propagation/reference frame, state and bias strategy before implementation. Prediction is not achieved knowledge.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "E03",
+      "group": "Estimator decisions",
+      "decision": "Kalman filter proposal",
+      "candidates": [
+        {
+          "value": "Passive StateEstimator run_filter at 5 Hz; prediction unless LOST/FOUND truth updated, then correction; no Kalman variant or covariance definition",
+          "units": "architecture; Hz",
+          "status": "TBC",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "SW1",
+              "section": "1.1, 2.1, 2.2, 3.1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Source explicitly outdated; updates described as else-to-prediction leave propagation detail unresolved. No evidence selecting EKF versus MEKF.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Retain as obsolete proposal, not current flight implementation. Do not fill missing equations/gains/covariance from convention.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "E04",
+      "group": "Estimator decisions",
+      "decision": "TRIAD, QUEST/q-method, complementary, EKF/MEKF selection",
+      "candidates": [
+        {
+          "value": "No explicit current HS-2 selection found for TRIAD, QUEST/q-method, complementary filter, EKF or MEKF in reviewed current evidence",
+          "units": "algorithm selection",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "I1",
+              "section": "4.1.4"
+            },
+            {
+              "source": "B3",
+              "section": "2.8"
+            },
+            {
+              "source": "SW1",
+              "section": "StateEstimator"
+            },
+            {
+              "source": "ADCS_FOLDER",
+              "section": "one-item listing"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Generic Kalman language does not establish a variant; naming an algorithm here would be a new engineering decision.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Architecture trade/design can begin now, but flight selection and implementation are blocked. This bounded review does not prove no software exists elsewhere.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "E05",
+      "group": "Estimator decisions",
+      "decision": "Vendor AHRS and legacy reference are not flight-estimator evidence",
+      "candidates": [
+        {
+          "value": "VN-100 proprietary AHRS Kalman/VPE with gyro-bias compensation and magnetic/acceleration rejection",
+          "units": "vendor algorithm",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H4",
+              "section": "cover, 1"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Standalone gyro propagation plus one magnetic-vector correction/bias scaffold; truth magnetic reference; historical unvalidated gains",
+          "units": "legacy algorithm",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "D3",
+              "section": "Preserved standalone C++ simulation"
+            }
+          ],
+          "frame": "Configuration-specific sensor/body frame; mapping unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Vendor AHRS is not B3 own raw-sensor estimator; historical standalone reference is not a released onboard implementation or independent accuracy test.",
+      "recommended_simulation_treatment": "NOT MODELED YET",
+      "simulation_note": "Do not promote either model or its gains into the runtime configuration.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "P12",
+      "group": "Performance evidence",
+      "decision": "TensorCSS temperature response specifications",
+      "candidates": [
+        {
+          "value": {
+            "output_temperature_coefficient": 4.31,
+            "offset_error_at_100C": 0.1,
+            "compensated_gain_error_at_100C": 2
+          },
+          "units": "mV/C; mV; percent",
+          "status": "CONFIRMED",
+          "evidence_type": "VENDOR SPECIFICATION",
+          "source_refs": [
+            {
+              "source": "H5",
+              "section": "2, 3.2"
+            }
+          ],
+          "frame": "Analog sensor output",
+          "confidence": "Vendor table; gain error footnote assumes temperature compensation"
+        }
+      ],
+      "status": "CONFIRMED",
+      "conflict": "The 100 C specification condition is not permission to operate at 100 C; detailed operational limit remains 70 C. T0 and installed unit response are missing.",
+      "recommended_simulation_treatment": "VENDOR PRIOR ONLY",
+      "simulation_note": "Preserve vendor compensation form V_comp = V_out - alpha*(T-T0); do not load the example curve or nominal coefficient as HS-2 calibration.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "K01",
+      "group": "Knowledge requirements",
+      "decision": "Spacecraft estimator knowledge requirement versus budget inputs",
+      "candidates": [
+        {
+          "value": null,
+          "units": "attitude knowledge accuracy/confidence",
+          "status": "TBD",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-20"
+            },
+            {
+              "source": "D2",
+              "section": "Attitude knowledge"
+            }
+          ],
+          "frame": "Applicable sensor/body/optical frame unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": {
+            "pointing_estimator_prediction": 10,
+            "pointing_knowledge_allocation": 0.1
+          },
+          "units": "arcsec; deg",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.2, 2.8"
+            }
+          ],
+          "frame": "Spacecraft estimate",
+          "confidence": "Common 3-sigma or bounded-equivalent budget basis; not measured distribution"
+        },
+        {
+          "value": 5,
+          "units": "arcsec",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "4.3"
+            }
+          ],
+          "frame": "Attitude input to FOUND",
+          "confidence": "Budget 3-sigma context; input provenance/three-axis meaning not established"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "10 arcsec spacecraft prediction and 5 arcsec FOUND input describe different chains; no architecture/data-product mapping establishes both. Neither replaces RVM TBD.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Approve estimate error frame, per-axis/full-attitude metric, mode/rate envelope, confidence, time window and truth source. No credible knowledge accuracy can yet be estimated.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "K02",
+      "group": "Knowledge requirements",
+      "decision": "Sensor-to-body alignment knowledge",
+      "candidates": [
+        {
+          "value": 3,
+          "units": "deg",
+          "status": "CONFIRMED",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "ADCS-7"
+            },
+            {
+              "source": "I1",
+              "section": "2.2"
+            }
+          ],
+          "frame": "Sensor relative to body",
+          "confidence": "Known within; sigma/RMS not specified"
+        },
+        {
+          "value": {
+            "prediction": 0.25,
+            "allocation": 0.5
+          },
+          "units": "deg",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.4"
+            }
+          ],
+          "frame": "ADCS sensors relative to body",
+          "confidence": "Common budget confidence; bounded alignment term"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Written 3-deg knowledge bound and tighter budget numbers are not measured mounting errors or approved supersession.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Separate mounting tolerance from calibrated alignment knowledge and estimator residual; no arbitrary Gaussian distribution.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "K03",
+      "group": "Knowledge requirements",
+      "decision": "LOST-to-FOUND relative alignment knowledge",
+      "candidates": [
+        {
+          "value": 0.05,
+          "units": "deg",
+          "status": "CONFIRMED",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-8"
+            }
+          ],
+          "frame": "LOST relative to FOUND",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": 0.04,
+          "units": "deg",
+          "status": "TBR",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-9"
+            }
+          ],
+          "frame": "LOST relative to FOUND",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": 0.05,
+          "units": "deg",
+          "status": "TBR",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R2",
+              "section": "4.7"
+            }
+          ],
+          "frame": "LOST relative to FOUND",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Conflicting entries in the same RVM; 90 +/-1 physical mounting angle is a different requirement.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Retain both knowledge values and flags; obtain source-owner disposition plus relative boresight survey.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "K04",
+      "group": "Knowledge requirements",
+      "decision": "Camera-to-truth alignment knowledge",
+      "candidates": [
+        {
+          "value": "FOUND/TM 0.04 TBR; LOST/TM TBD",
+          "units": "deg",
+          "status": "TBR",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-10/11"
+            }
+          ],
+          "frame": "Camera relative to truth measure",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "FOUND/TM 0.1 TBR; other passages 0.05 or TBD",
+          "units": "deg",
+          "status": "TBC",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R2",
+              "section": "4.7"
+            },
+            {
+              "source": "D2",
+              "section": "Camera/truth knowledge"
+            }
+          ],
+          "frame": "Applicable sensor/body/optical frame unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": {
+            "integrated_truth_prediction": 0.05,
+            "integrated_truth_allocation": 0.1
+          },
+          "units": "deg",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "2.5"
+            }
+          ],
+          "frame": "Truth sensor / camera / body chain",
+          "confidence": "Budget bounded term includes tracker accuracy and residual alignment"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Distinct camera pairs and integrated tracker+alignment terms cannot be treated as the same error or counted twice.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Resolve exact pairs and measurement frame; distinguish sensor accuracy, payload boresight calibration and thermoelastic change.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "K05",
+      "group": "Knowledge requirements",
+      "decision": "LOST algorithm accuracy and truth chain",
+      "candidates": [
+        {
+          "value": {
+            "threshold_cross": 30,
+            "threshold_around": 60,
+            "objective_cross": 9,
+            "objective_around": 50
+          },
+          "units": "arcsec",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "3"
+            }
+          ],
+          "frame": "LOST cross/around boresight",
+          "confidence": "3 sigma"
+        },
+        {
+          "value": {
+            "Sagitta_cross_around": [
+              6,
+              30
+            ],
+            "LOST_Sagitta_alignment_cross_around": [
+              5,
+              10
+            ],
+            "exposure_sync_cross_around": [
+              15,
+              15
+            ]
+          },
+          "units": "arcsec",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "3"
+            }
+          ],
+          "frame": "LOST validation chain",
+          "confidence": "Budget assigned terms, not completed measured results"
+        },
+        {
+          "value": "Older minimum-success passages: 180 cross / 360 around; different full-success tiers",
+          "units": "arcsec",
+          "status": "TBC",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "M1",
+              "section": "experiment/success criteria"
+            },
+            {
+              "source": "D2",
+              "section": "LOST accuracy"
+            }
+          ],
+          "frame": "Applicable sensor/body/optical frame unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "B3 is an unverified budget, not a Sagitta serial-specific vendor/test certificate; payload algorithm accuracy is not spacecraft control pointing.",
+      "recommended_simulation_treatment": "NOT MODELED YET",
+      "simulation_note": "Preserve axes, success tier, confidence and reference chain. No combination into an achieved pointing number.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "K06",
+      "group": "Knowledge requirements",
+      "decision": "Image synchronization versus angular error allocation",
+      "candidates": [
+        {
+          "value": 10,
+          "units": "ms",
+          "status": "CONFIRMED",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-12"
+            }
+          ],
+          "frame": "LOST versus FOUND exposure epochs",
+          "confidence": "Within; confidence/statistic unspecified"
+        },
+        {
+          "value": 15,
+          "units": "arcsec",
+          "status": "CONFIRMED",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-13"
+            }
+          ],
+          "frame": "LOST versus truth synchronization error",
+          "confidence": "Angular allocation, not ms"
+        },
+        {
+          "value": "FOUND/truth less than +/-10; FOUND/GNSS less than +/-65",
+          "units": "ms",
+          "status": "CONFIRMED",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "R1",
+              "section": "PAY-16, PAY-15"
+            }
+          ],
+          "frame": "Exposure/truth/GNSS epochs",
+          "confidence": "Limits; statistic unspecified"
+        },
+        {
+          "value": {
+            "camera_attitude_timing_prediction": 0.5,
+            "GNSS_FOUND_timing_prediction": 3
+          },
+          "units": "ms",
+          "status": "ASSUMED",
+          "evidence_type": "DESIGN ASSUMPTION",
+          "source_refs": [
+            {
+              "source": "B3",
+              "section": "4.4, 4.6"
+            }
+          ],
+          "frame": "Exposure midpoint / attitude / position",
+          "confidence": "Common budget confidence assumptions; not measured latency"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Time synchronization, angular allocation, transport latency and estimator sample age are different terms; clock/exposure definitions are unverified.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "Define exposure midpoint and clock mapping with signed offset/jitter measurements. Angular sample-age error is approximately omega times delta-t for small motion, not a fixed pointing number.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "K07",
+      "group": "Knowledge requirements",
+      "decision": "Control accuracy and keep-out are separate from attitude knowledge",
+      "candidates": [
+        {
+          "value": "RVM 20 deg pointing; B3 10 deg; budgets 15 deg allocation; older derivations 42 TBR / 43 deg",
+          "units": "deg",
+          "status": "TBC",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "D2",
+              "section": "Pointing"
+            },
+            {
+              "source": "R1",
+              "section": "ADCS-4"
+            },
+            {
+              "source": "B3",
+              "section": "2.1"
+            }
+          ],
+          "frame": "Applicable sensor/body/optical frame unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "RVM Sun keep-out >=55 when cameras on; R2/T2 >=70; legacy Twinkle note 90; payload fields TBD",
+          "units": "deg",
+          "status": "TBC",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "D2",
+              "section": "Sun keep-out"
+            },
+            {
+              "source": "R1",
+              "section": "ADCS-5, PAY-19"
+            },
+            {
+              "source": "R2",
+              "section": "4.5"
+            },
+            {
+              "source": "T2",
+              "section": "Sun avoidance"
+            }
+          ],
+          "frame": "Applicable sensor/body/optical frame unresolved",
+          "confidence": "Unspecified"
+        },
+        {
+          "value": "Experiment rate <0.5 TBC; ICD slew ceiling 0.04, parent requirement unresolved",
+          "units": "deg/s",
+          "status": "TBC",
+          "evidence_type": "DOCUMENTED REQUIREMENT",
+          "source_refs": [
+            {
+              "source": "D2",
+              "section": "Experiment angular rate and slew"
+            },
+            {
+              "source": "R1",
+              "section": "ADCS-3"
+            },
+            {
+              "source": "I1",
+              "section": "4.1.7-4.1.8"
+            }
+          ],
+          "frame": "Applicable sensor/body/optical frame unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBC",
+      "conflict": "Limits and confidence/applicability are unresolved; none defines estimator accuracy or proves tracker/Sun-sensor availability.",
+      "recommended_simulation_treatment": "BLOCKED PENDING SOFTWARE DECISION",
+      "simulation_note": "Keep control error, acquisition geometry and sensor knowledge separate. Do not implement pointing or convert assumed budget predictions into requirements.",
+      "priority": "P0",
+      "runtime_usable": false
+    },
+    {
+      "id": "V01",
+      "group": "Verification evidence",
+      "decision": "Completed installed sensor/estimator measurements",
+      "candidates": [
+        {
+          "value": null,
+          "units": "signed raw results/calibration/test data",
+          "status": "TBD",
+          "evidence_type": "UNRESOLVED",
+          "source_refs": [
+            {
+              "source": "T2",
+              "section": "IMMU/sun and attitude results"
+            },
+            {
+              "source": "T3",
+              "section": "results"
+            },
+            {
+              "source": "T4",
+              "section": "results"
+            },
+            {
+              "source": "T1",
+              "section": "component/integrated tracker"
+            },
+            {
+              "source": "B3",
+              "section": "2.4-2.9, 3, 4.4"
+            },
+            {
+              "source": "D5",
+              "section": "all tests NOT EXECUTED"
+            }
+          ],
+          "frame": "Applicable sensor/body/optical frame unresolved",
+          "confidence": "Unspecified"
+        }
+      ],
+      "status": "TBD",
+      "conflict": "Procedures, tracker entries, vendor factory assertions and budget MC/HIL assertions are not executed HS-2 measured evidence.",
+      "recommended_simulation_treatment": "BLOCKED PENDING CALIBRATION",
+      "simulation_note": "No completed measured installed gyro/magnetic/CSS/alignment/timing/estimator/SIL-HIL performance result was located in this bounded review. Request records; do not assert none exists elsewhere.",
+      "priority": "P0",
+      "runtime_usable": false
+    }
+  ],
+  "inventory": [
+    {
+      "id": "INV-GYRO",
+      "sensor": "VN-100 gyro (channel of one IMMU)",
+      "part_model": "VN-100 Rugged, hardware/firmware/serial flight revision unconfirmed",
+      "role": "Raw body-rate candidate for detumble and own-estimator propagation",
+      "flight_selection": "Documented candidate selection; installed acceptance not established",
+      "interface": "UART/TTL versus RS-232 versus I2C/RS-422 conflict",
+      "configured_output_rate": "TBD; 10 Hz manager intent versus historical 5 Hz control",
+      "hardware_maximum_rate": "800 Hz internal IMU sample / up to 800 Hz IMU data capability; selected packet rate TBD",
+      "filtering": "265 Hz vendor bandwidth; selected device/filter/decimation settings TBD",
+      "timestamp_semantics": "Acquisition clock, filter age, packet readiness, receipt and estimator epoch TBD",
+      "mounting_transform": "Lateral plate; C_SB and positive-axis map TBD",
+      "calibration_status": "Vendor factory statement only; no installed rate/bias/scale/alignment dataset",
+      "status": "TBC",
+      "decision_ids": [
+        "S01",
+        "S03",
+        "S04",
+        "F02",
+        "P01",
+        "P02",
+        "P03",
+        "P07",
+        "T01",
+        "T02"
+      ]
+    },
+    {
+      "id": "INV-MAG",
+      "sensor": "VN-100 internal magnetometer",
+      "part_model": "Internal three-axis VN-100 magnetic sensor; not three external devices",
+      "role": "Raw field candidate for detumble and own-estimator correction",
+      "flight_selection": "B3 design intent; I1 data-producer contract incomplete",
+      "interface": "Internal channel delivered through unresolved VN-100 packet/port configuration",
+      "configured_output_rate": "TBD; manager cadence is not magnetic packet rate",
+      "hardware_maximum_rate": "200 Hz sample capability",
+      "filtering": "Selected bandwidth/history and compensation mode TBD",
+      "timestamp_semantics": "Acquisition aperture/clock/age and clean-window overlap TBD",
+      "mounting_transform": "Channel frame/IMMU housing-to-B map TBD",
+      "calibration_status": "No installed hard/soft-iron, temperature or post-burst recovery data",
+      "status": "TBC",
+      "decision_ids": [
+        "S01",
+        "S03",
+        "F02",
+        "P04",
+        "P07",
+        "T01",
+        "T02",
+        "T03"
+      ]
+    },
+    {
+      "id": "INV-ACCEL",
+      "sensor": "VN-100 accelerometer",
+      "part_model": "Internal three-axis VN-100 accelerometer",
+      "role": "Acceleration published by I1; specific attitude-estimator use undefined",
+      "flight_selection": "IMMU channel exists by vendor specification; estimator role not confirmed",
+      "interface": "Same unresolved IMMU path",
+      "configured_output_rate": "TBD; 10 Hz manager intent",
+      "hardware_maximum_rate": "800 Hz internal sampling",
+      "filtering": "230 Hz vendor bandwidth; selected settings TBD",
+      "timestamp_semantics": "Clock/acquisition/receipt semantics TBD",
+      "mounting_transform": "Per-channel calibration and sensor-to-B map TBD",
+      "calibration_status": "No installed specific-force/rate/temperature correlation data",
+      "status": "TBC",
+      "decision_ids": [
+        "S01",
+        "S03",
+        "S04",
+        "F02",
+        "P05",
+        "P07"
+      ]
+    },
+    {
+      "id": "INV-EXTMAG",
+      "sensor": "Additional external magnetometer(s)",
+      "part_model": "TBD; existence/count/part not established",
+      "role": "TBD; generic/plural wording is insufficient",
+      "flight_selection": "Not established",
+      "interface": "TBD",
+      "configured_output_rate": "TBD",
+      "hardware_maximum_rate": "TBD",
+      "filtering": "TBD",
+      "timestamp_semantics": "TBD",
+      "mounting_transform": "Location/boresight/channel map TBD",
+      "calibration_status": "No identified unit or measurements",
+      "status": "TBD",
+      "decision_ids": [
+        "S02",
+        "P10"
+      ]
+    },
+    {
+      "id": "INV-CSS",
+      "sensor": "Coarse Sun sensor array",
+      "part_model": "TensorCSS-10 candidate versus SLCD61N8; -10S vendor option not selected",
+      "role": "Sun acquisition / Sun-vector aid / avoidance intent; vector reconstruction unclosed",
+      "flight_selection": "Conflicting 2/3/6 TensorCSS versus 4 SLCD; no installed BOM disposition",
+      "interface": "Analog through 12-bit MCP3204/3208 SPI ADC; exact variant/channel map TBD",
+      "configured_output_rate": "10 Hz three-channel intent versus six-channel fields",
+      "hardware_maximum_rate": "TensorCSS analog device has no established digital output maximum here; selected ADC cadence TBD",
+      "filtering": "ADC/analog filtering, scan skew and validity threshold values TBD",
+      "timestamp_semantics": "Per-channel acquisition and vector epoch TBD",
+      "mounting_transform": "+X/+Y solar and FOUND locations versus ~30 deg deployed axes; numeric vectors TBD",
+      "calibration_status": "Vendor example only; installed illumination/temperature/albedo/ADC calibration absent",
+      "status": "TBC",
+      "decision_ids": [
+        "S05",
+        "S06",
+        "F03",
+        "P08",
+        "P09",
+        "P12",
+        "T01"
+      ]
+    },
+    {
+      "id": "INV-LOST",
+      "sensor": "LOST imaging / attitude payload",
+      "part_model": "xiC MC031CG-SY versus MC031MG-SY-FL / MC031MG-SY; lens candidate in S07",
+      "role": "Independent experimental attitude product; current ADCS feedback selection unresolved",
+      "flight_selection": "Current design camera family documented; exact optical variant/release/acceptance unconfirmed",
+      "interface": "USB2.0/USB3.0 conflict, GPIO trigger/strobe intent",
+      "configured_output_rate": "Exposure/cadence TBD",
+      "hardware_maximum_rate": "Not established for selected full optical/readout configuration",
+      "filtering": "Image processing/intrinsics/distortion/exposure blur calibration TBD",
+      "timestamp_semantics": "Exposure midpoint intent in B3; trigger, strobe, pipeline and estimator clocks unverified",
+      "mounting_transform": "Lateral plate; complete optical-to-B/relative-Sagitta transform TBD",
+      "calibration_status": "No executed as-built optical/alignment/trigger performance result found",
+      "status": "TBC",
+      "decision_ids": [
+        "S07",
+        "S09",
+        "F04",
+        "P11",
+        "K03",
+        "K04",
+        "K05",
+        "K06"
+      ]
+    },
+    {
+      "id": "INV-FOUND",
+      "sensor": "FOUND horizon imaging / position payload",
+      "part_model": "Same unresolved xiC camera family; FOUND lens candidate in S07",
+      "role": "Position estimation using attitude input; not independent full-attitude measurement",
+      "flight_selection": "Intended payload documented; exact installed variant/optics unknown",
+      "interface": "USB and GPIO conflicts/settings as S09",
+      "configured_output_rate": "Exposure/cadence TBD",
+      "hardware_maximum_rate": "Not established for selected configuration",
+      "filtering": "Limb fitting, optical calibration and attitude-input time processing TBD",
+      "timestamp_semantics": "Exposure versus input attitude/GNSS clock relation unverified",
+      "mounting_transform": "90 deg relative LOST intent; physical face and full rotation TBD",
+      "calibration_status": "FOV/resolution procedures only, no completed installed calibration",
+      "status": "TBC",
+      "decision_ids": [
+        "S07",
+        "S09",
+        "F04",
+        "P11",
+        "K01",
+        "K03",
+        "K04",
+        "K06"
+      ]
+    },
+    {
+      "id": "INV-TRACKER",
+      "sensor": "Attitude truth star tracker",
+      "part_model": "Sagitta hardware table versus Twinkle software text",
+      "role": "Independent truth in B3/I3 hardware; feedback quaternion port in I1",
+      "flight_selection": "Sagitta intended; exact unit/firmware/configuration and estimator policy unresolved",
+      "interface": "Full-duplex RS-485/UART; CSP versus NSP/SLIP descriptions unresolved",
+      "configured_output_rate": "TBD",
+      "hardware_maximum_rate": "Not established from the reviewed selected-unit evidence; B3 assigned errors are not vendor rate specifications",
+      "filtering": "Onboard processing/validity/covariance/timing settings TBD",
+      "timestamp_semantics": "Quaternion/image exposure epoch, processing latency and age TBD",
+      "mounting_transform": "Four lateral-plate brackets; optical-to-B/camera rotations TBD",
+      "calibration_status": "No located serial-specific accuracy, as-built alignment or synchronized integrated result",
+      "status": "TBC",
+      "decision_ids": [
+        "S08",
+        "S09",
+        "F04",
+        "K04",
+        "K05",
+        "K06",
+        "V01"
+      ]
+    }
+  ],
+  "frame_contract": {
+    "status": "ASSUMED",
+    "simulation": "N is Earth-centered ICRF/J2000; B is the mathematical simulation body. sigma_BN represents B relative to N, C_BN maps N components to B. For a sensor S, C_SB maps B to S, so b_S=C_SB*C_BN*b_N and b_B=C_SB^T*b_S for a proper rotation. The existing identity C_SB is explicitly ASSUMED and enforced by config validation.",
+    "hardware": "Physical B axes/origin and installed sensor/optical axes are not established. Per-sensor origin and polarity, housing datum, right-handed axis definitions, pixel axes and optical boresights must be released before applying any mounting transform.",
+    "evidence_ids": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "T04"
+    ],
+    "levels": [
+      [
+        "Design intent",
+        "Qualitative lateral-plate/solar-face/90-degree descriptions; obligations and candidate placements."
+      ],
+      [
+        "CAD geometry",
+        "No complete approved sensor/optical-to-body matrix from released CAD established in this review."
+      ],
+      [
+        "Assembly geometry",
+        "I1/I3 reference structures details and unresolved face/bracket decisions; not an as-built transform."
+      ],
+      [
+        "As-built survey",
+        "No signed positional/orientation survey with uncertainty located."
+      ],
+      [
+        "Calibrated alignment",
+        "No installed gyro/mag/solar/optical residual calibration or temperature-dependent alignment result located."
+      ]
+    ]
+  },
+  "performance_coverage": [
+    {
+      "sensor": "VN-100 gyro",
+      "vendor_or_candidate_fields": [
+        "range/resolution P01",
+        "bias instability/noise density P02",
+        "internal sample/bandwidth/cross-axis P03",
+        "factory thermal calibration claim P07"
+      ],
+      "unresolved_fields": [
+        "initial bias and turn-on repeatability",
+        "installed bias instability/noise PSD/random walk",
+        "scale-factor error/calibration coefficients",
+        "installed cross-axis alignment",
+        "selected filter/sample/output rates",
+        "latency/timestamp uncertainty",
+        "temperature residuals",
+        "saturation and recovery behavior"
+      ],
+      "evidence_ids": [
+        "P01",
+        "P02",
+        "P03",
+        "P07",
+        "T01",
+        "T02"
+      ]
+    },
+    {
+      "sensor": "VN-100 magnetometer",
+      "vendor_or_candidate_fields": [
+        "range/resolution/noise density/sample/cross-axis P04",
+        "factory compensation capability P07"
+      ],
+      "unresolved_fields": [
+        "installed bias/hard-soft iron matrices",
+        "bias instability/drift/random walk",
+        "scale factor/cross-axis residuals",
+        "selected filter/bandwidth/output rate",
+        "latency/aperture/clock uncertainty",
+        "temperature coefficients",
+        "electrical/magnetic saturation recovery",
+        "in-situ calibration/cleanliness allocation"
+      ],
+      "evidence_ids": [
+        "P04",
+        "P07",
+        "T01",
+        "T02",
+        "T03"
+      ]
+    },
+    {
+      "sensor": "VN-100 accelerometer",
+      "vendor_or_candidate_fields": [
+        "range/bias stability/noise density/sample/bandwidth/resolution/cross-axis P05"
+      ],
+      "unresolved_fields": [
+        "flight estimator relevance",
+        "installed bias/scale/misalignment/noise model",
+        "latency/filter/configured rate",
+        "temperature calibration residual",
+        "specific-force model and saturation behavior"
+      ],
+      "evidence_ids": [
+        "P05",
+        "P07"
+      ]
+    },
+    {
+      "sensor": "External magnetometer",
+      "vendor_or_candidate_fields": [],
+      "unresolved_fields": [
+        "existence/model/count/location",
+        "all requested range/resolution/bias/noise/random-walk/scale/cross-axis/accuracy/saturation/rate/latency/filter/calibration/thermal fields"
+      ],
+      "evidence_ids": [
+        "S02",
+        "P10"
+      ]
+    },
+    {
+      "sensor": "CSS array",
+      "vendor_or_candidate_fields": [
+        "TensorCSS analog range/FOV/typical angular error P08",
+        "vendor temperature limits P09",
+        "temperature compensation coefficient/offset/gain specification P12",
+        "12-bit ADC candidate S06"
+      ],
+      "unresolved_fields": [
+        "model/count/ADC/channels and boresights",
+        "installed dark bias/noise/drift/scale/angle response",
+        "array vector uncertainty/cross-channel error",
+        "effective analog/ADC filtering/bandwidth",
+        "selected rate/scan skew/aperture/latency/timestamp",
+        "albedo/shadow/irradiance response and saturation",
+        "delivered per-unit response/temperature calibration",
+        "meaning of confidence for typical 5-deg vendor error"
+      ],
+      "evidence_ids": [
+        "S05",
+        "S06",
+        "F03",
+        "P08",
+        "P09",
+        "P10",
+        "P12"
+      ]
+    },
+    {
+      "sensor": "LOST/FOUND cameras",
+      "vendor_or_candidate_fields": [
+        "model/lens/FOV candidates S07/P11",
+        "design trigger polarity S09",
+        "payload algorithm/error-budget allocations K01/K03-K06"
+      ],
+      "unresolved_fields": [
+        "selected optical/radiometric response and distortion/intrinsics",
+        "centroid/limb fitting bias/noise/temperature dependence",
+        "calibrated boresight and pixel convention",
+        "exposure/readout/rate/latency/time uncertainty",
+        "validity versus rate/blur/illumination/saturation",
+        "installed algorithm angular/position accuracy/confidence"
+      ],
+      "evidence_ids": [
+        "S07",
+        "S09",
+        "F04",
+        "P11",
+        "K01",
+        "K03",
+        "K04",
+        "K05",
+        "K06"
+      ]
+    },
+    {
+      "sensor": "Sagitta/Twinkle tracker",
+      "vendor_or_candidate_fields": [
+        "B3 assigned 6/30 arcsec accuracy terms only K05; not treated as vendor specifications"
+      ],
+      "unresolved_fields": [
+        "selected model/firmware and serial certificate",
+        "measured per-axis accuracy/bias/noise/alignment",
+        "rate/exposure/processing latency/clock mapping",
+        "limiting rate, FOV, keep-out, loss/reacquisition behavior for selected model",
+        "calibration and thermal uncertainty"
+      ],
+      "evidence_ids": [
+        "S08",
+        "S09",
+        "F04",
+        "K04",
+        "K05",
+        "K06"
+      ]
+    }
+  ],
+  "estimator_architectures": [
+    {
+      "id": "ARCH-ICD",
+      "candidate": "I1 AttitudeFilter",
+      "currency": "Current specific interface intent, rev5 2026-09-01; not a released algorithm",
+      "state": "Cached quaternion, body rate/angular acceleration, previous B and per-source timestamps; actual stochastic state TBD",
+      "propagation": "TBD",
+      "measurement_updates": "IMU, body Sun vector, tracker quaternion ports; raw B producer not fully specified",
+      "update_rates": "Asynchronous inputs/synchronous getters; 10 Hz application intent; actual filter epochs/rates TBD",
+      "noise_covariance": "Q/R/P0, correlations, gyro bias dynamics TBD",
+      "initialization": "TBD",
+      "lost_attitude": "Application stale/reset scaffolding; initialization/observability/reacquisition rules and thresholds TBD",
+      "implementation_status": "Interface text only; no flight source/build revision established by reviewed evidence",
+      "test_status": "No completed estimator accuracy result located",
+      "status": "TBD",
+      "evidence_ids": [
+        "E01",
+        "S04",
+        "T01"
+      ]
+    },
+    {
+      "id": "ARCH-OWN",
+      "candidate": "B3 own gyro/magnetic/Sun estimator",
+      "currency": "CDR budget claim without release/approval established",
+      "state": "Not specified",
+      "propagation": "Raw gyro propagation implied by roles; equations/frame/convention not defined",
+      "measurement_updates": "Raw VN-100 magnetic and CSS intended; Sagitta truth-only",
+      "update_rates": "TBD",
+      "noise_covariance": "No numerical Q/R/P0 or credible residual distribution supplied",
+      "initialization": "TBD",
+      "lost_attitude": "TBD",
+      "implementation_status": "Architecture intent/prediction; no linked implementation baseline",
+      "test_status": "MC/HIL verification asserted without linked completed data",
+      "status": "ASSUMED",
+      "evidence_ids": [
+        "E02",
+        "K01",
+        "V01"
+      ]
+    },
+    {
+      "id": "ARCH-KALMAN",
+      "candidate": "SW1 Kalman proposal",
+      "currency": "Explicitly outdated; modified 2026-04-21; no numbered release",
+      "state": "Latest truth quaternion/flag named; filter state/bias design unspecified",
+      "propagation": "Prediction when no truth update, otherwise correction; exact time integration absent",
+      "measurement_updates": "LOST/FOUND truth correction",
+      "update_rates": "5 Hz / 200 ms proposal",
+      "noise_covariance": "TBD; EKF versus MEKF not specified",
+      "initialization": "TBD",
+      "lost_attitude": "TBD",
+      "implementation_status": "Proposed signatures/pseudocode, not verified flight code",
+      "test_status": "No executed records",
+      "status": "TBC",
+      "evidence_ids": [
+        "E03",
+        "S08"
+      ]
+    },
+    {
+      "id": "ARCH-OTHER",
+      "candidate": "TRIAD; QUEST/q-method; complementary filter; EKF/MEKF",
+      "currency": "No current explicit selection found in bounded review",
+      "state": "TBD",
+      "propagation": "TBD",
+      "measurement_updates": "TBD; vector-based families would require calibrated reference/measurement geometry",
+      "update_rates": "TBD",
+      "noise_covariance": "TBD",
+      "initialization": "TBD",
+      "lost_attitude": "TBD",
+      "implementation_status": "No selection/implementation established",
+      "test_status": "No completed HS-2 result located",
+      "status": "TBD",
+      "evidence_ids": [
+        "E04"
+      ]
+    },
+    {
+      "id": "ARCH-VENDOR",
+      "candidate": "VN-100 onboard AHRS",
+      "currency": "Vendor product capability, H4 hardware v7.0; B3 explicitly excludes substitution",
+      "state": "Proprietary attitude/gyro-bias features, not an HS-2 state definition",
+      "propagation": "Proprietary",
+      "measurement_updates": "Vendor IMU/magnetic/acceleration aiding; orbital applicability not established",
+      "update_rates": "Vendor attitude output 1-400 Hz; actual configuration TBD",
+      "noise_covariance": "Vendor internal settings/HS-2 firmware readback TBD",
+      "initialization": "Vendor behavior/configuration not released for this mission",
+      "lost_attitude": "Orbital fallback/validity TBD",
+      "implementation_status": "Product capability only, not HS-2 selected estimator policy",
+      "test_status": "Vendor specifications are not installed HS-2 validation",
+      "status": "TBC",
+      "evidence_ids": [
+        "E05",
+        "P06"
+      ]
+    },
+    {
+      "id": "ARCH-ACTIVE",
+      "candidate": "Active SimpleNav versus historical standalone scaffold",
+      "currency": "Current code C1/C2 uses truth navigation; standalone retained as historical D3 evidence",
+      "state": "Active ideal truth navigation; no flight-like attitude estimator",
+      "propagation": "Basilisk truth; standalone historical gyro/magnetic correction is separate",
+      "measurement_updates": "Active TAM supplies controller field, not a flight attitude filter; standalone uses truth magnetic reference",
+      "update_rates": "Current assumed 0.1 s clock; cycle freezes same-epoch field/nav; historical rates not adopted",
+      "noise_covariance": "Active zero noise; historical arbitrary gains/noise not flight priors",
+      "initialization": "Simulation truth initial state, not lost-attitude acquisition",
+      "lost_attitude": "No flight estimator logic",
+      "implementation_status": "Working software architecture only; historical standalone not revisited or modified",
+      "test_status": "Software regressions validate modeled contracts, not sensor/knowledge performance",
+      "status": "ASSUMED",
+      "evidence_ids": [
+        "E05",
+        "T04",
+        "P10"
+      ]
+    }
+  ],
+  "observability_analysis": {
+    "classification": "Independent engineering inference; not released HS-2 mode logic",
+    "basis": "For one known inertial vector b_N with measurement b_S=C_SB*C_BN*b_N, the attitude Jacobian is proportional to the vector cross-product matrix, rank two for a nonzero vector: rotation about that vector is instantaneously unobservable. Two correctly timed/calibrated non-collinear vector directions can locally constrain attitude; conditioning degrades near collinearity. A photodiode intensity is not by itself a full direction. Gyros propagate an initialized attitude but do not supply an absolute orientation or guarantee bias observability. Temporal field variation can improve observability under an appropriate dynamic model/excitation; it is not an instantaneous guarantee. Accelerometers in free fall cannot be treated as a terrestrial gravity-direction aid.",
+    "modes": [
+      {
+        "mode": "Detumble",
+        "documented_measurements": "I1 BDot current/previous B and angular rate; B3 raw VN-100 intent",
+        "full_attitude": "Not instantaneously from magnetic vector alone. Rate damping may operate without a full absolute attitude solution.",
+        "gap": "Current B producer and magnetic validity/timing unclosed; gyro bias and rate envelope unresolved.",
+        "evidence_ids": [
+          "S01",
+          "E01",
+          "T03",
+          "K07"
+        ]
+      },
+      {
+        "mode": "Sun acquisition / solar pointing",
+        "documented_measurements": "SunSensorManager/AttitudeFilter intent; gyro plus magnetic data if valid",
+        "full_attitude": "Potentially locally determined with calibrated non-collinear Sun and magnetic vectors, not guaranteed by present scalar channels.",
+        "gap": "Array population/boresights/inversion/coverage, illumination and reference-vector epochs unknown; roll about Sun alone unobserved.",
+        "evidence_ids": [
+          "S05",
+          "S06",
+          "F03",
+          "E01"
+        ]
+      },
+      {
+        "mode": "Experiment / Earth-limb pointing / hold",
+        "documented_measurements": "I1 mode names and tracker quaternion input; B3 uses own raw-sensor estimate with independent Sagitta",
+        "full_attitude": "A valid full tracker quaternion could determine attitude, but its availability and permitted estimator role are unresolved.",
+        "gap": "Feedback versus independent truth conflict; FOUND depends on attitude input, LOST is experiment output; optical keep-outs/rate limits/epochs unknown.",
+        "evidence_ids": [
+          "S07",
+          "S08",
+          "S09",
+          "K01",
+          "K05",
+          "K07"
+        ]
+      },
+      {
+        "mode": "Eclipse",
+        "documented_measurements": "No valid direct Sun measurement; gyro and magnetometer candidates; tracker only if valid and authorized",
+        "full_attitude": "Gyro plus a single magnetic vector is not instantaneously full-attitude observable; temporal recovery depends on model/excitation and initialization.",
+        "gap": "No approved eclipse measurement set, tracker availability or uncertainty growth/fallback specification.",
+        "evidence_ids": [
+          "E01",
+          "E04",
+          "P05",
+          "T03"
+        ]
+      },
+      {
+        "mode": "Magnetometer invalid during/after actuation",
+        "documented_measurements": "Gyro; Sun channels if illuminated; possible tracker subject to policy",
+        "full_attitude": "Gyro plus Sun direction leaves instantaneous rotation about Sun unobserved; with neither absolute aid, gyro-only propagation drifts.",
+        "gap": "No measured validity window, fallback selection or allowed covariance/sample age established.",
+        "evidence_ids": [
+          "T03",
+          "S06",
+          "S08",
+          "T01"
+        ]
+      },
+      {
+        "mode": "Sun sensors unavailable or invalid",
+        "documented_measurements": "Gyro + magnetic if clean; possible tracker subject to policy",
+        "full_attitude": "Single-vector limitation unless an independent valid full attitude or second non-collinear vector is available.",
+        "gap": "No per-mode valid-source matrix or quantitative failure/reacquisition policy.",
+        "evidence_ids": [
+          "S06",
+          "E01",
+          "E04"
+        ]
+      },
+      {
+        "mode": "Lost attitude / initialization",
+        "documented_measurements": "No released acquisition/reset estimator algorithm; I1 has mode/reset/staleness scaffolding",
+        "full_attitude": "Gyro alone cannot initialize absolute attitude; one vector retains an ambiguity. Two usable directions or a permitted valid tracker could initialize, subject to calibration/geometry.",
+        "gap": "Initial state/covariance, bias initialization, degeneracy handling, tracker/CSS availability and acceptance gates all TBD.",
+        "evidence_ids": [
+          "E01",
+          "E02",
+          "E03",
+          "E04",
+          "S08"
+        ]
+      }
+    ],
+    "source_refs": [
+      {
+        "source": "I1",
+        "section": "4.1.4, 4.1.8"
+      },
+      {
+        "source": "OP1",
+        "section": "ADCS operations unfilled, as recorded in D1/D2"
+      },
+      {
+        "source": "B3",
+        "section": "2.4, 2.5, 2.8, 4.1"
+      }
+    ]
+  },
+  "test_evidence": [
+    {
+      "id": "TEST-TRACKER",
+      "item": "IMU/sun-sensor unit and integrated ADCS tracking",
+      "classification": "TRACKER ENTRY",
+      "finding": "Committed T1 audit: IMU and CSS ordered, done No; integrated ADCS completion blank. Not refetched this phase.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "V01"
+      ],
+      "source_refs": [
+        {
+          "source": "T1",
+          "section": "component and integrated tables"
+        },
+        {
+          "source": "D4",
+          "section": "F01"
+        }
+      ]
+    },
+    {
+      "id": "TEST-IMU",
+      "item": "Gyro, internal magnetic data and timestamp acquisition",
+      "classification": "PROCEDURE ONLY",
+      "finding": "T2 acquisition objectives include angular rate, acceleration, B, temperature and timestamps; recorded values/sign-offs/results/graphs unfilled. It is not a bias/noise/latency characterization result.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "V01",
+        "P07",
+        "T01"
+      ],
+      "source_refs": [
+        {
+          "source": "T2",
+          "section": "overview HS2_ADCS_TEST-001; body IMMU acquisition objective and Test Results"
+        }
+      ]
+    },
+    {
+      "id": "TEST-CSS",
+      "item": "Sun-sensor acquisition/calibration",
+      "classification": "PROCEDURE ONLY",
+      "finding": "T2 three-channel output/range/illumination response procedure; no delivered per-unit response, vector accuracy or completed installed measurements.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "V01",
+        "P09"
+      ],
+      "source_refs": [
+        {
+          "source": "T2",
+          "section": "overview HS2_ADCS_TEST-002; sun-acquisition results"
+        }
+      ]
+    },
+    {
+      "id": "TEST-TEMPLATE",
+      "item": "Separate magnetometer/IMU headings and generic ADCS template",
+      "classification": "OBSOLETE EVIDENCE",
+      "finding": "T3 contains generic test numbering, placeholder steps/results and inconsistent pointing criteria. It proves neither external hardware nor completed calibration.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "S02",
+        "V01"
+      ],
+      "source_refs": [
+        {
+          "source": "T3",
+          "section": "Functional Tests Overview, 2.8, 2.9"
+        }
+      ]
+    },
+    {
+      "id": "TEST-PAYLOAD",
+      "item": "Camera FOV/resolution",
+      "classification": "PROCEDURE ONLY",
+      "finding": "T4 has blank HS2_PAY_TEST-001/-002 results. No completed payload-boresight, exposure-sync or integrated attitude-error measurement found.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "V01",
+        "K06",
+        "P11"
+      ],
+      "source_refs": [
+        {
+          "source": "T4",
+          "section": "camera objectives, Test Results/Graphs/Photos"
+        }
+      ]
+    },
+    {
+      "id": "TEST-BUDGET",
+      "item": "Sensor/boresight surveys, thermoelastic alignment, estimator/control MC and HIL",
+      "classification": "ASSERTION WITHOUT DATA",
+      "finding": "B3 states predictions are verified and names methods; no execution ID/raw dataset/estimator revision/serial calibration/signed acceptance attached in reviewed evidence. Those numbers remain assumptions.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "V01",
+        "K01",
+        "K04",
+        "K05"
+      ],
+      "source_refs": [
+        {
+          "source": "B3",
+          "section": "2.4-2.9, 3, 4.2-4.6"
+        }
+      ]
+    },
+    {
+      "id": "TEST-VENDOR",
+      "item": "Factory calibration and CSS example response",
+      "classification": "ASSERTION WITHOUT DATA",
+      "finding": "Vendor calibration processes/capabilities are documented, but no selected-unit certificate/response file was located. Vendor general specification is not a completed HS-2 installed measured result.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "P07",
+        "P09",
+        "V01"
+      ],
+      "source_refs": [
+        {
+          "source": "H4",
+          "section": "cover, 5.5"
+        },
+        {
+          "source": "H5",
+          "section": "3.1, 3.2"
+        }
+      ]
+    },
+    {
+      "id": "TEST-MAG-PLAN",
+      "item": "Phase 6C magnetic sensor/alignment/clock/integrated characterization",
+      "classification": "PLANNED TEST",
+      "finding": "ADCS-MAG-001/006/007/008 and gates G02/G05/G06/G07/G09/G11 cover major shared inputs; plan explicitly NOT EXECUTED.",
+      "validates_installed_performance": false,
+      "evidence_ids": [
+        "T03",
+        "V01"
+      ],
+      "source_refs": [
+        {
+          "source": "D5",
+          "section": "plan boundary; ADCS-MAG-001, -006, -007, -008; G02, G05-G07, G09, G11"
+        }
+      ]
+    }
+  ],
+  "software_validation_boundary": {
+    "id": "TEST-SOFTWARE",
+    "item": "Committed ideal Basilisk regression/telemetry/native-cycle checks",
+    "classification": "SOFTWARE NUMERICAL VERIFICATION ONLY",
+    "finding": "Completed numerical software results from prior phases, not physical measurements. Validate software timing/frame/actuation contracts under ideal sensor assumptions only; no simulation rerun in Phase 7A.",
+    "validates_installed_performance": false,
+    "measurement_domain": "software numerical output only; explicitly excluded from installed hardware validation",
+    "evidence_ids": [
+      "T04",
+      "V01"
+    ],
+    "source_refs": [
+      {
+        "source": "D3",
+        "section": "Validation boundaries"
+      },
+      {
+        "source": "C2",
+        "section": "telemetry contract"
+      },
+      {
+        "source": "C3",
+        "section": "cycle implementation"
+      }
+    ]
+  },
+  "source_boundary": [
+    "Committed D1-D5 and current C1-C3 were inspected first at the stated baseline commit. Historical 833b015 timing/ExtForceTorque statements in audit tables are not current defects; current code and later addenda define the repaired software behavior.",
+    "Drive reads were limited to nine exact sensor/interface/budget/procedure documents and two targeted folders already grounded in Husky Satellite Lab, 0AC8raEVvalZjUk9PVA. Every fetched result reported that Drive ID. No My Drive or all-Drive search, unrelated document fetch, Drive write, web research or repeated broad audit was performed.",
+    "Targeted folders: ADCS Component listed only obsolete SW1; Subsystem Testing listed nine documents, of which the ADCS and payload procedures were read. These bounded listings are not proof that no other implementation or test exists elsewhere.",
+    "R1/R2/M1/B1/P1/T1/I2/S2/OP1 facts were reused through their committed audit registers, not claimed as a new inspection of those originals. Their current revisions have not been reverified.",
+    "Engineering revision/approval controls authority, not Drive modification time. I3's 2026-09-29 revision-history date is future-dated at this 2026-09-07 review. I1 remains unsigned and explicitly notes software inaccuracies.",
+    "Fetched H5 is a stored text transcription with modified time 2026-07-28 but internal 2025-08 revision; H4 current metadata says 2026-03-21, unlike the older audit's metadata observation. These metadata differences do not establish changed component performance or override document revision.",
+    "CONFIRMED means exactly the cited statement/capability/implementation fact. Selection intent, vendor performance, design prediction, an approved obligation and installed calibration remain separate. Null is unknown, never zero. All structured evidence remains runtime_usable:false."
+  ],
+  "pointing_readiness": {
+    "terms": [
+      {
+        "id": "BUD-1",
+        "term": "Attitude-estimator knowledge error",
+        "status": "TBD",
+        "quantifiable_today": "Vendor gyro/magnetic capabilities and B3 10/5 arcsec predictions can be tabulated separately, but no HS-2 estimator error distribution or achieved bound is supported.",
+        "blocked_by": [
+          "K01",
+          "E01",
+          "E02",
+          "E03",
+          "E04",
+          "P07"
+        ],
+        "installed_value": null
+      },
+      {
+        "id": "BUD-2",
+        "term": "Sensor-to-body alignment error",
+        "status": "TBD",
+        "quantifiable_today": "3-deg documented knowledge bound and 0.250/0.500-deg budget prediction/allocation are known statements, not measured residuals.",
+        "blocked_by": [
+          "F01",
+          "F02",
+          "F03",
+          "K02"
+        ],
+        "installed_value": null
+      },
+      {
+        "id": "BUD-3",
+        "term": "Control/tracking error",
+        "status": "TBD",
+        "quantifiable_today": "Historical control allocations/predictions exist; no validated magnetic pointing/hold result. Detumble trajectory and ideal direct-torque pointing do not establish tracking accuracy.",
+        "blocked_by": [
+          "K07",
+          "E01",
+          "T03"
+        ],
+        "installed_value": null
+      },
+      {
+        "id": "BUD-4",
+        "term": "Payload-to-body boresight error",
+        "status": "TBD",
+        "quantifiable_today": "Relative mounting intent and conflicting knowledge requirements can be listed. Released full optical/body transforms, calibrated residuals and thermoelastic error are missing.",
+        "blocked_by": [
+          "F04",
+          "K03",
+          "K04",
+          "K05"
+        ],
+        "installed_value": null
+      },
+      {
+        "id": "BUD-5",
+        "term": "Timing/sample-age error",
+        "status": "TBD",
+        "quantifiable_today": "Requirement limits and vendor sync capability are known separately. Small-angle sensitivity delta-theta approximately omega*delta-t can be evaluated for declared hypothetical conditions; actual clock/latency/error distribution is unknown.",
+        "blocked_by": [
+          "T01",
+          "T02",
+          "T03",
+          "K06"
+        ],
+        "installed_value": null
+      },
+      {
+        "id": "BUD-6",
+        "term": "Total payload pointing error",
+        "status": "TBD",
+        "quantifiable_today": "Error-budget structure and dependencies can be defined; no combined HS-2 pointing value or accepted confidence distribution is supported.",
+        "blocked_by": [
+          "K01",
+          "K02",
+          "K03",
+          "K04",
+          "K06",
+          "K07"
+        ],
+        "installed_value": null
+      }
+    ],
+    "answers": [
+      {
+        "question": "Which terms can currently be quantified?",
+        "answer": "Only vendor component specifications, documented requirement/allocation candidates, and conditional sensitivities. None of the six terms has an independently validated installed HS-2 performance value."
+      },
+      {
+        "question": "Which terms are completely blocked as flight predictions?",
+        "answer": "Estimator residual and bias drift, installed sensor/optical alignment, control tracking, real timing error and the combined total all lack required evidence; no flight error distribution is selected."
+      },
+      {
+        "question": "Which uncertainties are likely to dominate?",
+        "answer": "Potentially consequential: raw-sensor versus tracker-feedback policy; gyro bias/drift over unaided intervals; contaminated magnetic data; coarse Sun response/coverage; optical alignment and sample-age errors. This is engineering risk ranking, not a numerical variance ranking. Existing budget assertion that control dominates is not independently established."
+      },
+      {
+        "question": "Enough evidence for attitude KNOWLEDGE accuracy?",
+        "answer": "No. No current complete estimator, approved metric, installed error model or independent synchronized validation."
+      },
+      {
+        "question": "Enough evidence for CONTROL pointing accuracy?",
+        "answer": "No. Estimator, hardware/magnetic validity, geometry and magnetic pointing/hold validation remain open."
+      },
+      {
+        "question": "Enough evidence for TOTAL payload pointing accuracy?",
+        "answer": "No. Terms, frames, timing, confidence, correlations and inclusion boundaries are not closed; do not RSS unmatched assumptions."
+      }
+    ]
+  },
+  "next_options": [
+    {
+      "option": "A",
+      "decision": "Sensor-only candidate models can begin now",
+      "disposition": "CONDITIONAL: isolated vendor-prior/component studies only; no runtime implementation in Phase 7A",
+      "why": "Model-specific gyro/internal-magnetic capability priors and conditional TensorCSS specifications exist. Hardware suite/configuration, filtering and mounted error distributions are unresolved.",
+      "usable_evidence": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P08",
+        "P09",
+        "P12",
+        "T02"
+      ],
+      "constraints": "Use exact vendor units/conditions only; +/-2000 deg/s and 0.02 deg/s are vendor gyro range/resolution, not flight configuration. Noise densities need an explicit justified PSD/filter/sample contract; bias stability is not a bias prior. Do not model 5-deg CSS typical error as Gaussian or use example calibration. Vendor AHRS accuracy is not own-estimator accuracy. Installed noise/bias/temperature/latency/alignment and categorical hardware selections remain blocked or explicitly parametric without invented bounds."
+    },
+    {
+      "option": "B",
+      "decision": "Estimator architecture can begin now",
+      "disposition": "YES for requirements/interface/algorithm trade decisions, not adoption of an unapproved flight architecture",
+      "why": "I1 and B3 establish candidate measurement roles and asynchronous timestamps; the remaining ownership/state/update choices can be specified and reviewed.",
+      "usable_evidence": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "S08",
+        "T01"
+      ],
+      "constraints": "Agree truth independence, algorithm/state/frames, gyro bias strategy, reference-vector source, input validity and propagation/measurement epochs first."
+    },
+    {
+      "option": "C",
+      "decision": "Estimator implementation is blocked",
+      "disposition": "BLOCKED",
+      "why": "No sufficiently current, complete, unambiguous estimator definition or installed measurement model.",
+      "usable_evidence": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "K01",
+        "V01"
+      ],
+      "constraints": "Minimum decisions: algorithm/attitude convention/state; tracker/LOST/FOUND role; raw B producer and CSS intensity-to-vector mapping; initialized state/P0; gyro propagation/bias model; Q/R/units/correlations from evidence; asynchronous/OOS updates/rates; valid-source matrix, dropout/eclipses/lost-attitude initialization and recovery; reproducible flight code/test baseline."
+    },
+    {
+      "option": "D",
+      "decision": "Pointing-control work is blocked",
+      "disposition": "BLOCKED for credible HS-2 acquisition/hold/performance prediction",
+      "why": "No credible attitude-knowledge chain, physical boresights/validity envelope or validated magnetic pointing architecture; control requirements conflict.",
+      "usable_evidence": [
+        "K01",
+        "K07",
+        "F04",
+        "T03"
+      ],
+      "constraints": "Do not implement or tune pointing, or claim pointing accuracy in this phase."
+    },
+    {
+      "option": "E",
+      "decision": "Pointing-error-budget work can begin partially",
+      "disposition": "PARTIAL: bookkeeping, frame/time sensitivities and missing-input allocation",
+      "why": "Six distinct error terms, requirement conflicts and candidate priors can be kept traceable.",
+      "usable_evidence": [
+        "K01",
+        "K02",
+        "K03",
+        "K04",
+        "K05",
+        "K06",
+        "K07"
+      ],
+      "constraints": "No combined number. Keep bias/random, confidence, mode, frames, timing and correlation/inclusion boundaries explicit; avoid counting tracker/alignment/thermal effects twice."
+    },
+    {
+      "option": "F",
+      "decision": "Hardware characterization is required first",
+      "disposition": "REQUIRED before installed sensor/estimator performance credibility",
+      "why": "No completed mounted sensor noise/alignment/timing/calibration evidence was located.",
+      "usable_evidence": [
+        "P07",
+        "P09",
+        "P10",
+        "T03",
+        "V01"
+      ],
+      "constraints": "Reuse Phase 6C magnetic sensor/timing tests and collect minimum gyro/CSS/optical records listed below; vendor data may bound a study only under declared applicability."
+    }
+  ],
+  "missing_inputs": [
+    {
+      "id": "INPUT-01",
+      "rank": 1,
+      "priority": "P0",
+      "input": "Actual sensor suite, part/serial/firmware/BOM and connector/channel population",
+      "why": "Determines which vendor specifications and interfaces apply; closes external magnetic/CSS count/model and Sagitta/Twinkle identity.",
+      "owner": "ADCS / Payload / CDH / configuration control (proposed owners)",
+      "evidence_ids": [
+        "S01",
+        "S02",
+        "S03",
+        "S05",
+        "S07",
+        "S08",
+        "S09"
+      ]
+    },
+    {
+      "id": "INPUT-02",
+      "rank": 2,
+      "priority": "P0",
+      "input": "Body axes/datum, sensor-body and payload-boresight design/as-built/calibrated transforms",
+      "why": "Wrong frame/sign invalidates measurements and makes accuracy predictions meaningless.",
+      "owner": "Structures / ADCS / Payload",
+      "evidence_ids": [
+        "F01",
+        "F02",
+        "F03",
+        "F04"
+      ]
+    },
+    {
+      "id": "INPUT-03",
+      "rank": 3,
+      "priority": "P0",
+      "input": "Estimator architecture and truth-feedback policy with versioned flight implementation decision",
+      "why": "Own raw-sensor filter and tracker-assisted filter have different observability and independent-validation requirements.",
+      "owner": "ADCS / CDH / Payload",
+      "evidence_ids": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "S08"
+      ]
+    },
+    {
+      "id": "INPUT-04",
+      "rank": 4,
+      "priority": "P0",
+      "input": "Attitude-knowledge requirement, confidence, axis/error metric, modes and success tiers",
+      "why": "No defensible accuracy criterion or allocation can be selected from TBD/10-arcsec/5-arcsec material.",
+      "owner": "Systems / science customer / ADCS",
+      "evidence_ids": [
+        "K01",
+        "K03",
+        "K04",
+        "K05",
+        "K07"
+      ]
+    },
+    {
+      "id": "INPUT-05",
+      "rank": 5,
+      "priority": "P0",
+      "input": "Configured sensor/filter/packet settings; estimator rates; acquisition/clock/exposure/latency map",
+      "why": "Density-to-noise conversion, vector pairing and propagation depend on physical sample epochs and filter history.",
+      "owner": "CDH / ADCS / Payload",
+      "evidence_ids": [
+        "S03",
+        "S04",
+        "S06",
+        "T01",
+        "T02",
+        "K06"
+      ]
+    },
+    {
+      "id": "INPUT-06",
+      "rank": 6,
+      "priority": "P0",
+      "input": "Gyro zero-rate bias/turn-on repeatability/noise PSD/Allan data and baseline scale/cross-axis calibration",
+      "why": "Controls drift and gyro propagation credibility when absolute aids are absent.",
+      "owner": "ADCS / test",
+      "evidence_ids": [
+        "P01",
+        "P02",
+        "P03",
+        "P07"
+      ]
+    },
+    {
+      "id": "INPUT-07",
+      "rank": 7,
+      "priority": "P0",
+      "input": "Installed magnetic calibration and actuation-contamination/acquisition validity",
+      "why": "Biased or contaminated B can invalidate both detumble sensing and attitude updates.",
+      "owner": "ADCS / EPS / test",
+      "evidence_ids": [
+        "P04",
+        "P07",
+        "T03"
+      ]
+    },
+    {
+      "id": "INPUT-08",
+      "rank": 8,
+      "priority": "P0",
+      "input": "CSS populated geometry, per-unit illumination/ADC/temperature calibration and vector inversion",
+      "why": "Scalar channels do not establish an accurate vector or full Sun visibility; eclipse and near-collinear directions matter.",
+      "owner": "ADCS / EPS / Structures / test",
+      "evidence_ids": [
+        "S05",
+        "S06",
+        "F03",
+        "P08",
+        "P09",
+        "P12"
+      ]
+    },
+    {
+      "id": "INPUT-09",
+      "rank": 9,
+      "priority": "P0",
+      "input": "Calibrated optical/truth alignment and synchronized independent estimator acceptance dataset",
+      "why": "Closes the experiment comparison chain and avoids using an estimator input as its own truth.",
+      "owner": "Payload / ADCS / metrology / test",
+      "evidence_ids": [
+        "S08",
+        "F04",
+        "K04",
+        "K05",
+        "K06",
+        "V01"
+      ]
+    },
+    {
+      "id": "INPUT-10",
+      "rank": 10,
+      "priority": "P1",
+      "input": "Temperature/vibration/power-state dependence and repeatability beyond baseline calibration",
+      "why": "Needed for realistic uncertainty growth over the mission envelope. Any condition essential to initial validity must instead be closed at P0.",
+      "owner": "Thermal / ADCS / test",
+      "evidence_ids": [
+        "P07",
+        "P09",
+        "P10",
+        "P12"
+      ]
+    },
+    {
+      "id": "INPUT-11",
+      "rank": 11,
+      "priority": "P1",
+      "input": "Albedo/shadow/irradiance, magnetic reference/position uncertainty and optical validity envelopes",
+      "why": "Needed for realistic available-measurement and reference-vector errors; no reference/environment model change authorized here.",
+      "owner": "ADCS / Payload / mission analysis",
+      "evidence_ids": [
+        "F03",
+        "P08",
+        "P11",
+        "K07"
+      ]
+    },
+    {
+      "id": "INPUT-12",
+      "rank": 12,
+      "priority": "P1",
+      "input": "Measured estimator residual cross-correlations, nonlinear/recovery behavior and held-out SIL/HIL coverage",
+      "why": "Needed to validate covariance credibility, failure recovery and total error bookkeeping, not just mean residual.",
+      "owner": "ADCS / CDH / test",
+      "evidence_ids": [
+        "E01",
+        "E02",
+        "K01",
+        "V01"
+      ]
+    },
+    {
+      "id": "INPUT-13",
+      "rank": 13,
+      "priority": "P2",
+      "input": "Long-term aging/radiation/recalibration trends and expanded lifetime statistics",
+      "why": "Refines a supported initial model; no assumed degradation law or unwarranted mission guarantee.",
+      "owner": "ADCS / Thermal / test",
+      "evidence_ids": [
+        "P07",
+        "P09",
+        "P10"
+      ]
+    },
+    {
+      "id": "INPUT-14",
+      "rank": 14,
+      "priority": "P2",
+      "input": "Larger Monte Carlo and longer-duration HIL correlation after model/requirements are fixed",
+      "why": "Later coverage improvement cannot substitute for P0 suite, frames, timing, calibration or architecture.",
+      "owner": "ADCS / Systems / test",
+      "evidence_ids": [
+        "K01",
+        "V01"
+      ]
+    }
+  ],
+  "minimum_characterization": [
+    {
+      "id": "MEAS-01",
+      "status": "ASSUMED",
+      "classification": "PLANNED TEST",
+      "measurement": "Freeze unit/firmware/configuration identity and survey body/sensor/optical frames and signs, including deployed CSS normals.",
+      "output": "Signed BOM/config readback, datum definitions, C_SB/boresight matrices with uncertainty and serial-linked calibration ownership.",
+      "evidence_ids": [
+        "S01",
+        "S05",
+        "S08",
+        "F01",
+        "F02",
+        "F03",
+        "F04"
+      ],
+      "reuse": "D5 ADCS-MAG-001; extend optical survey without inventing tolerance."
+    },
+    {
+      "id": "MEAS-02",
+      "status": "ASSUMED",
+      "classification": "PLANNED TEST",
+      "measurement": "Acquire time-stamped stationary gyro records and controlled-rate/turn-on/temperature cases with independent reference.",
+      "output": "Raw traces, clock/filter settings, PSD/Allan analysis with conventions, bias repeatability, scale/cross-axis and temperature residuals plus uncertainty.",
+      "evidence_ids": [
+        "P01",
+        "P02",
+        "P03",
+        "P07"
+      ],
+      "reuse": "New focused gyro characterization; acceptance metric/duration derived after requirements and bandwidth are approved, not guessed here."
+    },
+    {
+      "id": "MEAS-03",
+      "status": "ASSUMED",
+      "classification": "PLANNED TEST",
+      "measurement": "Calibrate installed magnetic triad in known fields, then record actual coil-current/local-field/sensor recovery over power and actuation states.",
+      "output": "Hard/soft-iron/frame calibration, residual error map, raw recovery/filter-history traces and supported clean-aperture validity envelope.",
+      "evidence_ids": [
+        "P04",
+        "P07",
+        "T03"
+      ],
+      "reuse": "D5 ADCS-MAG-006 with -004/-005 and approved cleanliness allocation."
+    },
+    {
+      "id": "MEAS-04",
+      "status": "ASSUMED",
+      "classification": "PLANNED TEST",
+      "measurement": "Illumination-angle/irradiance/temperature/dark and representative albedo/shadow sweeps through the installed CSS/ADC chain.",
+      "output": "Per-channel calibrated response, boresights, ADC reference/scan/filter settings, uncertainty and held-out vector inversion tests.",
+      "evidence_ids": [
+        "S05",
+        "S06",
+        "F03",
+        "P08",
+        "P09",
+        "P12"
+      ],
+      "reuse": "T2 acquisition procedure is only a bring-up starting point; no example vendor LUT substitution."
+    },
+    {
+      "id": "MEAS-05",
+      "status": "ASSUMED",
+      "classification": "PLANNED TEST",
+      "measurement": "Measure sensor sync, packet readiness/receipt, estimator execution and camera trigger/strobe/exposure timing on the same calibrated time base.",
+      "output": "Clock mapping, physical aperture/filter age, exposure midpoint, latency/jitter/correlation and loss/recovery traces with configuration/hash.",
+      "evidence_ids": [
+        "S04",
+        "S09",
+        "T01",
+        "T02",
+        "T03",
+        "K06"
+      ],
+      "reuse": "D5 ADCS-MAG-007; extend to optical/GNSS synchronization."
+    },
+    {
+      "id": "MEAS-06",
+      "status": "ASSUMED",
+      "classification": "PLANNED TEST",
+      "measurement": "After architecture decisions, validate initialized propagation and vector/attitude updates against independent synchronized truth under dropouts/eclipse/degenerate geometry and nominal cases.",
+      "output": "Versioned estimator/config/raw replay, held-out residuals by axis/mode/epoch, covariance consistency where applicable, failures and reproducible SIL/HIL comparison.",
+      "evidence_ids": [
+        "E01",
+        "E02",
+        "E04",
+        "S08",
+        "K01",
+        "V01"
+      ],
+      "reuse": "Extend D5 ADCS-MAG-008. No same-input tracker-as-truth validation, no scope-limited data advertised as flight accuracy."
+    }
+  ],
+  "verification_contract": {
+    "only_output_files": [
+      "docs/ATTITUDE_SENSOR_ESTIMATOR_EVIDENCE.md",
+      "basilisk_runner/config/attitude_sensor_estimator_evidence.json"
+    ],
+    "checks": [
+      "Strict JSON parse/no NaN or Infinity",
+      "Unique source, decision, inventory, architecture, test, budget, input and measurement IDs",
+      "All source and decision references resolve",
+      "Local source SHA-256 values match unchanged committed files",
+      "Direct Drive IDs/Shared Drive membership and reused-source provenance recorded",
+      "All decision candidates have value, units, status, evidence type, source section, frame and confidence; revision/date resolves through source catalog",
+      "Markdown renders identical candidate/status/source/conflict/treatment data and narrative matrices as JSON",
+      "Relative links and internal anchors resolve; Drive URLs use cited file IDs",
+      "All evidence runtime_usable false; no installed measured performance claims",
+      "git diff --check and two-file scope check"
+    ],
+    "not_run": "No Basilisk simulation, runtime import, regression rerun or code/dependency modification; documentation/evidence changes only."
+  }
+}
