@@ -6,6 +6,31 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7D live shadow navigation addendum — 2026-09-14
+
+**SHADOW DEVELOPMENT INTEGRATION / NOT FLIGHT VALIDATED.** This addendum records
+the current opt-in integration; historical audit tables below retain their stated
+commit scope. See the [message, timing and validity contract](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7d-live-shadow-integration--2026-09-14).
+
+| FIELD | FINDING |
+|---|---|
+| Path / purpose | `attitude_mekf_adapter.py`, opt-in detumble scenario, `validate_mekf_shadow.py`: test live message translation, epoch transfer, faults and offline-equivalent MEKF execution. |
+| Inputs | Unchanged production profile; actual SCStates rate as ideal gyro; stored acquisition TAM and WMM reference with validity/epochs. Explicit `--shadow-ideal-sun` supplies a TEST-ONLY synthetic Sun vector. No installed sensor performance is modeled. |
+| Actuator / controller | Existing native MtbEffector and SimpleNav-fed controller unchanged. Shadow output has no control or actuation consumer. Direct-reference actuation/command replay are excluded from this opt-in mode. |
+| Estimator | Verified Phase 7C MEKF/replay core; new interface models and nonmutating current-point rate accessor. Fresh two-vector TRIAD acquisition; no absolute initialization from a single vector or gyro alone. Explicit prior supports gyro-only development cases. |
+| Sensors / frames | Actual TAMSensorMsg in S, explicit C_SB, matched acquisition WMM B_N. No truth B substitution. Current ideal gyro in B and optional ideal Sun use declared TEST-ONLY bridges. Physical body/mount registration remains unresolved. |
+| Environment / timing | Existing Earth/WMM and 0.1 s task unchanged. Bridge 590, MEKF 580 and observer 570 run after existing controller/cycle driver 600. Cycle SAMPLE occurs at 0.4 s; shadow NavAtt is current-point data, while production control at 0.5 s still uses its frozen 0.4 s SimpleNav/TAM snapshot. |
+| Output | Native NavAtt sigma_BN, omega_BN_B, timeTag plus mandatory Python quality/epoch companion. vehSunPntB unsupported. Separate `_shadow_host*` CSV/JSON artifacts; default output paths unchanged. |
+| Validation | 114 regression tests pass, including 17 new interface tests. Eight dedicated cases pass; final live/offline q, bias and P differences are exactly zero with matching counts/epochs. All eight shadow host DataFrames exactly equal shadow-disabled hosts. |
+| Production preservation | Full continuous baseline, hs2_candidate and diagnostic-cycle CSV bytes match saved Phase 7C baselines/hashes exactly; applicable checks 20/20, 20/20 and 44/44. |
+| Degraded / fault cases | Single/no-vector startup stays uninitialized; loss of Sun after acquisition preserves propagation/magnetic updates. Invalid/stale samples rejected; delayed updates replay with original epochs. Gyro/coverage faults latch invalid status and stop fresh NavAtt publication; explicit reset/new pair reacquires. |
+| Limitations | Noise-free TEST-ONLY P0/Q/R and gyro interpolation; no real Sun sensor, calibrated timing/noise or flight validity gate. Fresh common-epoch startup pair required. Continuous magnetic updates lack a quiet-window contract. Companion transport and diagnostic storage are development interfaces. No controller handover, flight attitude knowledge, pointing accuracy or HS-2 compliance claim. |
+| Next | Test a quality-gated, sample-epoch dummy navigation consumer before any opt-in controller connection; characterize mounted sensor/coil-cycle timing and errors against independent truth before performance modeling. |
+
+Default CLI navigation remains `simple-nav`. An explicit development example is
+`python basilisk_runner/scenario_huskysat2_detumble.py --navigation shadow-mekf --shadow-ideal-sun --magnetic-cycle diagnostic --duration 4 --no-plots`.
+The ideal Sun option is not enabled automatically.
+
 ## Current Basilisk minimal scenario
 
 | FIELD | FINDING |

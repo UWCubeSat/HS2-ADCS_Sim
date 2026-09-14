@@ -220,7 +220,8 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
 
 def run(stop_time_s=None, write_outputs=True, actuator=None,
         replay_commands=None, capture_commands=False, make_plots=True,
-        config: HS2SimConfig = DEFAULT_CONFIG, cycle: MagneticCycleConfig | None = None):
+        config: HS2SimConfig = DEFAULT_CONFIG, cycle: MagneticCycleConfig | None = None,
+        shadow=None):
     config = config.with_run_options(stop_time_s, actuator)
     actuator = config.magnetorquers.implementation.value
     step_ns = macros.sec2nano(config.timing.dynamics_step.value)
@@ -346,6 +347,24 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     if actuator == "direct":
         sim.AddModelToTask("DynamicsTask", effector, ModelPriority=500)
     # Only ExtForceTorque must latch the NEW torque for the NEXT step here.
+
+    # Phase 7D: lazy, explicitly selected SHADOW path. The existing controller
+    # subscriptions and priorities above remain untouched. No output is fed back.
+    shadow_observer = shadow_adapter = None
+    if shadow is not None:
+        from attitude_mekf_adapter import (ShadowOptions, IdealLiveBridge,
+                                           MEKFNavigationAdapter, ShadowNavigationObserver)
+        if not isinstance(shadow, ShadowOptions) or actuator != "native" or replay_commands is not None:
+            raise ValueError("Shadow navigation requires explicit ShadowOptions and native controller actuation")
+        shadow_bridge = IdealLiveBridge(sc.scStateOutMsg, tam.tamDataOutMsg, mag.envOutMsgs[0],
+                                        cycled_driver, config.sensors.magnetometer_dcm_SB.value, shadow, step_ns)
+        shadow_adapter = MEKFNavigationAdapter(shadow_bridge.out, shadow)
+        shadow_observer = ShadowNavigationObserver(shadow_adapter, sc.scStateOutMsg, nav.attOutMsg)
+        for model, tag, priority in ((shadow_bridge, "IdealShadowInputs", 590),
+                                     (shadow_adapter, "ShadowMEKF", 580),
+                                     (shadow_observer, "ShadowNavMonitor", 570)):
+            model.ModelTag = tag
+            sim.AddModelToTask("DynamicsTask", model, ModelPriority=priority)
 
     sc_log = sc.scStateOutMsg.recorder(rec_dt)
     mag_log = mag.envOutMsgs[0].recorder(rec_dt)
@@ -528,6 +547,16 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         out_csv = out_csv.with_name(out_csv.stem + f"_{profile}.csv")
     if cycle is not None:
         out_csv = out_csv.with_name(out_csv.stem + "_cycled.csv")
+    if shadow_observer is not None:
+        # Separate artifacts even when run with write_outputs=True. Production
+        # CSV names and their schema/values are unchanged when shadow is disabled.
+        from dataclasses import asdict
+        df.attrs["shadow_telemetry"] = pd.DataFrame(shadow_observer.history)
+        df.attrs["shadow_input_trace"] = shadow_adapter.input_trace
+        df.attrs["shadow_estimator_trace"] = shadow_adapter.trace
+        df.attrs["shadow_status"] = shadow_adapter.history
+        df.attrs["shadow_options"] = asdict(shadow)
+        out_csv = out_csv.with_name(out_csv.stem + "_shadow_host.csv")
     if write_outputs:
         df.to_csv(out_csv, index=False)
         out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
@@ -542,6 +571,11 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
                             actual_record_step_ns=step_ns, telemetry_schema_version=5)
             out_csv.with_name(out_csv.stem + "_cycle.json").write_text(json.dumps(cycle.to_dict(), indent=2), encoding="utf-8")
         out_csv.with_name(out_csv.stem + "_run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        if shadow_observer is not None:
+            df.attrs["shadow_telemetry"].to_csv(out_csv.with_name(out_csv.stem + "_nav.csv"), index=False)
+            out_csv.with_name(out_csv.stem + "_status.json").write_text(json.dumps({
+                "scope": "SHADOW DEVELOPMENT INTEGRATION / NOT FLIGHT VALIDATED",
+                "options": df.attrs["shadow_options"], "status": df.attrs["shadow_status"]}, indent=2), encoding="utf-8")
         print(f"Wrote {out_csv}")
     print(f"Initial |omega| [rad/s]: {omega_mag[0]:.12g}")
     print(f"Final   |omega| [rad/s]: {omega_mag[-1]:.12g}")
@@ -567,15 +601,24 @@ def main(argv=None):
                            help="Physical profile; candidate is an explicit opt-in sensitivity case")
     parser.add_argument("--duration", type=float, default=None)
     parser.add_argument("--no-plots", action="store_true")
+    parser.add_argument("--navigation", choices=("simple-nav", "shadow-mekf"), default="simple-nav")
+    parser.add_argument("--shadow-ideal-sun", action="store_true",
+                        help="Explicit TEST-ONLY Sun bridge; requires --navigation shadow-mekf")
     cycle_selection = parser.add_mutually_exclusive_group()
     cycle_selection.add_argument("--magnetic-cycle", choices=("continuous", "diagnostic"), default="continuous",
                                  help="Opt-in ASSUMED architecture-test timing; continuous remains default")
     cycle_selection.add_argument("--cycle-config", type=Path, help="Explicit provenance-bearing cycle JSON")
     args = parser.parse_args(argv)
+    shadow = None
+    if args.shadow_ideal_sun and args.navigation != "shadow-mekf":
+        parser.error("--shadow-ideal-sun requires --navigation shadow-mekf")
+    if args.navigation == "shadow-mekf":
+        from attitude_mekf_adapter import ShadowOptions
+        shadow = ShadowOptions(ideal_sun=args.shadow_ideal_sun)
     run(stop_time_s=args.duration, actuator=args.actuator, make_plots=not args.no_plots,
         config=get_profile_config(args.profile) if args.config is None else HS2SimConfig.load(args.config),
         cycle=(MagneticCycleConfig.load(args.cycle_config) if args.cycle_config else
-               diagnostic_cycle_config() if args.magnetic_cycle == "diagnostic" else None))
+               diagnostic_cycle_config() if args.magnetic_cycle == "diagnostic" else None), shadow=shadow)
 
 
 if __name__ == "__main__":

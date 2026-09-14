@@ -514,3 +514,181 @@ then ran `build_validation({}, summarize_basilisk(frame))` and, for the cycled c
    evidence, justified stochastic covariance models, observability/consistency
    studies and a resolved boresight/control/error-budget chain. No pointing
    controller or flight-performance claim is supplied here.
+
+## Phase 7D live shadow integration — 2026-09-14
+
+**SHADOW DEVELOPMENT INTEGRATION / NOT FLIGHT VALIDATED.** This addendum
+supersedes the Phase 7C *integration readiness* statements above, not its
+mathematical contract or unresolved engineering evidence. Starting commit:
+`1b79a50`. Software findings below are CONFIRMED only for the tested development
+configuration. Sensor bridges and numerical fixtures remain ASSUMED / TEST-ONLY.
+
+### Actual message and task contract
+
+The detumble scenario defaults to `--navigation simple-nav`. Explicit
+`--navigation shadow-mekf` adds three Python SysModels with no connection to a
+production consumer. The existing controller still reads SimpleNav, including
+the frozen acquisition-epoch navigation message in cycled operation. Shadow mode
+currently requires native actuation and excludes command replay. No pointing
+path, controller law, actuator, configuration value or existing priority changed.
+
+| DATA / MESSAGE | PRODUCER → CONSUMER | FRAME / UNITS | EPOCH AND ORDER |
+|---|---|---|---|
+| SCStatesMsg: sigma_BN, omega_BN_B, r_BN_N | Spacecraft → SimpleNav, WMM, TAM, ideal bridge, observer | sigma_BN dimensionless; omega_BN_B rad/s in B; position m in N | Spacecraft priority 1000 publishes state at current integer simulation ns after propagating the preceding interval. |
+| Planet-state orientation and MagneticFieldMsg.magField_N | Existing Earth publisher/WMM → TAM, native actuator; bridge verifies field header | C_PN maps N to Earth-fixed P; WMM returns Tesla in N | Earth 925, epoch guard 910, WMM 900; current position, orientation and field epoch. Implementation unchanged. |
+| NavAttMsg: sigma_BN, omega_BN_B, timeTag | SimpleNav → existing controller/cycle driver; shadow observer | N-to-B MRPs, rad/s in B, seconds | SimpleNav 800; current header and payload timeTag. Cycle driver retains the acquisition message for its later control event. |
+| TAMSensorMsg.tam_S | Existing ideal TAM → controller/cycle snapshot and shadow bridge | Tesla in sensor S; C_SB maps B to S | Continuous TAM 700; in cycled mode driver 600 invokes TAM at SAMPLE and stores that acquisition. No active Sun measurement exists. |
+| Cycle history/validity plus stored WMM reference | MagneticCycleDriver → ideal bridge | Actual TAM in S with explicit C_SB; independently stored reference in N, Tesla | Driver 600 completes before bridge. Bridge requires current history, SAMPLE event, valid flag, matching TAM/WMM/acquisition ns and existing zero-command/zero-torque quiet checks. |
+| InputBatch, Python DevelopmentChannel | IdealLiveBridge 590 → MEKFNavigationAdapter 580 | Point gyro in B rad/s; covered gyro intervals; vector samples with frames, transforms, acquisition/reference epochs and validity | Actual SCStates header retained as gyro epoch; channel publication and sim ns checked separately. Delays retain acquisition ns. |
+| NavAttMsg plus mandatory statusOut companion | Adapter 580 → ShadowNavigationObserver 570 only | Estimated sigma_BN, point omega_BN_B rad/s, timeTag seconds; status epochs in ns | Written at current ns only after initialization, contiguous gyro coverage and all updates/replays delivered this tick. Existing recorders follow. |
+
+The full descending order is: preceding-interval recorders 1100, native-input
+guard 1050, spacecraft 1000, native effector 980, applied-torque recorders 975,
+sensor-state recorder 950, Earth 925, WMM guard 910, WMM 900, SimpleNav 800,
+continuous TAM 700 when applicable, controller/cycle driver 600, **bridge 590,
+MEKF 580, shadow observer 570**, then ordinary recorders. The existing replay
+priority 550 and direct-torque latch 500 are outside this shadow mode.
+
+In the existing ASSUMED diagnostic cycle (source: `diagnostic_cycle_config`,
+Phase 6A), the period is 1 s, acquisition offset 0.4 s, control offset 0.5 s and
+actuation starts at 0.6 s. The task step is 0.1 s. Control at 0.5 s consumes the
+frozen 0.4 s SimpleNav/TAM snapshot. A new magnetic command applies over the
+following integration interval; the native plant uses its existing WMM path.
+The shadow filter acquires at 0.4 s and publishes current-epoch estimates on
+subsequent ticks without affecting that control path.
+
+N is the existing Earth-centered inertial ICRF/J2000 frame; B is the mathematical
+body frame whose physical HS-2 registration remains unresolved; P is Earth-fixed.
+`sigma_BN` describes B relative to N; `C_BN` maps N components to B. The native
+TAM relation is `tam_S = C_SB C_BN B_N`; the core receives S plus C_SB and converts
+with `C_SB.T`. Historical cycle CSV names containing `*_B_B` hold raw `tam_S`;
+this adapter carries the explicit mounting transform instead of assuming those
+labels establish a physical frame. Present production mounting remains unchanged.
+
+### Output validity, acquisition and fault containment
+
+`attitude_mekf_adapter.py` supplies a native NavAttMsg for **sigma_BN,
+omega_BN_B and timeTag only**. `vehSunPntB` is not supplied or validated, so this
+is not a full semantic replacement for every possible SimpleNav consumer.
+Output rate is the current point gyro minus the posterior bias through the new,
+nonmutating core `point_rate` accessor; it is not the last propagation interval's
+average rate. No estimator propagation, correction, reset or replay equation was
+changed. Native header time, payload timeTag, status epoch and estimator epoch
+must all agree before any future consumer uses this output.
+
+The mandatory `statusOut` is a deep-copy Python DevelopmentChannel, **not a
+flight/SWIG message ABI**. It records validity, initialization/fault state, source
+availability, per-delivery validity/provenance/disposition, received and accepted
+sensor epochs/ages separately, last update, replay/rejection counts and
+acquisition/reacquisition events. Rejected data cannot refresh accepted-data age.
+Accepted-epoch metadata is conservative when older evidence leaves replay history.
+
+- Startup needs a fresh common-current-epoch noncollinear magnetic/Sun pair.
+  TRIAD acquires at 0.4 s in the dedicated two-vector case. A delayed startup pair
+  is explicitly rejected; arbitrary-attitude gyro propagation is not attempted.
+- Magnetic-only, Sun-only and gyro-only startup remain UNINITIALIZED and publish
+  no NavAtt. Gyro-only propagation works from an explicitly supplied TEST-ONLY
+  prior. Loss of one vector after acquisition retains propagation and the
+  remaining vector updates; covariance follows the unchanged core. Validity is
+  interface/propagation validity, not a flight attitude-knowledge threshold.
+- Invalid, missing or stale TAM is rejected without replacing it with truth B.
+  Only actual SAMPLE acquisitions enter the magnetic channel. Continuous mode
+  has no quiet-window contract and therefore admits no magnetic updates.
+- Delayed local vector updates retain acquisition/reference epochs and use the
+  Phase 7C replay contract. The existing fixture bounds history to 3 s / 512
+  events; the delivery queue is also bounded. These are TEST-ONLY capacity choices.
+- Missing/stale/nonfinite gyro, invalid epoch or incomplete interval coverage
+  latches FAULT. No fresh NavAtt is written; a previous message retains its old
+  timestamp. Explicit reset plus a new valid pair is required for reacquisition.
+  There is no automatic truth or SimpleNav substitution inside the estimator.
+
+### Ideal bridge and telemetry limitations
+
+The bridge uses actual current SCStates body rate as ideal gyro data. Ten
+subinterval rates per 0.1 s task interval are reconstructed from the previous and
+current rate endpoints by causal linear interpolation. Both endpoints are known
+at delivery; no future sample or attitude difference is used. This differs from
+Phase 7C's offline cubic sensor synthesis. It is an ASSUMED aperture approximation,
+not an installed IMU packet/filter model or a new production integration rate.
+
+`--shadow-ideal-sun` must be explicitly selected. It generates a synthetic N vector
+from the unchanged Phase 7C fixture through current truth C_BN. The 0.7 s cadence,
+0.4 s first sample, zero measurement noise/bias, P0/Q/R conditioning and synthetic
+Sun direction come from the existing TEST-ONLY fixture/ShadowOptions; no CSS,
+ephemeris, installed calibration or flight tuning is claimed. Dedicated delay
+cases use 0.2 s delivery delays after 1 s; these are interface tests only.
+
+Shadow files use a separate `_shadow_host` prefix. The host CSV retains production
+columns; `_nav.csv` adds truth/SimpleNav/MEKF attitude, truth/estimated rates, bias,
+P diagonal and eigenvalue bounds, independent truth-angle diagnostic, all source,
+state and publication epochs, ages, validity and update/rejection diagnostics.
+`_status.json` retains options and detailed per-tick quality. Host config/run/cycle
+manifests are also separate. Full input/core traces are returned in DataFrame
+attributes for the equivalence harness; they are not serialized in the CLI files.
+Diagnostic histories grow with run duration even though estimator replay storage
+is bounded. This is not a flight memory or message-delivery implementation.
+
+### Verification and preservation
+
+Source: Phase 7D local tests and runs, 2026-09-14; CONFIRMED development results.
+All **114 regression tests pass**, including 17 new adapter/integration tests.
+Compileall and diff whitespace checks pass. Optional static analysis was not run:
+the previously established environment lacks `typing_extensions` for that tool;
+no dependency was installed or changed.
+
+| DEDICATED 8 s CASE | VERIFIED RESULT |
+|---|---|
+| Two vectors | Acquired at 0.4 s; 77 valid rows; magnetic/Sun update counts 8/11. |
+| Magnetic only; Sun only; gyro only without prior | All three stay UNINITIALIZED; no navigation publication. |
+| Gyro only with explicit prior | 81 valid rows from epoch zero; no vector updates. |
+| Sun loss after 2 s | 77 valid rows; counts 8/3; eight missing-Sun rejections; covariance continues to evolve. |
+| Delayed magnetic | Seven replays; acquisition times remain unchanged. |
+| Delayed Sun | Ten replays; acquisition times remain unchanged. |
+
+For every initialized case, final live versus independent chronological event
+application has **exactly zero** quaternion-component, bias and covariance
+difference; update counts and epochs agree. The numerical comparison tolerance
+is TEST-ONLY 1e-12 absolute. This verifies adapter delivery/replay equivalence
+using the same verified core, not independent estimator mathematics or sensor
+accuracy. All eight host DataFrames exactly match the shadow-disabled host.
+
+Full shadow-disabled production runs reproduce the Phase 7C saved CSV bytes and
+the SHA256 values recorded above: continuous regression baseline 5,793 rows
+(20/20 applicable checks); hs2_candidate 5,793 rows (20/20); diagnostic cycle
+57,924 rows (44/44 including cycle checks). The standalone-reference finiteness
+check is explicitly inapplicable to these in-memory runs. No saved production
+CSV was overwritten. A separate 4 s CLI shadow run also verifies output writing.
+
+Commands (repository root, existing project Python):
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_attitude_mekf_adapter.py' -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_*.py' -q
+.\.venv\Scripts\python.exe -B basilisk_runner/validate_mekf_shadow.py --report basilisk_runner/output_data/mekf_shadow_validation.json
+.\.venv\Scripts\python.exe -B basilisk_runner/scenario_huskysat2_detumble.py --navigation shadow-mekf --shadow-ideal-sun --magnetic-cycle diagnostic --duration 4 --no-plots
+git diff --check
+```
+
+The full production checks used an inline `python -B -` harness calling `run`
+with `write_outputs=False, make_plots=False` for the default, hs2_candidate and
+diagnostic-cycle configurations, then comparing UTF-8 `to_csv(index=False)`
+bytes and applying the same validators described in the Phase 7C closeout above.
+
+### Next gate
+
+The smallest next software experiment is a separately authorized, opt-in
+**navigation-consumer boundary test**: retain shadow actuation isolation while a
+dummy controller consumer exercises frozen sample-epoch delivery, uninitialized
+startup, stale publication, fault latching and explicit reacquisition. It must
+require quality metadata and demonstrate that invalid/stale attitude and rate
+cannot become a command. Native NavAtt fields make a later controller experiment
+technically feasible, but production SimpleNav should remain the default.
+
+Realistic attitude knowledge and pointing prediction remain blocked by U01–U11.
+The next physical evidence step is a synchronized, mounted sensor/coil-cycle
+characterization against independent attitude truth: establish frame registration,
+gyro aperture/latency, magnetic clean-window validity, Sun reconstruction and
+noise/bias/correlation before deriving Q/R and testing covariance consistency.
+Released boresight alignment, control authority and an accepted knowledge/pointing
+error budget are additionally required for defensible pointing accuracy.

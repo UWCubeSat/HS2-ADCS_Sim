@@ -308,6 +308,16 @@ class MEKF:
                             "residual_angle_rad": angle, "tangent_innovation": residual.tolist()}
         return "updated"
 
+    def point_rate(self, gyro_B_rad_s: ArrayLike, acquisition_ns: int) -> Array:
+        """Phase 7D output accessor: current point gyro minus posterior bias.
+
+        Distinct from the interval-supported propagation rate. No state update,
+        extrapolation or truth substitution; the caller owns sensor validity.
+        """
+        if not self.initialized or epoch(acquisition_ns) != self.epoch_ns:
+            raise ValueError("point rate requires initialized state at gyro acquisition epoch")
+        return vector(gyro_B_rad_s)-self.bias
+
     def output(self) -> dict:
         q = self.q if self.q[0] >= 0 else -self.q
         return {"q_BN": self.q.copy(), "sigma_BN": q[1:]/(1+q[0]),
