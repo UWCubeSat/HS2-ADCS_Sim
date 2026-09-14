@@ -302,3 +302,215 @@ Document checks also require valid JSON, unique/resolving IDs, source hashes, wo
 8. Before realistic sensor performance or pointing claims, close U01–U11 using mounted characterization and resolved subsystem interfaces; identify an approved attitude-knowledge requirement; test covariance consistency with justified stochastic models, independent truth and repeated cases.
 
 Remaining blockers include physical B/mount registration, CSS selection/reconstruction, raw magnetic producer/clean-window contract, actual packet clocks/filter support, bias/noise/correlation calibration, reference-provider uncertainty, truth independence acceptance, mode thresholds and unresolved pointing requirements. A functioning prototype would still be **NOT FLIGHT VALIDATED**.
+
+## Phase 7C implementation addendum — 2026-09-07
+
+Status: **NOISE-FREE DEVELOPMENT PROTOTYPE / NOT FLIGHT VALIDATED**. Source baseline:
+`6d725b1` (committed Phase 7B architecture). The preceding sections remain the
+Phase 7B design record; their future-implementation wording is superseded only
+by the bounded prototype described here. The Phase 7B architecture JSON remains
+an evidence artifact with `runtime_usable: false`.
+
+The isolated [MEKF core](../basilisk_runner/attitude_mekf.py),
+[shadow harness](../basilisk_runner/attitude_mekf_prototype.py),
+[test configuration](../basilisk_runner/config/attitude_mekf_test_only.json) and
+[regression tests](../basilisk_runner/test_attitude_mekf.py) implement A01–A07
+for mathematical/software testing. No production scenario imports this estimator.
+SimpleNav, controller behavior, physical profiles, Earth orientation and magnetic
+cycle scheduling are unchanged. The harness consumes an in-memory run of the
+existing cycled scenario and does not feed estimates back to its plant/controller.
+
+Closeout review: 2026-09-13. The successful numerical verification below was
+completed before the interruption and remains valid. This closeout corrects and
+clarifies documentation; it does not reinterpret those results as flight evidence.
+
+| EVIDENCE CLASS | WHAT IS ESTABLISHED |
+|---|---|
+| KNOWN / VERIFIED SOFTWARE RESULTS | Analytic/unit behavior, bounded replay, tested observability and unchanged production results reported below. |
+| CANDIDATE / DEVELOPMENT ARCHITECTURE | MEKF is the HS-2 simulation estimator candidate; live opt-in consumer integration remains a separate gate. |
+| ASSUMED / TEST-ONLY | Conditioning covariances, synthetic biases, ideal measurements, S=B in the prototype magnetic path, zero injected alignment error and numerical test thresholds. |
+| BLOCKED / NOT YET CLAIMABLE | Installed sensor performance or mounting calibration, flight Q/R and gyro/magnetometer/CSS stochastic models, flight estimator or attitude-knowledge accuracy, and total pointing accuracy. |
+
+### Implemented contract
+
+- Nominal scalar-first unit q_BN, residual bias in B (rad/s), local error
+  [delta_theta_B, delta_b_B] and 6 by 6 P. The Phase 7B Hamilton/passive convention,
+  negative bias coupling, positive vector Jacobian, Joseph update and right-Jacobian
+  covariance reset are implemented. No eigenvalue clipping or hidden jitter.
+- Constant-rate quaternion propagation and exact constant-rate F transition;
+  positive-weight quadrature for nonzero test Qc. The standard deterministic
+  fixture has Qc=0. P0 and positive tangent weights exist for numerical conditioning
+  and initial uncertainty in tests, **not installed sensor statistics**.
+- Valid magnetic/Sun vectors can be normalized from arbitrary nonzero magnitude.
+  Declared sensor-frame data require a proper supplied C_SB; already-body data are
+  explicitly labeled B. Epoch, finite-value, dimension, zero-vector, mount,
+  local-angle/antipodal and acquisition-pair consistency checks reject bad inputs.
+  A coherent wrong rotation or a corruption within the local gate is not generally
+  detectable without additional independent information.
+- TRIAD requires two valid noncollinear pairs at the same physical epoch. It
+  resets to the explicitly configured bias prior and P0 on acquisition/reacquisition.
+  It rejects inconsistent inter-vector angles. Asynchronous **initial acquisition**
+  by gyro transport is deferred; asynchronous local updates are supported.
+- Gyro intervals have explicit, contiguous start/end coverage, interpreted as
+  piecewise constant rates. Vector events retain acquisition/reference epoch,
+  source and unique ID; receipt time is separate. Future/uncovered, outside-history,
+  duplicate and capacity-exceeding events are explicitly rejected. Gyro gaps raise
+  an error; the estimator does not substitute truth or propagate stale rate silently.
+- Delayed events restore the checkpoint before the affected epoch and replay
+  all later gyro segments **and vector/loss events**. Same-epoch order is loss,
+  magnetic, Sun, then event ID. Numerical gates are reevaluated; revised dispositions
+  and replay lineage are recorded. Counts represent the resulting history, not
+  the number of replays. The TEST-ONLY history is bounded by 3 s and 512 events;
+  the capacity bound may shorten the usable time window.
+- Outputs include q/MRP, bias, P, initialization flag, instantaneous attitude rank,
+  physical state epoch and last-update source/event/epoch. A rate is explicitly
+  an interval-supported estimate, not a point sample. Following a correction or
+  acquisition it is invalidated until new gyro coverage exists; a live NavAtt
+  consumer adapter therefore remains required.
+- Magnetic-cycle admission uses the actual acquisition row: SAMPLE event,
+  sample/TAM/reference epochs, valid flag, native coil-off witnesses and quiet age.
+  The measurement comes from `tam_sample_B_B_*`, checked against the frozen cycle
+  sample. Current truth `B_B_*` is never used as a magnetic observation.
+  Receipt during actuation can replay an earlier valid acquisition; an ACTUATE
+  row containing held data cannot masquerade as an acquisition.
+
+### Noise-free truth harness and numerical finding
+
+All numerical assumptions are **ASSUMED / TEST-ONLY**, revision 2026-09-07,
+sourced to the isolated test configuration. It specifies zero injected measurement
+noise/alignment error, a zero-bias base case and separately imposed constant biases.
+The inertial Sun direction is synthetic; CSS reconstruction, installed mounts and
+ephemeris accuracy are not modeled. The existing WMM/cycle produces magnetic truth
+and TAM samples. No hardware timing or sensor rate is inferred from these fixtures.
+
+The initial endpoint-trapezoidal gyro treatment at the 0.1 s truth record interval
+passed eight of nine harness checks but missed the three-axis bias bound. In the
+zero-bias case it produced a false estimated bias norm of 2.40962e-4 rad/s. The
+failed diagnostic is preserved in
+[the coarse-gyro report](../basilisk_runner/output_data/attitude_mekf_coarse_gyro_diagnostic.json).
+The final sensor synthesizer uses four-point cubic interpolation of recorded
+Basilisk **angular rate**, sampled at 0.01 s subinterval midpoints. It does not
+derive gyro from attitude differences. Offline lookahead belongs to synthetic
+sensor generation, not a proposed real-time sensor packet. Production clocks stay
+unchanged. Polynomial-rate tests independently verify the interpolation and
+integration refinement. Covariance weights and pass bounds were not loosened.
+
+The refined zero-bias residual bias norm is 3.19503e-7 rad/s, supporting the
+discretization diagnosis. Finite interpolation, integration and filter-linearization
+error remains. These residuals are algorithm-test results, not knowledge accuracy.
+
+### Verified results
+
+**97 regression tests pass**, including 24 new Phase 7C tests and all 73 existing
+tests. Propagation covers zero, +X/+Y/+Z and arbitrary constant body rates against
+analytic rotations (principal-angle discrepancy below 2e-15 rad in those fixtures).
+Zero/one-axis/three-axis imposed-bias cases converge with two-vector aiding
+(final bias norm error below 2e-6 rad/s in the controlled stationary tests).
+Removing aiding leaves the imposed bias unestimated and causes the expected drift.
+
+Single-vector tests preserve the ambiguous attitude and bias direction. A rotating
+body test explicitly follows the unobservable inertial Sun rotation as its
+components change in B; its covariance projection does not fall below its prior.
+The filter never labels a single update as full instantaneous observability.
+These tests do not prove calibrated covariance consistency for arbitrary nonlinear
+trajectories or uncertain sensor models.
+
+Interior-interval/asynchronous updates, same-epoch ordering, delayed updates with
+intervening measurements, checkpoint pruning, duplicate/future/outside-history
+rejection and explicit loss/reacquisition pass. Delayed versus chronological
+q/bias/P agree within 2e-16 absolute numerical tolerance in the controlled replay
+fixture. This is a numerical test tolerance, not a flight timing specification.
+
+The five 60 s Basilisk truth cases pass all nine harness checks. Angles below are
+principal-angle errors in **rad**, measured independently with Basilisk conversion
+utilities and a sign-invariant quaternion metric; bias errors are norms in **rad/s**.
+The report also retains an axis-resolved sin(angle)-times-axis vector; it approximates
+a rotation vector only for small errors.
+
+| CASE | INITIAL ANGLE | FINAL ANGLE | MAX ANGLE | FINAL BIAS ERROR | MAG / SUN UPDATES | INVALID REJECTIONS | ACQUISITIONS / REACQUISITIONS |
+|---|---:|---:|---:|---:|---|---|---|
+| 1: gyro + magnetic + Sun | 2.32634e-16 | 4.87204e-6 | 4.87204e-6 | 3.19503e-7 | 60 / 86 | 0 | 1 / 0 |
+| 2: gyro + intermittent magnetic, no Sun | 0.269258 | 0.0135648 | 0.269258 | 2.92009e-4 | 20 / 0 | 0 | 0 / 0 |
+| 3: gyro + Sun; actuation magnetic rejected | 0.269258 | 0.111541 | 0.269258 | 1.97463e-5 | 0 / 86 | 60 | 0 / 0 |
+| 4: gyro-only gap, explicit loss/reacquisition | 2.32634e-16 | 4.06116e-6 | 4.06116e-6 | 3.51802e-7 | 54 / 77 | 0 | 2 / 1 |
+| 5: imposed three-axis bias with both vectors | 0.269258 | 1.11113e-4 | 0.270366 | 1.42915e-5 | 60 / 86 | 0 | 0 / 0 |
+
+Cases 1/4 start uninitialized and first acquire at 0.4 s; their initial reported
+error is the first valid estimate. Cases 2/3/5 use a declared synthetic imperfect
+prior. Case 4 suppresses vector updates during 8–14.4 s, explicitly marks attitude
+lost at 14.4 s, then reacquires. Cases 1/5 each replay 59 delayed magnetic samples.
+No complete-convergence assertion is made for single-vector cases 2/3.
+
+All reported P matrices remain finite, symmetric and PSD; the smallest eigenvalue
+observed across cases is 9.56483e-9. Eigenvalues mix attitude/bias units and are
+numerical health diagnostics, **not attitude variances or an accuracy certificate**.
+The final six eigenvalues, ascending, are:
+
+| CASE | FINAL P EIGENVALUES |
+|---|---|
+| 1 | 9.79320e-9, 4.71132e-8, 9.16714e-8, 8.85504e-7, 2.71930e-6, 4.41537e-6 |
+| 2 | 7.26339e-8, 3.32176e-7, 6.08423e-7, 5.90154e-6, 2.59121e-5, 2.46407e-3 |
+| 3 | 1.55204e-8, 7.59660e-8, 1.59603e-7, 1.16322e-6, 6.28636e-6, 6.54248e-3 |
+| 4 | 1.93493e-8, 5.79742e-8, 1.09880e-7, 1.13993e-6, 3.56936e-6, 7.25126e-6 |
+| 5 | 9.56483e-9, 4.57297e-8, 9.03869e-8, 8.74677e-7, 2.68309e-6, 4.36866e-6 |
+
+Full precision, counts, configuration fingerprints and health metrics are in the
+[separate prototype report](../basilisk_runner/output_data/attitude_mekf_prototype_report.json).
+These generated local reports are not tracked evidence releases.
+
+### Production preservation and commands
+
+The full continuous baseline (5,793 rows), candidate profile (5,793 rows) and
+diagnostic cycle (57,924 rows) reproduced their existing CSV bytes exactly using
+`write_outputs=False` and comparing serialized in-memory results by SHA-256.
+Independent detumble checks passed 20/20 for each continuous profile; combined
+detumble/cycle checks passed 44/44. The standalone-reference check was explicitly
+excluded from these in-memory validations because no reference CSV was supplied.
+
+| SAVED PRODUCTION CSV | UNCHANGED SHA-256 |
+|---|---|
+| detumble_output.csv | `c9e8aff00b93ac1a70829a6b38ffb106d2a2dd2763f770bf59776dd6ac62a960` |
+| detumble_output_hs2_candidate.csv | `8fd59baf3c79bf9d01c5611b1d4030f8fbbfb6f1c7e272bc1cb750bbd4ffbeb1` |
+| detumble_output_cycled.csv | `791eb062bfa0ec89456fe1132d7798c6a6875cffe8faabd7e9e8cc46e7d4f57e` |
+
+Commands from the repository root (existing interpreter, no environment changes):
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_attitude_mekf.py -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_*.py' -q
+.\.venv\Scripts\python.exe -B basilisk_runner/attitude_mekf_prototype.py --report basilisk_runner/output_data/attitude_mekf_prototype_report.json
+git diff --check
+```
+
+The in-memory full-run verifier was invoked through `python.exe -B -` with
+`basilisk_runner` on sys.path. It called `run(config=get_profile_config(profile),
+cycle=cycle, write_outputs=False, make_plots=False)` for
+(regression_baseline, None), (hs2_candidate, None), and
+(regression_baseline, diagnostic_cycle_config()). It compared
+SHA256(frame.to_csv(index=False).encode('utf-8')) to the corresponding saved CSV,
+then ran `build_validation({}, summarize_basilisk(frame))` and, for the cycled case,
+`cycle_checks(frame, config)`. No production CSV was rewritten.
+
+### Readiness and next minimum step
+
+1. The implemented mathematics/software is trustworthy **within the exercised
+   ideal-data, local-error and bounded replay contracts**. It is a testable
+   prototype, not a general fault-tolerant or statistically calibrated estimator.
+2. It is ready for a separately authorized integration trial, but **not yet a
+   drop-in SimpleNav replacement**. Add a live NavAtt/quality facade and validate
+   actual gyro packet support, rate validity, sample-epoch controller consumption,
+   acquisition startup and failure handling before connecting estimates to control.
+3. It is **not ready to replace SimpleNav as the default production path**.
+   Production continues to use SimpleNav; no prototype imports/configuration
+   changes have been introduced into that path.
+4. It is **not ready for realistic HS-2 performance prediction**. U01–U11 remain
+   unresolved: physical body/mount registration, installed calibration/noise/bias,
+   CSS selection/reconstruction, gyro/filter/clock support, magnetic clean-window
+   behavior, correlations/reference errors, independent truth and accepted requirements.
+5. The next minimum software step toward estimator-derived pointing analysis is
+   that opt-in facade with independent epoch/rate/truth checks. Credible numerical
+   knowledge or pointing accuracy additionally requires measured sensor/timing
+   evidence, justified stochastic covariance models, observability/consistency
+   studies and a resolved boresight/control/error-budget chain. No pointing
+   controller or flight-performance claim is supplied here.
