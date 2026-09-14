@@ -6,6 +6,29 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7E dummy navigation consumer addendum — 2026-09-14
+
+**DUMMY NAVIGATION CONSUMER / NO CONTROL AUTHORITY / NOT FLIGHT VALIDATED.**
+Source: focused code trace, native-message tests and local diagnostic runs from
+Phase 7D commit `dd4b97d`; CONFIRMED software behavior only. See the
+[consumer contract](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7e-dummy-navigation-consumer--2026-09-14).
+
+| FIELD | FINDING |
+|---|---|
+| Paths / purpose | `attitude_navigation_consumer.py`, `validate_navigation_consumer.py`, consumer tests and explicit detumble API opt-in: verify navigation acceptance and logical source switching before controller connection. |
+| Inputs | Native NavAtt and mandatory quality companions only; no spacecraft truth or raw sensor input to consumer. SimpleNav quality is explicitly ASSUMED ideal-simulation availability. |
+| Control / actuation | None. Existing SimpleNav consumers and native actuation unchanged. No consumer output message can command an effector. Default production and diagnostic requested source remain SIMPLE_NAV. |
+| States / selection | UNINITIALIZED, VALID, STALE, DEGRADED, FAULTED, REACQUIRING. Explicit requests SIMPLE_NAV/MEKF/NONE; rejected MEKF selects NONE, never automatic fallback. Fault latches require explicit fresh reacquisition evidence. |
+| Frames / timing | Principal/shadow MRP and quaternion equivalence for C_BN mapping N to B; omega_BN_B in rad/s. State age uses consumer minus state epoch. Point consumer requires age 0; frozen consumer requires exact 0.4 s sample at 0.5 s, preserving both source headers. These allowances are TEST-ONLY. |
+| Schedule | Existing cycle/controller 600 and MEKF 580 unchanged; new SimpleNav quality 565, point probe 560 and frozen probe 555. The real cycle driver still samples before MEKF publication; direct rewiring would be incorrect. |
+| Validation | 135 regression tests pass, including 21 new tests. Seven live cases, four isolated adapter fault/recovery cases, analytic bidirectional handover and degraded-measurement/history cases pass. Startup valid at 0.4 s; fault fixture at 0.8 s, reset 1.2 s, reacquisition 1.4 s. |
+| Handover | Analytic attitude differences 4.44089e-16 / 1.11022e-16 rad, rate jumps zero, epoch jumps zero. Live detumble differences are reported separately in the architecture document; no estimator tuning or flight acceptance threshold. |
+| Preservation | Three committed-versus-working 4 s production cases byte-identical; seven live diagnostic hosts exactly match disabled host. Existing full production CSV hashes match committed evidence; full orbits were not rerun. |
+| Outputs | Dedicated `navigation_consumer_validation.json` with case telemetry, source transitions, acceptance/rejections, faults, epochs, ages, representations and provenance. Optional host artifacts have `_consumer` suffix; production schemas unchanged. |
+| Limitations / next | No controller handover, command-inhibition/retention policy, closed-loop safety or pointing claim. Next separately authorized step is a disconnected unchanged-controller command dry run behind the quality/exact-sample gate. Calibrated sensor/frame/timing evidence and accepted performance budgets remain unresolved. |
+
+Run `python basilisk_runner/validate_navigation_consumer.py --report basilisk_runner/output_data/navigation_consumer_validation.json` for dedicated cases. No default scenario command enables the consumer.
+
 ## Phase 7D live shadow navigation addendum — 2026-09-14
 
 **SHADOW DEVELOPMENT INTEGRATION / NOT FLIGHT VALIDATED.** This addendum records

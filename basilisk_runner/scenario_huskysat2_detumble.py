@@ -221,7 +221,9 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
 def run(stop_time_s=None, write_outputs=True, actuator=None,
         replay_commands=None, capture_commands=False, make_plots=True,
         config: HS2SimConfig = DEFAULT_CONFIG, cycle: MagneticCycleConfig | None = None,
-        shadow=None):
+        shadow=None, navigation_consumer=None):
+    if navigation_consumer is not None and shadow is None:
+        raise ValueError("Dummy navigation consumer requires explicit shadow mode")
     config = config.with_run_options(stop_time_s, actuator)
     actuator = config.magnetorquers.implementation.value
     step_ns = macros.sec2nano(config.timing.dynamics_step.value)
@@ -365,6 +367,14 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
                                      (shadow_observer, "ShadowNavMonitor", 570)):
             model.ModelTag = tag
             sim.AddModelToTask("DynamicsTask", model, ModelPriority=priority)
+
+    dummy_point = dummy_frozen = None
+    if navigation_consumer is not None:
+        from attitude_navigation_consumer import ConsumerOptions, attach_consumers
+        if not isinstance(navigation_consumer, ConsumerOptions):
+            raise ValueError("Explicit diagnostic ConsumerOptions required")
+        dummy_point, dummy_frozen = attach_consumers(sim, nav.attOutMsg, shadow_adapter.navOutMsg,
+                                                     shadow_adapter.statusOut, cycle, navigation_consumer)
 
     sc_log = sc.scStateOutMsg.recorder(rec_dt)
     mag_log = mag.envOutMsgs[0].recorder(rec_dt)
@@ -557,6 +567,12 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         df.attrs["shadow_status"] = shadow_adapter.history
         df.attrs["shadow_options"] = asdict(shadow)
         out_csv = out_csv.with_name(out_csv.stem + "_shadow_host.csv")
+    if dummy_point is not None:
+        df.attrs["navigation_consumer"] = dummy_point.history
+        df.attrs["navigation_frozen_consumer"] = dummy_frozen.consumer.history if dummy_frozen else []
+        # Consumer validation writes its own report; keep any requested host
+        # artifacts distinct from both production and Phase 7D shadow results.
+        out_csv = out_csv.with_name(out_csv.stem + "_consumer.csv")
     if write_outputs:
         df.to_csv(out_csv, index=False)
         out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")

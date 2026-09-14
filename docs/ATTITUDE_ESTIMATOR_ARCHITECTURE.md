@@ -692,3 +692,185 @@ gyro aperture/latency, magnetic clean-window validity, Sun reconstruction and
 noise/bias/correlation before deriving Q/R and testing covariance consistency.
 Released boresight alignment, control authority and an accepted knowledge/pointing
 error budget are additionally required for defensible pointing accuracy.
+
+## Phase 7E dummy navigation consumer — 2026-09-14
+
+**DUMMY NAVIGATION CONSUMER / NO CONTROL AUTHORITY / NOT FLIGHT VALIDATED.**
+Starting commit `dd4b97d` contains Phase 7D. This addendum closes the tested dummy
+consumer boundary; it does not authorize or implement controller handover. Source:
+the scoped consumer trace, new native-message tests and local validation below.
+Findings are CONFIRMED only as software behavior; all new policies/fixtures are
+ASSUMED / TEST-ONLY and are outside HS-2 runtime physical/sensor configuration.
+
+### Existing production consumers and future connection surface
+
+| CONSUMER | INPUT / INTERPRETATION | TIME, VALIDITY AND HANDOVER LIMIT |
+|---|---|---|
+| Continuous PythonBdotMTQController | Native NavAttMsg from SimpleNav; consumes omega_BN_B in B [rad/s], not attitude. Optional project C++ receives the same numeric rate/field arrays through the wrapper. | Uses execution time for controller_step; does not check NavAtt header/timeTag or estimator quality. Numeric finiteness and magnetic-field floor checks cannot distinguish invalid navigation from valid zero rate. Stale numeric nav is possible if its publisher stops. |
+| MagneticCycleDriver and its internal detumble controller | Reads current SimpleNav NavAttMsg; stores complete acquisition payload, MRPs sigma_BN and omega_BN_B; internal controller reads frozen sample_nav. | Acquire at 0.4 s checks current message headers, then compute at 0.5 s checks frozen acquisition epoch. The 0.1 s age is intentional. Validity is magnetic-cycle validity, not estimator initialization/quality. A fresh invalid zero NavAtt could pass timestamp checks. |
+| Historical PythonMRPDirectTorqueController in pointing | SimpleNav sigma_BN is treated as N-to-B attitude error relative to inertial identity; uses principal/shadow MRPs and omega_BN_B [rad/s]. | Uses execution time, assumes navigation validity, no estimator quality or stale-navigation gate. Read for this connection trace only; pointing code/behavior remain unchanged. |
+| Navigation recorders and Phase 7D ShadowNavigationObserver | Native SimpleNav attitude/rate/time fields; observer also compares estimator/truth for diagnostics. | Recording is not a control consumer. The shadow observer checks publication epochs; it does not authorize any actuator. Minimal scenario has no SimpleNav consumer. |
+
+The actual cycle driver's acquisition priority 600 is **before** the MEKF's 580.
+Directly substituting the MEKF message at that existing acquisition call would
+therefore read the preceding estimator publication. A future controller interface
+must capture the matching estimate *after* publication, retain the corresponding
+TAM epoch and quality, and consume that snapshot at the existing compute event.
+The new frozen probe demonstrates this boundary without changing the driver.
+
+### Input, freshness and representation contract
+
+`attitude_navigation_consumer.py` receives only bound native NavAtt readers and
+published quality companions. It receives no spacecraft, raw sensor, estimator
+core, controller or actuator handle. SIMPLE_NAV is an explicitly permitted
+comparison/source option; operational decisions never read spacecraft truth.
+The module creates no native output message and cannot issue actuator commands.
+
+Each snapshot retains source identity, original NavAtt header, timeTag, sigma_BN,
+omega_BN_B, original quality-channel header and quality payload. MEKF quality is
+the unchanged Phase 7D companion. The explicit SimpleNavQuality facade declares
+ASSUMED ideal-simulation availability from a current written header/timeTag;
+SimpleNav itself has no validity bit. This is not installed sensor health evidence.
+Source identity is a fixed subscription binding, not inferred from numerical data.
+
+Acceptance requires explicit initialized/valid quality, no fault, consistent
+quality headers, state/publication/gyro epochs, finite representable navigation,
+and matching payload timeTag. `state_epoch <= publication_epoch <= quality_epoch
+<= consumer_epoch`; age is **consumer epoch minus state epoch**. Current-point
+consumption uses TEST-ONLY maximum age 0 ns. The frozen probe permits the existing
+100,000,000 ns acquisition-to-compute delay but additionally requires the **exact
+specified acquisition epoch**. This inclusive age boundary passes at 100,000,000 ns
+and fails at 100,000,001 ns. A current but wrong-sample estimate is rejected too.
+No nearest-time matching or flight stale threshold was introduced.
+
+Repeated publication without state advancement is separately visible through
+state/publication-advanced flags and cannot refresh state age. Future epochs,
+inconsistent headers/timeTag, source mismatch and nonfinite navigation fail the
+contract. Faults do not turn an old valid attitude into a fresh sample.
+
+The internal diagnostic representation contains principal MRPs, scalar-first
+quaternion and C_BN (N components to B), with unchanged omega_BN_B [rad/s in B].
+Equivalent MRP shadow sets are canonicalized; quaternion sign-equivalent attitudes
+are compared geometrically. A passive +X rotation test independently checks the
+N-to-B sign. Unsupported NavAtt vehSunPntB remains outside the contract.
+
+### Deterministic state and selection rules
+
+| STATE | ENTRY / ACCEPTANCE / EXIT |
+|---|---|
+| UNINITIALIZED | Quality says no acquisition; selected source NONE, no navigation accepted. Fresh valid acquired quality permits VALID. |
+| VALID | All quality, epoch and representation checks pass. Only this state exposes internal navigation for hypothetical consumption. |
+| STALE | Quality/state age exceeds the explicit test allowance or the required sample epoch differs. Selected NONE; fresh matching input may recover without an invented estimator reset. |
+| DEGRADED | Explicit NONE selection, unavailable source/quality, or initialized but invalid quality. Selected NONE; no automatic fallback. |
+| FAULTED | Estimator fault or invalid protocol/navigation; per-source latch prevents subsequent merely fresh packets from restoring acceptance. |
+| REACQUIRING | A latched source reports uninitialized after reset. Accept only a fresh post-fault acquisition event with increased acquisition count. |
+
+Source requests are explicit ordered `(epoch_ns, source)` commands: SIMPLE_NAV,
+MEKF or NONE. Default diagnostic selection is SIMPLE_NAV; default production
+selection also remains SimpleNav. Requesting disabled/uninitialized/stale/faulted
+MEKF selects NONE, even if SimpleNav is valid. There is no automatic flight
+failover policy. Fault latches survive logical source switches. Recovery checks
+are evaluated at consumer execution events; no claim is made about disabling a
+held physical command between those events.
+
+Sun loss, invalid magnetic windows, rejected out-of-history samples and delayed
+updates do not directly determine consumer state. The consumer follows published
+estimator quality. An initialized estimator with valid gyro coverage can still
+publish usable interface data during gyro-only propagation. VALID does not imply
+absolute observability or satisfaction of an attitude-knowledge bound.
+
+### Live scheduling, telemetry and handovers
+
+Explicit Python API `run(..., shadow=ShadowOptions(...),
+navigation_consumer=ConsumerOptions(...))` enables the experiment. Default None
+performs no consumer import, construction or execution. No CLI default changes.
+The standalone validator is the dedicated runnable entry point.
+
+Existing priorities remain unchanged through controller/cycle 600, bridge 590,
+MEKF 580 and shadow observer 570. New SimpleNav quality runs at 565, point dummy
+consumer at 560 and frozen probe at 555. The frozen probe copies both published
+navigation/quality snapshots after estimator publication at SAMPLE, preserving
+their original headers, and consumes them at COMPUTE. It owns no controller.
+
+Telemetry records requested/selected source, state, acceptance, quality validity,
+initialization, state/publication/quality/consumer epochs, required acquisition
+epoch, state age, received and canonical attitude/rate, fault/latch/reset evidence,
+rejection reason and source transitions. Unavailable internal navigation is null,
+not fabricated zero attitude/rate. Handover diagnostics compare the two published
+sources **at the same state epoch**; unequal epochs are flagged and no false angle
+jump is computed. These diagnostics do not influence selection. Analytic truth
+comparisons exist only in validation code.
+
+Source changes after an unavailable interval are recorded without inventing a
+continuity measurement across the gap. This is a diagnostic switch, not a verified
+closed-loop bumpless transfer. Report JSON retains all case telemetry, baseline
+commit and source-file hashes. Host outputs, if explicitly requested, receive an
+additional `_consumer` suffix; consumer histories are returned in DataFrame attrs
+and saved by the validator, not added to production CSV schemas.
+
+### Verification results
+
+Source: local Phase 7E validation, 2026-09-14. **135 regression tests pass**, including
+21 new boundary/integration tests. The initial no-truth dependency test incorrectly
+introspected Basilisk's wrapped constructor; it now checks the first-party AST and
+message APIs directly. No third-party code or dependencies were changed.
+
+- Seven live 4 s cases pass: startup, default source, bidirectional handover, Sun
+  loss, delayed magnetic delivery, gyro-only with explicit prior, and single-vector
+  startup. All host DataFrames exactly match the consumer-disabled host.
+- Live startup is unavailable at 0–0.3 s and VALID at 0.4 s. First frozen
+  consumption at 0.5 s retains state/publication 0.4 s and age 0.1 s.
+- Four isolated actual-adapter/native-message fault cases pass: nonfinite gyro,
+  missing interval coverage, explicit gyro-validity fault and corrupted nonfinite
+  NavAtt. Sequence: acquired 0.4 s; FAULTED at 0.8 s and latched through 1.1 s;
+  explicit reset at 1.2 s; REACQUIRING through 1.3 s; fresh reacquisition/VALID at
+  1.4 s. Synthetic common-epoch pairs are TEST-ONLY, not a flight acquisition cadence.
+- Invalid magnetic-window and replay-history-limit rejection leave initialized
+  propagation valid, with no fabricated vector updates. Freshness tests include
+  missing/stale quality, refreshed publications with old states, future epochs,
+  payload/header mismatch, exact age boundary and exact frozen-sample matching.
+
+| DIAGNOSTIC HANDOVER | EPOCH [s] | ATTITUDE DIFFERENCE [rad] | RATE DIFFERENCE [rad/s] | STATE / PUBLICATION EPOCH JUMP [ns] |
+|---|---:|---:|---:|---|
+| Analytic spin SIMPLE_NAV → MEKF | 1.0 | 4.44089e-16 | 0 | 0 / 0 |
+| Analytic spin MEKF → SIMPLE_NAV | 2.0 | 1.11022e-16 | 0 | 0 / 0 |
+| Live detumble SIMPLE_NAV → MEKF | 1.0 | 1.36917e-5 | 0 | 0 / 0 |
+| Live detumble MEKF → SIMPLE_NAV | 3.0 | 3.72038e-6 | 2.09412e-5 | 0 / 0 |
+
+The analytic fixture uses a 0.4 rad initial +X angle and constant 0.02 rad/s spin,
+with deliberately shadow-set SimpleNav MRPs. Maximum analytic DCM difference is
+4.44089e-16. Numerical acceptance 1e-12 is ASSUMED / TEST-ONLY. Live differences
+are measured development effects of ideal gyro reconstruction/estimation; the
+filter was not tuned to remove them. No flight handover tolerance was selected.
+
+Production preservation uses committed Phase 7D versus working-code **4 s runs**
+for continuous baseline, hs2_candidate and diagnostic cycle: byte-identical in
+all three. Existing full-run CSV hashes still match committed evidence above.
+Full orbits were not rerun because changes are conditional diagnostic additions
+and the user authorized this regression/hash strategy. No production output was
+overwritten. Compileall and whitespace checks pass; optional static tooling was
+not installed or run.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_*.py' -q
+.\.venv\Scripts\python.exe -B basilisk_runner/validate_navigation_consumer.py --report basilisk_runner/output_data/navigation_consumer_validation.json
+git diff --check
+```
+
+### Next minimum experiment and remaining blockers
+
+Next: separately authorize a **disconnected command dry run** of the unchanged
+detumble controller behind this quality/exact-sample gate. Feed captured MEKF nav
+and matching TAM to a diagnostic controller instance whose outputs have no
+effector subscription; verify startup, handover, fault/reset and inhibition of
+stale/invalid commands. This is the smallest step before closed-loop actuation.
+
+The consumer boundary now supports a future opt-in experiment, but direct
+rewiring is unsafe: acquisition scheduling, command retention/inhibition during
+faults, restart behavior and closed-loop sensitivity have not been verified.
+SimpleNav remains production default. Native quality transport, calibrated
+measurement/time/frame models, meaningful validity/uncertainty thresholds,
+boresight/error budgets and the U01–U11 evidence remain unresolved. This phase
+improves integration credibility; it does not establish attitude knowledge or
+pointing accuracy.
