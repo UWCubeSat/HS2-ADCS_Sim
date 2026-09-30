@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7F-2A disconnected controller command mathematics - 2026-09-30
+
+**DISCONNECTED CONTROLLER COMMAND MATHEMATICS / NO ACTUATOR AUTHORITY /
+NOT CLOSED LOOP / NOT FLIGHT VALIDATED.** Evidence anchor: Phase 7F-1 `4d3cc0b`.
+This isolated math gate narrows the earlier 7F-2 proposal; fault handling is deferred.
+
+| FIELD | FINDING |
+|---|---|
+| Paths / purpose | New `disconnected_detumble_math.py` and `test_disconnected_detumble_math.py`: one claim, accepted coherent snapshot to correct disconnected command mathematics. No scenario integration. |
+| Inputs / provenance | Immutable accepted Phase 7F-1 snapshot: sampled body rate rad/s and S-to-B transformed TAM in T, original epochs/quality/provenance, attitude carried but unused. Exact intended evaluation epoch plus unchanged `hs2_sim_config` with full source/status JSON and fingerprint. |
+| Controller | Reuses actual `basilisk_adcs_adapter.controller_step`: K(omega x B), existing componentwise current/dipole clipping, then m x B. Active backend in these tests is Python; optional `adcs_core` unavailable. Only missing requested-dipole diagnostic is reconstructed with the existing cross helper. |
+| Output / actuation | Frozen Python record of requested/clipped dipole, current, predicted torque, flags, computation validity and epochs/provenance. No native output message, subscriber, effector or schedule. Predicted torque is never presented as applied torque; computation validity is not authorization. |
+| Timing / frames | Inputs share sample s; math evaluates at selected e, preserving both. Test-only diagnostic case s=0.4 s, e=0.5 s. B-field uses C_SB transpose, with explicit nonidentity-mount case. No production timing, axis mapping or hardware value changed. |
+| Environment / sensors | Synthetic controlled accepted-snapshot fixtures, no orbit/WMM, live estimator, sensor-performance model or spacecraft propagation in this test. |
+| Independent validation | 9/9 tests, 13 cases: zero/parallel/perpendicular/arbitrary, mixed/all saturation, positive/negative clipping each axis, and S-to-B direction. Actual production SysModel matches dipole/torque exactly. Independent 50-digit Decimal scalar equations agree within roundoff; maximum torque error 2.964615315390051e-21 N m. Sign/damping, current and epoch checks pass. |
+| Preservation | Existing runtime/configuration and saved outputs unchanged. Compileall passes; focused tests only. No full orbit or existing regression rerun needed for this isolated addition. No static tooling installed. |
+| Gate / limits / next | PASS for controlled command mathematics only. Capture-time coherence does not imply current health. Next candidate 7F-2B is evaluation-time inhibition/fault/reset handling, still disconnected. No source handover, actuator authority, closed-loop safety, pointing or flight claim. |
+
+See the [math, timing, evidence and numerical results](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7f-2a-disconnected-controller-command-mathematics---2026-09-30).
+
 ## Phase 7F-1 coherent control snapshot — 2026-09-30
 
 **CONTROL SNAPSHOT / SCHEDULING DEVELOPMENT CONTRACT / NO CONTROLLER AUTHORITY /

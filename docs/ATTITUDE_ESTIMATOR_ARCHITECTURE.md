@@ -1042,3 +1042,149 @@ unchanged disconnected controller calculation from accepted snapshots with
 evaluation-time health checks, explicit inhibition, no command retention through
 fault/reset, and independent command-math verification. This phase establishes
 neither command correctness nor closed-loop, pointing or flight performance.
+
+## Phase 7F-2A disconnected controller command mathematics - 2026-09-30
+
+**DISCONNECTED CONTROLLER COMMAND MATHEMATICS / NO ACTUATOR AUTHORITY /
+NOT CLOSED LOOP / NOT FLIGHT VALIDATED.** Evidence anchor: committed Phase 7F-1
+`4d3cc0b`, initially clean working tree. This narrower phase implements only the
+command-math part of the preceding next-gate proposal. Evaluation-time health,
+fault inhibition, reset/restart and source handover remain unimplemented.
+
+**Engineering gate: PASS for the controlled command-mathematics claim.** Given
+an accepted coherent snapshot, the isolated calculation reuses the unchanged
+production dispatcher and agrees with both the actual production SysModel and
+independent scalar arithmetic in the cases below. This is CONFIRMED software/math
+behavior for the stated configuration, not confirmation of HS-2 hardware or
+permission to apply a command.
+
+### Reused production contract
+
+Source: `basilisk_adcs_adapter.py` and `hs2_sim_config.py` at `4d3cc0b`; inspected
+2026-09-30. The existing `PythonBdotMTQController` reads body rate from NavAtt and
+`tam_S` from TAMSensorMsg, assuming S=B, then calls `controller_step`. Despite its
+class name, the law is rate-cross-field; it does not numerically differentiate a
+measured magnetic field. For each body-aligned actuator axis i:
+
+```text
+m_requested_B = K (omega_BN_B x B_B)
+I_bound_i = min(I_limit_i, m_limit_i / g_i)
+I_i = clip(m_requested_i / g_i, -I_bound_i, +I_bound_i)
+m_clipped_i = g_i I_i
+tau_predicted_B = m_clipped_B x B_B
+```
+
+`omega_BN_B` is rad/s; B_B is T; K is A m^2 s/(rad T); g is A m^2/A;
+current is A; dipole is A m^2; predicted torque is N m. Saturation flags use the
+existing current-clipping difference threshold of 1e-15 A. Finite-input and
+minimum-field checks remain those of the existing controller. Configured axes
+are identity/body aligned; this does not implement allocation for other axes.
+
+K=67200, dipole limits=(0.2, 0.2, 0.85) A m^2, rod gains=(2.3, 2.3) A m^2/A,
+resistances=(51, 51, 4.4) ohm, rod voltage limits=(5, 5) V, aircoil power
+limit=1.75 W, and minimum field=1e-12 T are unchanged **ASSUMED** legacy/provisional
+inputs from `hs2_sim_config.py` (recovery provenance 2026-09-06). Rod current
+limits follow V/R, Z current follows sqrt(P/R), and Z gain follows m_limit/I_limit.
+These are not released hardware values. The full status/source-bearing config is
+retained in every calculation record as canonical JSON with fingerprint
+`99de374af2f512e27d34e40fdc3327356662ef48804f7ba7945b7a703a68ad8f`.
+
+`disconnected_detumble_math.evaluate_snapshot` calls that public dispatcher once.
+The optional `adcs_core` is unavailable, so this run exercises the
+Python backend. The dispatcher remains unchanged, including its optional-core
+behavior; no C++ parity claim is added. The record distinguishes optional-core
+availability/enabling, not a guaranteed backend when optional dispatch falls back.
+
+The production return value has no unclipped dipole field. Only that diagnostic
+is reconstructed using K and the existing cross-product helper, as in existing
+cycle telemetry. Clipped dipole, current, predicted torque, saturation flags and
+computation validity come directly from the production return value. There is no
+second clipping/controller implementation in the development module.
+
+### Frozen inputs and output boundary
+
+The input is the Phase 7F-1 accepted immutable `ControlSnapshot`. N is the existing
+inertial frame, B the modeled spacecraft body frame, and S the TAM sensor frame.
+The snapshot has already transformed `B_B = C_SB^T B_S`, where C_SB maps B to S.
+The calculation uses this B-frame vector, never the raw S components. sigma_BN
+defines C_BN mapping N to B and is retained with provenance; this rate-based law
+does not consume attitude or the optional inertial reference field.
+
+Sample/state epoch s, original publication/quality headers, capture epoch c and
+intended compute epoch e remain distinct in the nested snapshot. The function
+requires actual evaluation at e and passes e in seconds to the production math;
+both vectors remain the frozen sample at s. Controlled fixtures use the unchanged
+ASSUMED / TEST-ONLY diagnostic sample at 0.4 s and evaluation at 0.5 s. This
+stateless law currently does not depend numerically on elapsed time. No task is
+scheduled and no hold/application interval is implemented by this module.
+
+The immutable Python record contains requested and clipped body dipoles, current,
+predicted torque, saturation flags, computation-valid flag, evaluation epoch,
+input snapshot and full configuration provenance. It can be serialized with
+`dataclasses.asdict`; the focused tests evaluate independent math from that record.
+There is no output message, write/subscribe method, SysModel, effector or production
+import of this development module. Its actuator-authority field is false.
+`command_valid` means only the existing numerical calculation accepted its inputs.
+It is **not** a current-health assessment, command authorization or applied-torque
+measurement. The exact-epoch precondition does not replace a future safety gate.
+
+### Focused independent verification
+
+`test_disconnected_detumble_math.py` passes **9/9 tests across 13 controlled
+accepted snapshots**: zero rate, rate parallel to B, perpendicular rate/field,
+arbitrary unsaturated vectors, mixed clipping, all-axis clipping, positive and
+negative clipping separately on X/Y/Z, and a nonidentity S-to-B fixture. Inputs
+and tolerances are **ASSUMED / TEST-ONLY**, sourced to these fixtures, 2026-09-30.
+They do not run a live MEKF or establish estimation accuracy.
+
+The reference is the actual unchanged `PythonBdotMTQController`, invoked in
+isolation with equivalent synthetic native input messages. The already transformed
+B field is supplied at its S=B math boundary. Only a test reader observes its
+command header; no actuator subscribes. Inputs, current, flags and computation
+validity match; clipped dipole and predicted torque are exactly equal. Input
+headers are s=0.4 s; native reference publication is e=0.5 s. The development
+record itself has no publication/actuation event.
+
+Independent checking uses 50-digit Decimal scalar component equations from the
+logged input/config record, derives V/R and sqrt(P/R) limits independently,
+clamps in dipole space before recovering current, and computes m x B without a
+production helper or NumPy cross product. A hand case (+X rate, +Y field) gives
++Z requested dipole 0.1344 A m^2 and -X torque 2.688e-6 N m. Sign reversal and
+nonpositive predicted torque dot sampled rate are also checked. These sampled
+math checks do not assert energy decay for a held command in a changing field.
+
+| Comparison | Maximum absolute error | Units |
+|---|---:|---|
+| Production SysModel versus development clipped dipole | 0 | A m^2 |
+| Production SysModel versus development predicted torque | 0 | N m |
+| Independent requested dipole | 1.7763568394002505e-15 | A m^2 |
+| Independent clipped dipole | 6.938893903907228e-17 | A m^2 |
+| Independent current | 3.122502256758253e-17 | A |
+| Independent predicted torque | 2.964615315390051e-21 | N m |
+
+Independent tolerance is relative 1e-12 plus absolute 1e-14 A m^2 for dipole,
+1e-14 A for current, or 1e-18 N m for torque; these are floating-point test tolerances,
+not physical accuracy requirements. Zero/parallel cases are exactly zero.
+Structural tests check immutable output, no command endpoint, and no active
+imports in scenario, controller, cycle driver or MEKF adapter.
+
+The initial test harness incorrectly requested a timestamp from an output message
+object. It was corrected to use a test-only native message reader; the final
+compileall and all nine focused tests pass. No production correction was needed.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_disconnected_detumble_math.py' -v
+git diff --check
+```
+
+Existing runtime/configuration files, estimator, subscriptions, scheduling and
+saved outputs remain unchanged. Existing regression suites and full-orbit runs
+were not repeated because this phase changes no shared runtime path. No static
+dependency was installed and no static-check result is claimed.
+
+**Next candidate, Phase 7F-2B:** separately authorize evaluation-time
+health/revocation checks, explicit inhibition and no retention across fault/reset,
+with disconnected restart tests. Do not infer current validity from capture-time
+coherence. Source handover, actuator connection, closed-loop estimation/control,
+pointing and flight performance remain blocked by subsequent engineering gates.
