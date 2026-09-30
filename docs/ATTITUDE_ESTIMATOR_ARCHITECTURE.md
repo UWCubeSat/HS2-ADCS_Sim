@@ -1188,3 +1188,131 @@ health/revocation checks, explicit inhibition and no retention across fault/rese
 with disconnected restart tests. Do not infer current validity from capture-time
 coherence. Source handover, actuator connection, closed-loop estimation/control,
 pointing and flight performance remain blocked by subsequent engineering gates.
+
+## Phase 7F-2B evaluation-time command health gate - 2026-09-30
+
+**EVALUATION-TIME COMMAND HEALTH GATE / NO ACTUATOR AUTHORITY /
+NOT CLOSED LOOP / NOT FLIGHT VALIDATED.** Evidence anchor: committed Phase 7F-2A
+`de04df4`, initially clean working tree. Sources are the unchanged Phase 7D/E
+adapter/consumer interfaces and Phase 7F-1/2A records at that commit. No audit,
+external-source lookup, controller redesign or shared runtime change was performed.
+
+**Engineering gate: PASS within the observed development lifecycle.** The isolated
+`command_health_gate.py` rejects a mathematically valid stored command when current
+source health is lost. Health loss latches; clearing a valid/fault bit is not
+recovery. Explicit reset, fresh acquisition, a newly coherent post-reacquisition
+snapshot and a new numerical command are all required. These are CONFIRMED test
+results for this implementation; the policy remains a DEVELOPMENT CANDIDATE.
+
+### Three separate validities and five epoch meanings
+
+| Evidence / epoch | Meaning and check |
+|---|---|
+| Capture-time validity | Phase 7F-1 accepted coherent MEKF/TAM snapshot. Remains historical evidence when source health later fails. |
+| Mathematical command validity | Unchanged Phase 7F-2A `command_valid`; records numerical computation validity, not source health or authority. |
+| Evaluation-time usability | New `command_usable`, established on every gate call using current source evidence and retained lifecycle state. A previous true decision is not reusable authorization. |
+| Sample epoch s | Original matching nav state/TAM acquisition; unchanged in the command record. Test fixture 0.4 s. |
+| Snapshot capture epoch c | Original freeze epoch, with s <= c <= compute. Test fixture 0.4 s. |
+| Command computation epoch k | Existing `CommandMathematics.evaluation_epoch_ns`, explicitly identified as computation time here. Test fixture 0.5 s. |
+| Command use/evaluation epoch u | New gate-call epoch. This phase keeps u=k=the selected compute event; computation and health evaluation are ordered operations at that same timestamp. It does not add a hold or later-use permission. |
+| Current quality epoch q | Development quality-channel publication stamp, status_epoch_ns and sim_epoch_ns must agree with u. Current native NavAtt state/publication/timeTag and gyro support also describe u. Stored command inputs still describe s. |
+
+All timestamps are exact integer simulation ns. No nearest-time join or flight
+age threshold is introduced. The zero-age check reuses Phase 7E `assess` with
+required current state epoch u. A fault can occur after computation as a later
+operation at the same 0.5 s timestamp; that case inhibits use. A later timestamp
+also cannot reuse the command: its original selected evaluation deadline is over.
+This gate does **not** establish permission over the Phase 6A later ACTUATE burst.
+Any eventual actuator-bound interface must define and recheck health at the actual
+application boundary; no such interface is implemented in this phase.
+
+### Gate inputs, outputs and lifecycle
+
+Inputs are an accepted immutable `ControlSnapshot`, the unchanged disconnected
+`CommandMathematics`, current Phase 7E `Snapshot`/consumer decision and current
+evaluation epoch. `observe` consumes source publications between command events;
+`notify_reset` receives the existing explicit `InputBatch.reset_acquisition`
+request. Both must be supplied by an eventual development host. No reset of the
+estimator, native output subscription or task attachment occurs inside this gate.
+
+Output is an immutable `CommandUseDecision`: numerical command/provenance retained
+by reference, usability, explicit inhibition reason, sample/capture/computation/use
+epochs, separate capture/math flags and frozen current-health evidence. Health
+evidence includes source state, quality epoch, lifecycle state, acquisition epoch
+and count, and reset epoch. Original command numbers, configuration fingerprint,
+source strings and snapshot epochs remain unchanged. Configuration JSON/fingerprint,
+snapshot binding, finite metadata and provenance fields are checked without
+recomputing control mathematics. These checks detect inconsistent supplied records;
+they are not cryptographic authentication or proof against a dishonest producer.
+
+| Event / condition | Deterministic outcome |
+|---|---|
+| Startup | Await a witnessed current healthy acquisition event with positive count. A valid bit alone or prior-only initialization does not bootstrap this development lifecycle. |
+| Healthy current MEKF + accepted consumer + current acquisition provenance | Command usable only at its selected evaluation event with valid bound snapshot/command records. No SimpleNav alternative is selected. |
+| Estimator fault, navigation latch, uninitialized source after readiness, revoked validity, nonfinite/inconsistent/stale source metadata | Command unusable; lifecycle FAULTED. Inhibition persists even if later input merely clears the fault bit. |
+| Missing/mismatched/invalid snapshot or command provenance | Command unusable with an explicit record reason. It does not fabricate a source fault or mutate the numerical command. |
+| Explicit reset notification | Revoke old acquisition eligibility and enter REACQUIRING; uninitialized status remains inhibited. A further fault requires a new explicit reset. |
+| Fresh acquisition after reset | Require a current healthy acquisition event with count greater than the previously accepted count, and a cleared current navigation latch. Source can become healthy, but an old command remains unusable. |
+| Fresh post-reacquisition snapshot and command | Sample must be strictly later than reacquisition and the latest revocation epoch; exact selected computation/use epoch and current health must also pass. Only then usability resumes. |
+| Repeated evaluations / backward epochs | No stored last-command fallback. Each call assesses current health; backward observation faults, and late command use rejects. |
+
+The strict post-reacquisition sample relation is deliberate: an old sample and a
+reset/reacquisition can share an integer timestamp, and the existing snapshot has
+no within-timestamp sequence token. Such a sample is rejected even if captured
+later in that timestamp. This may defer eligibility to a later existing sample;
+it changes no cycle offsets or controller behavior. Initial acquisition can use
+a same-epoch sample because there has been no preceding command revocation.
+
+Acquisition counts come from the existing adapter's in-run reset protocol and
+remain monotonic across `reset_acquisition`. Full adapter/process `Reset` clears
+those counters and has no continuity contract here; it must not silently reuse
+this gate or old commands. A host must observe all health/reset events. This
+isolated gate does not discover unreported faults or promise thread atomicity.
+
+### Focused evidence and remaining gate
+
+**16/16 focused tests pass**, covering healthy acceptance, fault after capture,
+fault after computation, persistent inhibition, uninitialized/revoked/nonfinite
+states, navigation latch, stale/future/mismatched/missing/malformed status,
+reset/reacquisition, fresh-command restoration, no fallback, record immutability,
+provenance mismatch, same-timestamp old-command rejection and structural isolation.
+Synthetic fixture times and source inputs are **ASSUMED / TEST-ONLY**, sourced to
+`test_command_health_gate.py`, 2026-09-30. No new numerical tolerance is used.
+Phase 7F-1 frame checks and Phase 7F-2A sign/clipping/m x B tests were not duplicated.
+
+One focused test uses the actual existing MEKF adapter and persistent Phase 7E
+consumer, with synthetic gyro/two-vector messages and no plant or effector:
+
+| Time (s), TEST-ONLY | Observed outcome |
+|---|---|
+| 0.3 | Initial acquisition observed. |
+| 0.4 | Actual NavAtt/quality paired with synthetic TAM; coherent snapshot captured. |
+| 0.5 | Existing math computes a valid command; a gyro-epoch fault occurs before gate evaluation; command unusable. |
+| 0.6 | Explicit in-run reset; uninitialized/reacquiring, command still unusable. |
+| 0.7 | Actual fresh acquisition count 2 clears consumer latch; old command remains unusable. |
+| 1.4 / 1.5 | New coherent snapshot / new computation with healthy current source; usability restored. |
+
+An additional test reacquires before the old command's original deadline and
+rejects it **at that deadline**, proving rejection is not merely expiration.
+The gate retains only lifecycle scalars, never a last command. Earlier decision
+records stay immutable historical evidence; their old true bits are not authority
+for subsequent use. There is no MtbEffector/ExtForceTorque connection, native
+command message, write call or active import of this gate in production.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_command_health_gate.py' -v
+git diff --check
+```
+
+Compilation, focused tests and whitespace checks pass. Existing tracked runtime,
+configuration, subscriptions, priorities and saved simulation outputs are unchanged.
+No full-orbit run or existing regression rerun was needed. No dependency installed.
+
+**Next smallest experiment:** an opt-in, disconnected end-to-end observer in the
+existing live task order, capturing after MEKF publication and exercising the
+snapshot -> unchanged math -> current-health gate through fault/reset/reacquisition.
+Demonstrate reset-event delivery and absence of missed status events in that host.
+The isolated gate PASS alone does **not** justify immediately connecting a first
+closed-loop MEKF A/B run. Scheduled integration and an explicit application-boundary
+inhibition contract remain open. No source handover, pointing or flight claim.

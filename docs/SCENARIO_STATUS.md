@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7F-2B evaluation-time command health gate - 2026-09-30
+
+**EVALUATION-TIME COMMAND HEALTH GATE / NO ACTUATOR AUTHORITY /
+NOT CLOSED LOOP / NOT FLIGHT VALIDATED.** Evidence anchor: Phase 7F-2A `de04df4`.
+
+| FIELD | FINDING |
+|---|---|
+| Paths / purpose | New `command_health_gate.py` and `test_command_health_gate.py`: establish current command usability separately from capture coherence and mathematical validity. Isolated development policy; no scenario integration. |
+| Inputs / provenance | Accepted immutable MEKF/TAM snapshot, existing disconnected calculation, current NavAtt/quality and Phase 7E consumer decision, exact use epoch and explicit in-run reset notification. No truth or new sensor model. |
+| Controller / output | No math recomputation. Frozen decision retains original command/provenance and exposes usability, inhibition reason, source/lifecycle state and sample/capture/computation/use/quality epochs. Gate stores lifecycle scalars only, never a last command. |
+| Timing | Current quality and navigation must describe the use epoch exactly. Stored vectors retain the sample epoch. This phase keeps use at the original compute tick; no hold or ACTUATE-burst permission is added. |
+| Fault / restart | Health loss latches inhibition; clearing validity bits is insufficient. Explicit reset plus fresh increased-count acquisition restores source health. Usability additionally requires a newly coherent sample strictly after reacquisition and a new command. Old pre-fault commands remain unusable, including at their original deadline. |
+| Actuator / environment | No native command output, effector, spacecraft dynamics or production import. No environment, configuration, cycle or controller change. |
+| Validation | 16/16 focused tests pass. Includes actual existing MEKF adapter and persistent navigation latch through gyro-epoch fault, explicit reset, reacquisition and fresh-command restoration. Also tests nonfinite/malformed/stale/inconsistent metadata, same-timestamp restart ambiguity, immutability, provenance and no fallback. Compileall and diff checks pass. |
+| Preservation | Existing tracked runtime, subscriptions, task priorities and saved outputs unchanged; no expensive simulations or prior regression reruns. |
+| Gate / next | PASS for observed evaluation-time health gating only. Next: opt-in disconnected live-task observer proving end-to-end publication/reset-event delivery. Closed-loop A/B connection remains premature until that integration and actual application-boundary inhibition are defined/verified. |
+| Limitations | Host must supply all health/reset events. Policy requires a witnessed acquisition event; full process Reset/counter restart is outside the in-run reset contract. Equal-epoch reacquisition samples are conservatively rejected after reset because no ordering token exists. No flight age threshold or physical performance established. |
+
+See the [validity, epoch, lifecycle and evidence contract](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7f-2b-evaluation-time-command-health-gate---2026-09-30).
+
 ## Phase 7F-2A disconnected controller command mathematics - 2026-09-30
 
 **DISCONNECTED CONTROLLER COMMAND MATHEMATICS / NO ACTUATOR AUTHORITY /
