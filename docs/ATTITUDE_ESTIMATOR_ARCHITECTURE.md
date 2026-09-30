@@ -874,3 +874,171 @@ measurement/time/frame models, meaningful validity/uncertainty thresholds,
 boresight/error budgets and the U01–U11 evidence remain unresolved. This phase
 improves integration credibility; it does not establish attitude knowledge or
 pointing accuracy.
+
+## Phase 7F-1 coherent snapshot and scheduling contract — 2026-09-30
+
+**CONTROL SNAPSHOT / SCHEDULING DEVELOPMENT CONTRACT / NO CONTROLLER AUTHORITY /
+NO ACTUATOR AUTHORITY / NOT FLIGHT VALIDATED.** Checkpoint: Phase 7E is committed
+at `d285cb4`; working tree was clean before this phase. This phase narrows the
+next step to one claim: the state and magnetic acquisition belonging together
+can be identified and frozen unambiguously. No new controller instance, command
+computation, actuator connection or production scheduling change was made.
+
+Source: the current detumble scenario, MagneticCycleDriver, Phase 7D adapter,
+Phase 7E consumer, and new isolated timing/contract tests. Scheduling and test
+findings are CONFIRMED software facts. Cycle durations and synthetic inputs remain
+ASSUMED / TEST-ONLY; physical body-axis registration and flight timing remain open.
+
+### Current causal order, unchanged
+
+Let `t` be the current 0.1 s task tick, `s` the selected cycle's acquisition epoch,
+`e` its compute epoch and `a` its actuation-start epoch. In the unchanged Phase 6A
+diagnostic config, period=1 s, offsets s=0.4 s, e=0.5 s and a=0.6 s. These are
+ASSUMED diagnostic timings from `diagnostic_cycle_config`, revision 2026-09-06.
+
+| ORDER / MODULE | MESSAGE / DATA EPOCH / PUBLICATION | FRAME AND VALIDITY SEMANTICS |
+|---|---|---|
+| 1100 previous-interval recorders; 1050 native-input guard | Preserve/check held inputs before propagation. | Existing native command/field timing checks; no new estimator connection. |
+| 1000 spacecraft dynamics, including attached native MtbEffector derivative evaluation | SCStatesMsg is published at t after the preceding interval is integrated. Native dynamics uses held command/field messages during that interval. | r_BN_N in N [m], sigma_BN N-to-B MRPs, omega_BN_B in B [rad/s]. Native magnetic torque uses its existing field/attitude contract at derivative evaluations. |
+| 980 native effector; 975 applied-torque logs; 950 sensor-state log | Native UpdateState publishes the preceding interval's most recent dynamics torque; logs retain its semantics. | This scheduled publication is distinct from native torque computation inside dynamics. |
+| 925 Earth orientation; 910 WMM guard; 900 WMM | Planet-state orientation and MagneticFieldMsg.magField_N at t, using state/orientation at t. | C_PN maps N to Earth-fixed P; field in N [T]. Epoch guards remain unchanged. |
+| 800 SimpleNav | NavAttMsg header/timeTag/state at t. | sigma_BN, omega_BN_B [rad/s]; ideal development navigation, no native estimator-quality bit. |
+| 700 TAM only in continuous mode | Continuous TAM publishes at t. In cycled mode TAM is not independently scheduled here. | TAMSensorMsg.tam_S [T] in S, C_SB maps B to S. |
+| 600 cycle driver, SAMPLE event s | First checks zero native command/effective dipole/applied torque, quiet age, and current state/nav/WMM headers. Then explicitly calls TAM.UpdateState(s), freezes sample_nav and stores TAM and WMM at s. | Current SimpleNav satisfies this ordering. Cycle validity concerns acquisition/quiet-state evidence, not MEKF quality. No valid sample is inferred merely from finite TAM values. |
+| 600 cycle driver, COMPUTE event e | Existing controller consumes frozen NavAtt/TAM at s. Computation time is e; acquisition payload/header remains s. | Uses body rate and sampled TAM (existing S=B assumption), current/dipole conversion and clipping unchanged. No attitude term is used by the existing detumble law. |
+| 600 cycle driver, every tick / ACTUATE event a | MTBCmdMsg header is current t; it carries zero outside permitted burst and the held computed dipole during ACTUATE. | Command computed at e is first gated on at a and applies over the following interval. Native dynamics receives the production command, never a shadow command. |
+| 590 ideal bridge | Current point gyro and interval support; actual stored TAM/reference and original validity/acquisition metadata; optional TEST-ONLY Sun delivery. | Gyro in B [rad/s]. Magnetic measurements retain acquisition epochs even when delivery is delayed. |
+| 580 MEKF adapter | First propagates covered gyro intervals to t, then submits vector updates/replay, then publishes valid NavAtt at t. | Header=timeTag/state epoch=t for the current adapter. A delayed vector does not make the final navigation state historical; vector age and state epoch are distinct. |
+| 570 shadow observer; 565 SimpleNav quality; 560 dummy consumer; 555 frozen navigation probe | Existing optional Phase 7D/E diagnostics operate after MEKF publication. Frozen probe retains s and checks it at e. | These observe published navigation/quality; no production controller uses their outputs. |
+
+N is the existing inertial frame; B is the mathematical body frame; S is the TAM
+sensor frame. Physical HS-2 alignment is not established here. Native dynamics
+continues using its live environment input independently of sampled control data.
+
+### Why direct rewiring is wrong
+
+At SAMPLE, the priority-600 driver runs before bridge 590 and MEKF 580. At 1.4 s,
+the most recent MEKF publication is therefore the state at 1.3 s. At the first
+0.4 s acquisition, MEKF has not acquired yet at that point in the task. SimpleNav
+has already published the current state at priority 800, so the active path has
+no such lag.
+
+The isolated Basilisk trace uses native messages and the actual MEKF adapter:
+
+| EXECUTION | MEKF STATE / PUBLICATION | TAM ACQUISITION | RESULT |
+|---|---|---|---|
+| Priority-600 read at 0.4 s | Not initialized/published | 0.4 s | Reject. |
+| Post-publication capture at 0.4 s | 0.4 / 0.4 s | 0.4 s | Accept for 0.5 s evaluation. |
+| Priority-600 read at 1.4 s | 1.3 / 1.3 s | 1.4 s | Reject preceding estimate. |
+| Post-publication capture at 1.4 s | 1.4 / 1.4 s | 1.4 s | Accept for 1.5 s evaluation. |
+
+This refines the 7E warning: fully rewiring the driver's nav source **and** its
+current reader would trigger the existing current-epoch guard, rather than
+silently accepting 1.3 s navigation. Bypassing that guard or copying stale payload
+under a new header would conceal the mismatch. Neither was done. The root cause
+is causal task order plus sampling-before-publication, not incorrect MEKF epoch
+labels. Moving only compute after MEKF publication does not repair a stale frozen
+sample or justify pairing a new e-state with old s-TAM.
+
+### Immutable snapshot and exact epoch relationship
+
+New, unscheduled `control_input_snapshot.py` composes the existing Phase 7E quality
+assessment/consumer decision with magnetic acquisition evidence. Its only result
+is an immutable ControlSnapshot or an explicit rejection with no snapshot.
+
+| CONTENT | DEFINITION |
+|---|---|
+| Navigation | Bound source; original sigma_BN and omega_BN_B; state/publication/quality epochs; valid, initialized, estimator/fault/consumer state; provenance. An accepted, unlatched Phase 7E decision must describe exactly those values and epochs. |
+| Magnetic | Owned copy of actual sampled tam_S [T], explicit C_SB, transformed tam_B=C_SB.T tam_S [T], acquisition/publication epochs, original SAMPLE event and quiet/valid flags, provenance. |
+| Reference | Optional acquisition-epoch WMM vector in N [T] and its epoch. Retained for audit/estimator association; the existing rate-based controller law does not require it. A current WMM vector cannot replace an older TAM sample. |
+| Control window | Selected cycle period/sample/compute offsets with provenance; exact intended evaluation epoch e; derived sample s; actual capture c; coherence status/rejection. No default timing is selected by this module. |
+
+For cycle index k, derive `s=k*period+sample_offset` and
+`e=k*period+compute_offset`. Evaluation must be an actual compute event. Require:
+
+```text
+navigation state epoch = TAM acquisition epoch = s
+optional reference epoch = s
+s <= navigation publication <= quality publication <= capture c <= e
+s <= TAM publication <= capture c
+actual evaluation epoch = e
+```
+
+Payload timeTag must represent the state epoch; original message/quality headers
+must agree. Integer ns comparisons are exact. No flight age allowance, nearest
+sample join or time tolerance is introduced. The Phase 7E age check receives the
+derived `c-s` allowance together with an exact required state epoch s; this cannot
+admit an old coherent pair from a previous cycle.
+
+Navigation published later can legitimately describe s **only if its payload,
+quality, gyro support and state epoch actually describe s**, with publication by
+the capture/compute deadline. A native-message fixture at publication/capture
+0.5 s and state 0.4 s passes; a current 0.5 s state paired with 0.4 s TAM fails.
+Changing only headers/quality cannot relabel current data. The current MEKF
+adapter does not publish historical-state views; that fixture proves the data
+contract, not a new history-retrieval capability.
+
+In the replay test, a Sun measurement acquired at 0.9 s is delivered at 1.4 s.
+The actual adapter replays and returns navigation at 1.4 s, which pairs with TAM
+at 1.4 s. It must not be paired with a 0.9 s magnetic sample just because the last
+received vector was old. Previously frozen snapshots stay immutable through later
+updates. Inputs from a future epoch, wrong cycle, invalid quiet window, ACTUATE
+acquisition, stale/mismatched pair, uninitialized/faulted/latched navigation,
+conflicting source/decision or nonfinite vectors are rejected.
+
+No truth state or truth field is stored. Input validity/quiet flags are supplied
+producer evidence; the snapshot layer neither models coil decay nor independently
+proves sensor cleanliness. The optional reference is identified model data, not
+measured TAM. C_SB is explicitly supplied, not assumed from legacy `*_B_B` labels.
+The only new numerical tolerance is a TEST-ONLY 1e-12 orthogonal-rotation check;
+it is floating-point conditioning, not a mounting/alignment specification.
+
+### Scheduling choices
+
+| OPTION | CAUSALITY / EPOCH CORRECTNESS | CYCLE / PRODUCTION EFFECT | COMPLEXITY, LAG AND DELAYED-DATA IMPLICATION |
+|---|---|---|---|
+| A. Move future controller evaluation after MEKF | Causal reading alone does not make nav(e) and TAM(s) coherent. Evaluate/capture at s instead would change event semantics. | Moving the existing driver wholesale could also move acquisition and break bridge inputs. No production move authorized. | Low superficial code change, high risk of retaining or hiding a stale sample. Does not solve delayed state/reference association alone. |
+| B. Freeze after publication at s, evaluate from snapshot at e | Causal, exact pair; captures current MEKF state and actual stored TAM with retained headers. | Keeps Phase 6A SAMPLE/COMPUTE/ACTUATE timing and existing production controller unchanged. Add a separate development capture after quality gate. | Small extension; avoids one-estimate lag. Incorporates updates/replay already completed before capture; later updates do not mutate the frozen snapshot. |
+| C. Retrieve/reconstruct historical estimator state s | Can be correct if historical posterior, point rate/gyro support, provenance and quality are explicitly exposed by deadline e. | Could preserve cycle timing, but requires an estimator output/history interface not present today. | More complexity: replay revisions, bounds, historical bias/rate semantics and missing coverage. Never merely relabel the current state. |
+| D. Extend Phase 7E frozen probe with stored TAM and this gate | Implements B using the already demonstrated after-publication capture location. | Future diagnostic-only extension; zero production changes in 7F-1. | Smallest DEVELOPMENT CANDIDATE. Retain original acquisition/field evidence, no command output yet. |
+
+Select **B through D**: for a separately authorized 7F-2 path, capture after MEKF
+580 and consumer 560 (the existing diagnostic 555 location is suitable), then
+evaluate the unchanged disconnected controller from that snapshot at e. Do not
+change the production driver or rewire its SimpleNav input.
+
+Capture-time coherence is **not continuing command authorization**. The snapshot's
+`evaluation_rejection()` checks only exact scheduled use. A future command gate
+must also check latest fault/revocation state at evaluation, inhibit on reset or
+loss, and reject old-cycle snapshots. This phase does not implement command hold,
+inhibition or restart. Such policy must not be inferred from a frozen valid bit.
+
+### Verification and next gate
+
+**15/15 focused snapshot/timing tests pass.** They cover matching and mismatched
+pairs, stale/future/invalid/nonfinite inputs, uninitialized/faulted/latched quality,
+source conflicts, reference association, explicit S-to-B direction, immutable
+ownership, legitimate later publication, actual replay, before/after-publication
+order and exact later evaluation. The isolated 1.5 s Basilisk fixture has no
+spacecraft, controller or effector; synthetic native TAM/reference packets carry
+TEST-ONLY provenance. It does not revalidate WMM or physical sensor performance.
+
+Compileall and whitespace checks pass. Existing runtime Python/configuration,
+production subscriptions, task priorities and outputs are unchanged. The new
+module is not imported by the active scenario/controller/adapter/cycle paths;
+structural tests enforce that isolation. The committed 135-test baseline was
+not rerun, nor were full orbits or command cases: no existing runtime path changed.
+No dependency was installed or optional static tooling run.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_control_input_snapshot.py' -v
+git diff --check
+```
+
+The snapshot/timing gate is PASS within the tested development contract. The
+smallest justified **Phase 7F-2**, subject to separate user authorization, is an
+unchanged disconnected controller calculation from accepted snapshots with
+evaluation-time health checks, explicit inhibition, no command retention through
+fault/reset, and independent command-math verification. This phase establishes
+neither command correctness nor closed-loop, pointing or flight performance.

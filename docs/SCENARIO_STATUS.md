@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7F-1 coherent control snapshot — 2026-09-30
+
+**CONTROL SNAPSHOT / SCHEDULING DEVELOPMENT CONTRACT / NO CONTROLLER AUTHORITY /
+NO ACTUATOR AUTHORITY / NOT FLIGHT VALIDATED.** Phase 7E was committed at `d285cb4`
+and the working tree was clean. This narrower phase precedes command computation.
+
+| FIELD | FINDING |
+|---|---|
+| Paths / purpose | New `control_input_snapshot.py` and `test_control_input_snapshot.py`: define and test which published navigation estimate and stored magnetic acquisition belong together. No scenario integration. |
+| Inputs | Native NavAtt/quality evidence plus matching accepted/unlatched Phase 7E consumer decision; stored TAM in S, explicit C_SB, acquisition/quiet validity, optional acquisition-epoch WMM N reference; selected cycle timing/provenance. No operational truth input. |
+| Snapshot | Frozen owned tuples, source/frame/epoch/quality/provenance, capture epoch and exact intended evaluation epoch. Output is a coherent snapshot or explicit rejection, never a command. |
+| Epoch rule | nav state = TAM acquisition = selected sample s; optional reference epoch=s; publication may follow state but must precede capture c, with s <= c <= compute e. Actual use must be at e. No time tolerance. |
+| Ordering finding | Driver 600 samples before MEKF 580. At 1.4 s it can see only the 1.3 s estimator publication; capture after MEKF gets 1.4 s for evaluation at 1.5 s. Existing SimpleNav 800 has no such lag. A fully rewired driver would reject the stale header through its current-epoch guard. |
+| Development candidate | Extend the Phase 7E post-publication frozen probe with stored TAM and this gate, then use the snapshot in a future disconnected calculation at the unchanged compute event. No production reordering performed. |
+| Validation | 15/15 focused tests and compileall pass. Isolated native-message/actual-adapter fixture reproduces lag, post-publication freeze and delayed-vector replay without any controller or effector. Tests cover invalid/stale/mismatched/future/nonfinite data, source/quality conflicts, frame transform and immutable ownership. |
+| Preservation | Existing runtime files, subscriptions, schedules and production outputs unchanged; new module has no active import. No full-orbit or command runs. The existing 135-test baseline was not rerun. |
+| Limits / next | Validity is at capture, not a guarantee of future estimator health or command authorization. Next separately authorized 7F-2: disconnected unchanged-controller evaluation, current-health/revocation checks, explicit inhibition and independent math checks. No pointing or flight claim. |
+
+See the [complete scheduling/epoch contract and options](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7f-1-coherent-snapshot-and-scheduling-contract--2026-09-30).
+
 ## Phase 7E dummy navigation consumer addendum — 2026-09-14
 
 **DUMMY NAVIGATION CONSUMER / NO CONTROL AUTHORITY / NOT FLIGHT VALIDATED.**
