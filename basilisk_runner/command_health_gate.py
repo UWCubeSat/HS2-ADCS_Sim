@@ -16,6 +16,7 @@ from typing import Mapping
 from attitude_navigation_consumer import Snapshot, Source, State, assess
 from control_input_snapshot import ControlSnapshot, _epoch
 from disconnected_detumble_math import CommandMathematics
+from magnetic_control_cycle import MagneticCycleConfig
 
 
 @dataclass(frozen=True)
@@ -207,12 +208,16 @@ class CommandHealthGate:
                                  not reason, reason, self._state, self._acquired_ns, self._count, self._reset_ns)
 
     def evaluate(self, snapshot: ControlSnapshot | None, command: CommandMathematics | None,
-                 nav: Snapshot, decision: Mapping, epoch_ns: int) -> CommandUseDecision:
+                 nav: Snapshot, decision: Mapping, epoch_ns: int, *,
+                 application_cycle: MagneticCycleConfig | None = None) -> CommandUseDecision:
         """Reassess NOW. An earlier usable result grants no later use permission.
 
         Phase 7F-2A evaluation_epoch_ns is the command COMPUTATION epoch. This
         gate's epoch is USE evaluation: ordered after computation at the same
-        existing compute tick. Later ticks reject the old command; no hold added.
+        existing compute tick by default. Phase 7F-2C explicitly supplies the
+        unchanged cycle to check each later ACTUATE transport boundary instead.
+        Original sample/computation epochs are NEVER relabeled. No torque/hold
+        implementation is added; every boundary requires fresh current health.
         """
         health = self.observe(nav, decision, epoch_ns)
         reason = health.reason or _record_reason(snapshot, command)
@@ -222,6 +227,15 @@ class CommandHealthGate:
                 reason = "snapshot_predates_current_acquisition"
             elif self._revoked_ns is not None and (sample <= self._revoked_ns or sample <= self._acquired_ns):
                 reason = "fresh_post_reacquisition_snapshot_required"
+            elif application_cycle is not None:
+                cycle = application_cycle
+                start = sample // cycle.period_ns * cycle.period_ns
+                if (snapshot.window.period_ns != cycle.period_ns
+                        or snapshot.window.sample_offset_ns != cycle.sample_offset_ns
+                        or snapshot.window.compute_offset_ns != cycle.compute_offset_ns):
+                    reason = "application_cycle_mismatch"
+                elif not start+cycle.actuation_offset_ns <= epoch_ns < start+cycle.period_ns:
+                    reason = "outside_application_window"
             else:
                 reason = snapshot.evaluation_rejection(epoch_ns)
         return CommandUseDecision(command, not reason, reason, epoch_ns,

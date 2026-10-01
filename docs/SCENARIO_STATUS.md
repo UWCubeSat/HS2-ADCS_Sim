@@ -6,6 +6,27 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7F-2C live disconnected command-chain observer - 2026-09-30
+
+**LIVE DISCONNECTED COMMAND-CHAIN OBSERVER / NO ACTUATOR AUTHORITY /
+NOT CLOSED LOOP / NOT FLIGHT VALIDATED.** Evidence anchor: Phase 7F-2B `00d6909`.
+
+| FIELD | FINDING |
+|---|---|
+| Paths / purpose | `disconnected_command_observer.py`, focused validator/tests, opt-in scenario wiring and a small health-gate application-window extension. Reuses coherent snapshot, unchanged controller calculation and health/restart components. |
+| Inputs | Actual stored TAM/header and existing bridge quiet-window/reference evidence; post-publication MEKF NavAtt/quality and current consumer decision. Explicit test-only ideal Sun for validation acquisition. No observer truth substitution. |
+| Schedule | Existing production priorities unchanged. Early witness 595, input tap 587, health/capture 554, calculation 552, diagnostic application 550. Actual callback/epoch traces confirm order; at 1.4 s early read sees 1.3 s MEKF while capture sees 1.4 s. |
+| Epochs / generation | Nominal sample/capture 0.4 s, calculation 0.5 s, application checks 0.6-0.9 s at each transport tick. Immutable envelope binds cycle/command IDs and reset/acquisition/revocation generation; original timestamps retained. |
+| Actuation / environment | No command output or effector connection. Production SimpleNav/cycle driver remains the sole actual command owner. Plant, environment, physical profiles, gains, cycle and estimator math unchanged. |
+| Fault / restart | Fault after calculation inhibits before application; mid-burst fault inhibits subsequent intervals. Reset is delivered to actual shadow adapter and gate; reacquisition cannot revive an old envelope. Strictly fresh post-reacquisition sample/command restores diagnostic usability. |
+| Validation | 183/183 tests including 8 new integration tests; standalone nine-case live validator passes. Live/component snapshots, calculations and health decisions agree exactly. Invalid pairing, TAM window, stale quality and old-generation replay fail explicitly. |
+| Preservation | Three committed-versus-working 4 s production cases byte-identical when disabled. All nine enabled/fault-injected hosts also exactly match disabled production telemetry. Actuator/sensor wiring AST unchanged. No full orbit needed. |
+| Outputs | Dedicated `output_data/disconnected_command_chain_validation.json`, including source hashes, full command provenance, telemetry, execution/injection events and check results. Optional scenario artifacts have `_disconnected` suffix; default schemas/paths unchanged. |
+| Status / next | PASS for LIVE DISCONNECTED integration; DEVELOPMENT CANDIDATE / NOT FLIGHT VALIDATED. A separately authorized short closed-loop MEKF-vs-SimpleNav A/B is now justified, after implementing explicit single-owner routing and zero-on-inhibition at this boundary. No such routing exists in this phase. |
+| Limits | Ideal sensor bridges and 1 s validation Sun cadence are ASSUMED / TEST-ONLY. Delivered in-run reset/status contract only, no full-process restart continuity. No closed-loop, pointing, requirements or flight-performance claim. |
+
+See the [live scheduling and application-boundary evidence](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7f-2c-live-disconnected-command-chain-observer---2026-09-30).
+
 ## Phase 7F-2B evaluation-time command health gate - 2026-09-30
 
 **EVALUATION-TIME COMMAND HEALTH GATE / NO ACTUATOR AUTHORITY /

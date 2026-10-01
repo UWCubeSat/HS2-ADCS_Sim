@@ -1316,3 +1316,154 @@ Demonstrate reset-event delivery and absence of missed status events in that hos
 The isolated gate PASS alone does **not** justify immediately connecting a first
 closed-loop MEKF A/B run. Scheduled integration and an explicit application-boundary
 inhibition contract remain open. No source handover, pointing or flight claim.
+
+## Phase 7F-2C live disconnected command-chain observer - 2026-09-30
+
+**LIVE DISCONNECTED COMMAND-CHAIN OBSERVER / NO ACTUATOR AUTHORITY /
+NOT CLOSED LOOP / NOT FLIGHT VALIDATED.** Evidence anchor: Phase 7F-2B `00d6909`;
+the tree was clean and no edits remained from the interrupted inspection. This
+phase reuses the completed component contracts rather than repeating their audits.
+
+**Engineering gate: PASS for the tested live integration.** Actual Basilisk task
+execution now exercises stored TAM -> post-publication MEKF snapshot -> unchanged
+controller calculation -> current health gate -> diagnostic application decision.
+The implemented observer has no command message output or actuator connection.
+
+### Live schedule and epochs
+
+Source: unchanged production priorities in `scenario_huskysat2_detumble.py` at
+`00d6909`, plus the new explicitly selected stages below; verified 2026-09-30.
+Priority runs highest first on the existing 0.1 s task. Times/clock are existing
+ASSUMED development configuration, not flight timing requirements.
+
+| Priority | Operation | Data/publication/capture meaning |
+|---:|---|---|
+| 1100 / 1050 | Existing held-input recorders / native input guard | Previous command/field for the integration interval ending now. |
+| 1000 | Spacecraft | Propagates current truth at t using previous held inputs. |
+| 980 / 975 | Native effector publication / torque recorders | Existing completed-step final-stage torque semantics unchanged. |
+| 925 / 910 / 900 | Earth orientation / WMM input guard / WMM | Current state, orientation and inertial field at t. |
+| 800 | SimpleNav | Current production navigation at t; still owns production control input. |
+| 600 | Magnetic cycle driver | At s acquires TAM; at k computes production control; at ACTUATE ticks publishes production commands for the following interval. Unchanged. |
+| 595 | New early-read witness | Records current TAM header and previous MEKF publication before the bridge/MEKF execute. |
+| 590 | Existing ideal MEKF input bridge | Current gyro and valid acquisition TAM/reference evidence, original sample epoch retained. |
+| 588, validation only | Test input relay | Injects an explicit shadow fault/reset into the actual adapter input and the gate's observed reset stream. No production input changed. |
+| 587 | New acquisition tap | Stores actual TAM payload/header and the bridge's validated quiet-acquisition evidence/reference. No truth-field substitution. |
+| 580 / 570 | Existing MEKF / shadow monitor | Publishes NavAtt and quality describing t; monitor keeps its existing publication guard. |
+| 568, validation only | Late-quality fixture | Delivers prior quality after the monitor but before the consumer; retains old publication epoch. |
+| 565 / 560 | Existing SimpleNav quality / point consumer | Existing Phase 7E tasks, fixed MEKF diagnostic selection for this option. |
+| 556, validation only | Owned-view fixture | Corrupts only observer-owned sample/navigation views or replays a diagnostic old envelope. |
+| 555 | Existing frozen probe | Original Phase 7E diagnostic sample/evaluation probe, unchanged. |
+| 554 | New health observation and capture | Forwards reset once, observes current health every tick, captures matching MEKF/TAM at s after publication. |
+| 552 | New disconnected calculation | At k, calls the existing dispatcher once from the frozen snapshot; records computation-time health decision. |
+| 550 | New diagnostic application boundary | Refreshes current NavAtt/quality and checks health, source/reset generation and selected cycle at every ACTUATE transport tick. No publication. |
+
+Production priorities are unchanged. Callback traces verify new-stage order in every live
+case. At 1.4 s the early witness actually reads MEKF publication 1.3 s alongside
+TAM 1.4 s; capture at 554 reads state/publication 1.4 s. A deliberately used early
+view is rejected as stale. This is observed execution evidence, not just a list
+of intended priorities.
+
+Nominal diagnostic timing is s=c=0.4 s, k=0.5 s, with application checks
+u=0.6, 0.7, 0.8 and 0.9 s. Original sample/publication/capture/computation stamps
+remain separate from current health and application stamps. The next cycle clears
+pending eligibility; it cannot inherit an old usable decision.
+
+### Explicit later-application contract
+
+The necessary small `CommandHealthGate.evaluate(..., application_cycle=cycle)`
+extension reuses all existing health, provenance and restart checks. Without this
+argument, the Phase 7F-2B compute-only behavior remains unchanged. With it, the
+snapshot's period/sample/compute contract must match the explicitly supplied
+existing cycle, and u must be in that sample's ACTUATE window. No computation
+timestamp is relabeled and no controller equation is duplicated.
+
+The observer invokes this gate at **every existing task tick in the burst**, not
+only its start. A true decision means diagnostic permission for the following
+plant interval [u,u+0.1 s), contingent on this fixed single-threaded schedule; it
+does not grant permission for the rest of the burst. Current quality/NavAtt/gyro
+epochs must all equal u. Each boundary checks cycle ID, command ID, and source
+generation `(reset serial, acquisition count, revocation serial)` bound at capture.
+The extended gate also rejects a wrong cycle and use beyond that cycle's window.
+No flight age threshold or new timing offset is introduced.
+
+At present the real production driver has already published its **SimpleNav**
+command at priority 600. The observer's permission is diagnostic only and cannot
+revoke or replace that production command. A future authorized connection must
+publish through one explicitly selected owner after the gate, before the next
+plant propagation, and apply zero on inhibition/quiet phases. This phase adds
+neither that owner nor any actuator subscription.
+
+### Fault, reset and provenance evidence
+
+Nine live cases run for 3.9 s each: nominal, previous MEKF/current TAM,
+stale previous-cycle TAM/current MEKF, invalid TAM window, fault before first
+application, fault/reset/reacquisition with old-envelope replay, reset after
+computation, late quality, and fault during an already-started burst. Fixtures are
+**ASSUMED / TEST-ONLY**, sourced to `validate_disconnected_command_chain.py`,
+2026-09-30. The existing ideal-Sun option is explicitly set to a 1 s cadence
+coincident with quiet samples for short reproducible reacquisition; no default
+sensor setting or MEKF mathematics changed. All comparisons use exact equality.
+
+| Case / event | Verified outcome |
+|---|---|
+| Startup to first sample | Uninitialized at 0-0.3 s; acquisition/capture 0.4 s; calculation 0.5 s; first usable diagnostic decision 0.6 s. |
+| Previous estimate + current TAM at 1.4 s | `navigation:stale_quality`; no new command for that cycle. |
+| Previous-cycle TAM at 1.4 s | `tam_does_not_match_selected_sample_epoch`; no new command. |
+| Invalid quiet-window evidence at 1.4 s | `invalid_magnetic_acquisition`; no new command. |
+| Valid command 0.5 s, fault delivered 0.6 s | Actual adapter fault reaches consumer/gate before application; explicit inhibition at 0.6 s. Numerical command remains diagnostic evidence. |
+| Late quality at 0.6 s | Old status epoch remains visible and fails current-health evaluation. The existing shadow monitor was not weakened. |
+| Mid-burst fault at 0.8 s | Decisions at 0.6/0.7 s usable; 0.8/0.9 s inhibited. Earlier permission is not retained. |
+| Fault 1.6 s, reset 1.8 s | Current command inhibited; reset delivered to adapter and gate, REACQUIRING. |
+| Reacquisition 2.4 s, replay of pre-reset command 2.6 s | Source healthy but old `(0,1,0)` generation differs from current `(1,2,1)`; old command remains unusable. Its original sample 1.4 s and computation 1.5 s are not changed. |
+| Fresh sample 3.4 s, computation 3.5 s | Current generation matches; usability resumes 3.6 s. The preserved strict post-reacquisition rule rejects same-epoch acquisition samples. |
+| Reset immediately after first computation | Reset 0.6 s inhibits; reacquisition 1.4 s alone insufficient; fresh sample 2.4 s permits use 2.6 s. |
+
+Full records include simulation/cycle/selected-sample IDs, raw stored TAM validity,
+acquisition/publication epochs, sample MEKF publication, capture, computation,
+application window, current state/quality epochs, lifecycle/reset/generation,
+mathematical validity, usability/reason, requested/clipped dipole and predicted
+torque. Immutable command records retain complete configuration/snapshot provenance.
+Predicted torque is never written into applied-torque columns. Truth remains in
+the pre-existing explicit ideal sensor bridge/validation telemetry, not substituted
+by the observer for TAM or navigation.
+
+### Validation, preservation and next gate
+
+**183/183 regression tests pass**, including **8 new integration tests**. The
+standalone validator passes all nine cases. Replaying received live inputs through
+the component APIs gives exact agreement for 360 health observations, 36 snapshot
+results, 27 controller calculations, 36 compute decisions and 144 application
+decisions. These are component-equivalence checks; independent command arithmetic
+remains the already-established Phase 7F-2A evidence, also passing in the full suite.
+
+Three 4 s committed-versus-working runs (continuous regression baseline,
+continuous candidate profile, and cycled baseline) produce byte-identical CSV
+serialization with observer disabled. All nine enabled/injected observer cases
+also match disabled-host production telemetry exactly. The actuator/sensor
+subscription and dynamic-effector attachment ASTs match the committed scenario.
+The observer owns only readers, component objects and Python records: no native
+command output, effector handle, production controller handle or write call.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_disconnected_command_observer.py' -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_*.py' -v
+.\.venv\Scripts\python.exe -B basilisk_runner/validate_disconnected_command_chain.py --report basilisk_runner/output_data/disconnected_command_chain_validation.json
+git diff --check
+```
+
+The dedicated JSON records base commit, source SHA-256 hashes, telemetry,
+commands, execution order, injections and checks. No full-orbit run was needed;
+existing production result files were not regenerated. The scenario option is
+`--disconnected-commands`, requiring explicit shadow navigation and magnetic cycle.
+It does not enable an ideal Sun implicitly. Requested scenario artifacts receive
+a separate `_disconnected` suffix; the validator itself uses `write_outputs=False`.
+
+**Next smallest justified experiment:** a separately authorized short closed-loop
+MEKF-versus-SimpleNav detumble A/B under identical existing plant/cycle inputs,
+with one explicit actuator-command owner and the verified boundary gate enforcing
+quiet/invalid zero commands. This integration result justifies that controlled
+experiment; it does not implement the connection or establish closed-loop stability,
+sensor realism, pointing, requirement compliance or flight performance. Full-process
+counter restart and faults outside the delivered status/reset contract remain
+outside this in-run development evidence.

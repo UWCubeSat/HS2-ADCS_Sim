@@ -221,7 +221,16 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
 def run(stop_time_s=None, write_outputs=True, actuator=None,
         replay_commands=None, capture_commands=False, make_plots=True,
         config: HS2SimConfig = DEFAULT_CONFIG, cycle: MagneticCycleConfig | None = None,
-        shadow=None, navigation_consumer=None):
+        shadow=None, navigation_consumer=None, disconnected_commands=None):
+    if disconnected_commands is not None:
+        from disconnected_command_observer import ObserverOptions
+        from attitude_navigation_consumer import ConsumerOptions, Source
+        if not isinstance(disconnected_commands, ObserverOptions) or shadow is None or cycle is None:
+            raise ValueError("Disconnected command observer requires explicit options, shadow navigation and magnetic cycle")
+        selection = ConsumerOptions(((0, Source.MEKF),))
+        if navigation_consumer is not None and navigation_consumer != selection:
+            raise ValueError("Disconnected observer requires fixed MEKF diagnostic selection; no handover")
+        navigation_consumer = selection
     if navigation_consumer is not None and shadow is None:
         raise ValueError("Dummy navigation consumer requires explicit shadow mode")
     config = config.with_run_options(stop_time_s, actuator)
@@ -375,6 +384,12 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
             raise ValueError("Explicit diagnostic ConsumerOptions required")
         dummy_point, dummy_frozen = attach_consumers(sim, nav.attOutMsg, shadow_adapter.navOutMsg,
                                                      shadow_adapter.statusOut, cycle, navigation_consumer)
+
+    command_observer = None
+    if disconnected_commands is not None:
+        from disconnected_command_observer import attach_observer
+        command_observer = attach_observer(sim, cycle, config, tam.tamDataOutMsg,
+            shadow_bridge, shadow_adapter, dummy_point, disconnected_commands)
 
     sc_log = sc.scStateOutMsg.recorder(rec_dt)
     mag_log = mag.envOutMsgs[0].recorder(rec_dt)
@@ -573,6 +588,10 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         # Consumer validation writes its own report; keep any requested host
         # artifacts distinct from both production and Phase 7D shadow results.
         out_csv = out_csv.with_name(out_csv.stem + "_consumer.csv")
+    if command_observer is not None:
+        df.attrs["disconnected_command_records"] = command_observer.records()
+        df.attrs["disconnected_command_trace"] = command_observer.trace
+        out_csv = out_csv.with_name(out_csv.stem + "_disconnected.csv")
     if write_outputs:
         df.to_csv(out_csv, index=False)
         out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
@@ -592,6 +611,9 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
             out_csv.with_name(out_csv.stem + "_status.json").write_text(json.dumps({
                 "scope": "SHADOW DEVELOPMENT INTEGRATION / NOT FLIGHT VALIDATED",
                 "options": df.attrs["shadow_options"], "status": df.attrs["shadow_status"]}, indent=2), encoding="utf-8")
+        if command_observer is not None:
+            out_csv.with_name(out_csv.stem + "_commands.json").write_text(
+                json.dumps(command_observer.records(), indent=2, allow_nan=False), encoding="utf-8")
         print(f"Wrote {out_csv}")
     print(f"Initial |omega| [rad/s]: {omega_mag[0]:.12g}")
     print(f"Final   |omega| [rad/s]: {omega_mag[-1]:.12g}")
@@ -620,6 +642,8 @@ def main(argv=None):
     parser.add_argument("--navigation", choices=("simple-nav", "shadow-mekf"), default="simple-nav")
     parser.add_argument("--shadow-ideal-sun", action="store_true",
                         help="Explicit TEST-ONLY Sun bridge; requires --navigation shadow-mekf")
+    parser.add_argument("--disconnected-commands", action="store_true",
+                        help="Development observer only; requires shadow navigation and a magnetic cycle")
     cycle_selection = parser.add_mutually_exclusive_group()
     cycle_selection.add_argument("--magnetic-cycle", choices=("continuous", "diagnostic"), default="continuous",
                                  help="Opt-in ASSUMED architecture-test timing; continuous remains default")
@@ -631,10 +655,17 @@ def main(argv=None):
     if args.navigation == "shadow-mekf":
         from attitude_mekf_adapter import ShadowOptions
         shadow = ShadowOptions(ideal_sun=args.shadow_ideal_sun)
+    disconnected = None
+    if args.disconnected_commands:
+        from disconnected_command_observer import ObserverOptions
+        if shadow is None or (not args.cycle_config and args.magnetic_cycle != "diagnostic"):
+            parser.error("--disconnected-commands requires shadow navigation and a magnetic cycle")
+        disconnected = ObserverOptions()
     run(stop_time_s=args.duration, actuator=args.actuator, make_plots=not args.no_plots,
         config=get_profile_config(args.profile) if args.config is None else HS2SimConfig.load(args.config),
         cycle=(MagneticCycleConfig.load(args.cycle_config) if args.cycle_config else
-               diagnostic_cycle_config() if args.magnetic_cycle == "diagnostic" else None), shadow=shadow)
+               diagnostic_cycle_config() if args.magnetic_cycle == "diagnostic" else None), shadow=shadow,
+        disconnected_commands=disconnected)
 
 
 if __name__ == "__main__":
