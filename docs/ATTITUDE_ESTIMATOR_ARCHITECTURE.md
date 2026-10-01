@@ -1467,3 +1467,140 @@ experiment; it does not implement the connection or establish closed-loop stabil
 sensor realism, pointing, requirement compliance or flight performance. Full-process
 counter restart and faults outside the delivered status/reset contract remain
 outside this in-run development evidence.
+
+## Phase 7G-1 first nominal closed-loop integration - 2026-09-30
+
+**FIRST MEKF CLOSED-LOOP DEVELOPMENT INTEGRATION / NOMINAL SHORT-RUN ONLY /
+NOT FLIGHT VALIDATED.** Engineering gate: **PASS for the nominal tested case**.
+The starting committed checkpoint is `29e4149`; the working tree was clean.
+Earlier sections retain their phase-specific disconnected authorization/results.
+This opt-in connection does not change the default `SIMPLE_NAV_REFERENCE` mode.
+
+### Ownership and actual scheduling
+
+`MEKF_DEVELOPMENT` uses one new `mekf_command_owner.MEKFCommandOwner`, the sole
+publisher connected to the existing native MtbEffector's command reader. The
+7F snapshot, controller mathematics, health gate and observer are reused without
+algorithm changes. The observer itself still has no native command endpoint;
+the new owner consumes its current diagnostic decision and pending calculation.
+There is no ExtForceTorque connection, competing publisher, source handover,
+truth substitution for sampled TAM, or gain/limit change.
+
+| Priority / event | Contract |
+|---|---|
+| 1100 / 1050 | Record held inputs/state; guard their preceding-interval epochs. |
+| 1000 / 980 / 975 | Propagate spacecraft; publish/record native final-RK-stage torque. |
+| 950 / 925 / 910 / 900 / 800 | Record acquisition state; Earth orientation, WMM guard, WMM and SimpleNav at current epoch. |
+| 600 | Existing cycle acquisition/quiet checks and TAM execution. In MEKF mode the SimpleNav computation and driver MTBCmd writes are disabled. Publish provisional acquisition metadata for the existing bridge. |
+| 595 / 590 / 587 | Existing early witness, ideal input bridge and actual stored TAM acquisition tap. |
+| 580 / 570 | MEKF publication and independent navigation monitor. |
+| 565 / 560 / 555 | Existing source quality, current consumer and frozen consumer. |
+| 554 / 552 / 550 | Existing coherent capture/current health, selected compute event, and application-time health/generation/cycle decision. |
+| 548 | New single owner publishes zero or the usable immutable clipped dipole for [t,t+0.1 s). Verify native input equality; finish actual-command quiet/electrical bookkeeping. |
+| 0 | Record messages, including a separate native MEKF NavAtt recorder. |
+
+Before acquisition, during quiet/SAMPLE/COMPUTE, or on an unusable/missing current
+decision, each owner invocation creates a fresh zero payload. It has no retained
+usable-command cache. The cycle driver finalizes quiet age from this actual
+publication before the next tick. A missed finalization is an explicit error.
+The driver message remains unwritten in this mode, verified through a separate
+reader; publisher/subscriber module IDs and epochs agree on every tick.
+
+`cycle_sample_sigma_BN` and `cycle_sample_omega_B` represent the coherent MEKF
+snapshot in this mode, frozen starting on the SAMPLE tick, not changed at compute.
+The source is explicitly labeled. Independent `mekf_nav_*` native message records
+verify that sample; generic `nav_*` remain labeled SimpleNav diagnostic witnesses.
+Pre-acquisition MEKF recorder payloads are invalid zero sentinels with
+`mekf_nav_valid=false`. Basilisk emits four unwritten-NavAtt recorder warnings at
+0-0.3 s, as expected; no estimate or command authority is invented to suppress them.
+Control expectation, sampled-controller torque, native applied torque and plant
+truth stay distinct. Native torque at a coil-off boundary belongs to the previous
+integration interval, so zero-torque checks use the held dipole.
+
+### Nominal fixture and measured evidence
+
+Source: `validate_mekf_closed_loop.py`, revision 2026-09-30; 6 s duration is
+**ASSUMED / TEST-ONLY**. Six complete existing diagnostic cycles exercise repeated
+capture, compute, gated use and quiet reacquisition without an orbital campaign.
+The 10 s CLI/API ceiling is a development scope guard, not an engineering limit.
+Both runs use the unchanged regression baseline (legacy assumed mass/inertia),
+orbit, initial states, 0.1 s plant step, diagnostic cycle, controller, provisional
+actuator configuration and ideal bridge. The existing explicit ideal Sun has
+0.7 s cadence and 0.4 s first acquisition. Covariance fixtures and ideal gyro/TAM
+remain test-only. No hardware selection or sensor performance is newly confirmed.
+
+First command: TAM and post-publication MEKF capture at 400000000 ns; computation
+at 500000000 ns; current health evaluation/publication/native input at 600000000 ns;
+command ID 1, generation `(0,1,0)`, cycle 0. Dipole is
+`[-0.2,-0.2,0.42702955144649996] A m^2` in the existing body-aligned configuration.
+It applies during [0.6,0.7 s); independent nonzero native torque first appears at
+the 0.7 s completed-interval record. Before that interval, A/B states are identical.
+
+The following are **CONFIRMED numerical software observations for this fixture**,
+not flight parameters or requirement compliance:
+
+| Quantity | SimpleNav reference | MEKF development |
+|---|---:|---:|
+| Initial rate magnitude, rad/s | 0.8774964387392122 | 0.8774964387392122 |
+| Final rate magnitude, rad/s | 0.8742458216779315 | 0.8742458126971391 |
+| Actuation time / observed duration, s | 2.4 / 6 | 2.4 / 6 |
+| Energized / zero held intervals | 24 / 36 | 24 / 36 |
+| Maximum independent native-stage torque error, N m | 7.100e-21 | 5.082e-21 |
+| Maximum rigid-body rate-step error, rad/s | 1.110e-16 | 0 at recorded precision |
+| Maximum coupled state-step error | 1.110e-16 | 1.110e-16 |
+| Maximum per-interval energy/work residual, J | 1.558e-14 | 1.558e-14 |
+| Integrated magnetic work, J | -2.903374745438213e-5 | -2.903384999517699e-5 |
+
+The independent predictor uses held recorded dipole, WMM field and prior plant
+state to reconstruct RK stages, then compares native torque AND accepted plant
+state. Work integrates stage torque dot rate, while rotational energy comes from
+independently propagated states. Checks also reject altered native torque, altered
+gate-to-command evidence and altered independent MEKF sample telemetry. Numerical
+tolerances (ASSUMED test acceptance) are 1e-15 N m stage torque, 1e-12 rad/s rate
+step, 1e-12 MRP-component error and 1e-10 J per-interval work residual. They are not
+HS-2 requirement thresholds. Unchanged component replay yields 103 exact comparisons.
+
+Maximum A/B differences: requested dipole 3.4690953874294284e-5 A m^2; published
+clipped dipole 1.6043811018495724e-5 A m^2; native torque 3.110152792687033e-10 N m;
+rate vector 1.8620311143422534e-8 rad/s; attitude 2.4724589342520592e-8 rad.
+The law uses sampled body rate and TAM, not attitude directly. On the MEKF plant,
+the rate-input difference versus SimpleNav equals negative estimated gyro bias
+to 6.109371697254099e-17 rad/s. Its maximum is 2.3349284838398337e-5 rad/s; dispatching
+the same controller on that plant with its SimpleNav sample rate isolates a
+1.6050731675654184e-5 A m^2 command difference. Ideal-bridge reconstruction and
+estimator numerical residuals are the modeled source of the bias correction;
+subsequent feedback changes the trajectory. No extra physical bias was injected.
+Near equality is expected for ideal observations and does not prove general
+closed-loop stability or physical estimator accuracy.
+
+### Verification, artifacts and next gate
+
+Nine focused connection tests and 121 relevant pre-existing regressions pass.
+Compileall and `git diff --check` pass. The short validator runs both A/B cases,
+native/rigid-body/work validation, exact component replay and three preservation
+pairs; it exits nonzero on a failed check. The committed comparison loads BOTH
+scenario and cycle driver from HEAD, avoiding an old-scenario/new-driver mixture.
+Continuous baseline, continuous candidate and cycled baseline six-second CSV
+serializations are byte-identical with the feature disabled.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_mekf_closed_loop.py -v
+.\.venv\Scripts\python.exe -B -c "import sys,unittest;sys.path.insert(0,'basilisk_runner');names=['test_detumble_telemetry','test_magnetic_environment','test_native_magnetic_actuation','test_magnetic_control_cycle','test_attitude_mekf_adapter','test_attitude_navigation_consumer','test_control_input_snapshot','test_disconnected_detumble_math','test_command_health_gate','test_disconnected_command_observer'];result=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromNames(names));sys.exit(not result.wasSuccessful())"
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_mekf_closed_loop.py --report basilisk_runner\output_data\phase7g1_nominal.json
+git diff --check
+```
+
+The ignored report and its `_A_simple_nav.csv` / `_B_mekf.csv` companions contain
+configuration/cycle/sensor provenance, source/CSV hashes, base commit, checks,
+first-command and complete owner/chain trace. Production artifacts are preserved.
+For a separately requested scenario artifact the opt-in CLI is
+`--duration 6 --no-plots --magnetic-cycle diagnostic --navigation shadow-mekf --shadow-ideal-sun --control-source MEKF_DEVELOPMENT`;
+it writes a distinct `_mekf_closed_loop` suffix and ownership manifest.
+
+**Next:** a separately authorized short CLOSED-LOOP fault/inhibition experiment
+checking actual zero native input and subsequent torque after a late fault, then
+reset/fresh-generation restoration. Existing disconnected fault regressions still
+pass, but this phase adds no closed-loop fault campaign. Performance campaigns,
+requirements verification, hardware realism, pointing and flight claims remain
+blocked by their previously documented evidence gaps.

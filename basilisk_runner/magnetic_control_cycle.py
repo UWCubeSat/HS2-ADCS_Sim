@@ -138,7 +138,7 @@ class MagneticCycleDriver(sysModel.SysModel):
     separate and are not relabeled when a held command is republished.
     """
     def __init__(self, cycle, step_ns, tam, nav_message, state_message, field_message,
-                 controller_config, strict=True):
+                 controller_config, strict=True, *, external_command_owner=False):
         super().__init__()
         cycle.validate(step_ns)
         self.cycle, self.step_ns, self.tam, self.strict = cycle, step_ns, tam, strict
@@ -151,6 +151,11 @@ class MagneticCycleDriver(sysModel.SysModel):
         self.controller.navAttInMsg.subscribeTo(self.sample_nav)
         self.controller.tamSensorInMsg.subscribeTo(tam.tamDataOutMsg)
         self.config = controller_config
+        # Phase 7G-1 only: acquisition stays at priority 600; a single external
+        # owner completes command/readback bookkeeping AFTER the health gate.
+        # In this mode this driver never writes an MTBCmd, including at Reset.
+        self.external_command_owner = external_command_owner
+        self.pending_tick: tuple[int, np.ndarray, np.ndarray] | None = None
         self.mtbCmdOutMsg = messaging.MTBCmdMsg()
         self.cmdTorqueOutMsg = messaging.CmdTorqueBodyMsg()
         self.effector: MtbEffector.MtbEffector | None = None
@@ -161,7 +166,8 @@ class MagneticCycleDriver(sysModel.SysModel):
         self.tam.tamDataOutMsg.write(messaging.TAMSensorMsgPayload(), tick)
         self.sample_nav.write(messaging.NavAttMsgPayload(), tick)
         self.controller.Reset(tick)
-        self.mtbCmdOutMsg.write(messaging.MTBCmdMsgPayload(), tick)
+        if not self.external_command_owner:
+            self.mtbCmdOutMsg.write(messaging.MTBCmdMsgPayload(), tick)
         self.cmdTorqueOutMsg.write(messaging.CmdTorqueBodyMsgPayload(), tick)
         self.sample_epoch = self.compute_epoch = -1
         self.valid = False
@@ -174,6 +180,7 @@ class MagneticCycleDriver(sysModel.SysModel):
         self.flags = [False] * 3
         self.core_used = False
         self.history.clear()
+        self.pending_tick = None
 
     def native_dipoles(self):
         if self.effector is None:
@@ -240,6 +247,8 @@ class MagneticCycleDriver(sysModel.SysModel):
 
     def UpdateState(self, tick):
         tick = int(tick)
+        if self.pending_tick is not None:
+            raise ValueError("External owner did not finish the preceding cycle tick")
         start = tick // self.cycle.period_ns * self.cycle.period_ns
         phase, phase_start, phase_end = self.cycle.phase(tick, self.step_ns)
         pre_command, pre_applied = self.native_dipoles()
@@ -259,6 +268,13 @@ class MagneticCycleDriver(sysModel.SysModel):
         compute_event = tick == start + self.cycle.compute_offset_ns
         if sample_event:
             self.acquire(tick)
+        if self.external_command_owner:
+            # Acquisition metadata must be available to the existing bridge at
+            # priority 590. This provisional row describes the actual PRE-command
+            # native input. The owner replaces it after publication at 548.
+            self.pending_tick = (tick, pre_command, pre_applied)
+            self.record_tick(tick, pre_command, pre_applied, False, pre_command, pre_applied)
+            return
         consumed = False
         if compute_event and (self.valid or self.strict):
             self.compute(tick)
@@ -268,13 +284,24 @@ class MagneticCycleDriver(sysModel.SysModel):
             if self.compute_epoch != start + self.cycle.compute_offset_ns or tick < self.compute_epoch:
                 raise ValueError("Actuation before this cycle's computed command")
             command = self.clipped.copy()
+        self.complete_command(tick, command, consumed, pre_command, pre_applied)
+
+    def complete_external_tick(self, tick, command):
+        if not self.external_command_owner or self.pending_tick is None or self.pending_tick[0] != tick:
+            raise ValueError("External command requires this tick's completed acquisition stage")
+        _, pre_command, pre_applied = self.pending_tick
+        self.complete_command(tick, command, self.compute_epoch == tick, pre_command, pre_applied)
+        self.pending_tick = None
+
+    def complete_command(self, tick, command, consumed, pre_command, pre_applied):
         if np.any(command):
             self.disabled_since = -1
         elif self.disabled_since < 0:
             self.disabled_since = tick
-        payload = messaging.MTBCmdMsgPayload()
-        payload.mtbDipoleCmds = command.tolist() + [0.]*(MAX_EFF_CNT-3)
-        self.mtbCmdOutMsg.write(payload, tick, self.moduleID)
+        if not self.external_command_owner:
+            payload = messaging.MTBCmdMsgPayload()
+            payload.mtbDipoleCmds = command.tolist() + [0.]*(MAX_EFF_CNT-3)
+            self.mtbCmdOutMsg.write(payload, tick, self.moduleID)
         native_command, effective = self.native_dipoles()
         if not np.array_equal(command, native_command):
             raise ValueError("Native subscriber does not receive the gated electrical command")
@@ -286,6 +313,13 @@ class MagneticCycleDriver(sysModel.SysModel):
         tp = messaging.CmdTorqueBodyMsgPayload()
         tp.torqueRequestBody = expected.tolist()
         self.cmdTorqueOutMsg.write(tp, tick, self.moduleID)
+        self.record_tick(tick, command, effective, consumed, pre_command, pre_applied,
+                         replace=self.external_command_owner)
+
+    def record_tick(self, tick, command, effective, consumed, pre_command, pre_applied, *, replace=False):
+        start = tick // self.cycle.period_ns * self.cycle.period_ns
+        phase, phase_start, phase_end = self.cycle.phase(tick, self.step_ns)
+        sample_event = tick == start + self.cycle.sample_offset_ns
         currents = command / np.asarray(self.config.mtqDipoleGain_Am2_A)
         powers = currents**2 * np.asarray(self.config.mtqResistance_Ohm)
         limits = np.minimum(np.asarray(self.config.mtqDipoleLimit_Am2),
@@ -311,4 +345,7 @@ class MagneticCycleDriver(sysModel.SysModel):
                     ("cycle_sample_omega_B", self.sample_w), ("cycle_sample_sigma_BN", self.sample_sigma),
                     ("cycle_controller_sample_torque", self.sample_controller_torque)):
                 row[f"{prefix}_{a}"] = float(value[j])
-        self.history.append(row)
+        if replace:
+            self.history[-1] = row
+        else:
+            self.history.append(row)

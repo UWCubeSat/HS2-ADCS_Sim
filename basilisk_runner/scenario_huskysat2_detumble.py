@@ -60,6 +60,13 @@ clock; cycle_period_ns is the control-cycle period. Current expected torque is
 a diagnostic truth-frame calculation, with sample-epoch controller torque
 separately exported. Current gated commands apply over the following interval;
 native torque at a COIL_OFF boundary can still belong to the preceding burst.
+
+Phase 7G-1 control_source=MEKF_DEVELOPMENT is an explicit nominal short-run
+opt-in. SIMPLE_NAV_REFERENCE remains default. The unchanged 7F chain captures
+post-MEKF TAM/nav at 554, computes at 552 and gates at 550. One separate native
+command owner at 548 publishes the gated dipole (zero otherwise) for [t,t+dt).
+The cycle driver's MTBCmd writer and SimpleNav computation are disabled ONLY in
+that mode; its acquisition priority, native effector and physics stay unchanged.
 """
 
 from __future__ import annotations
@@ -221,7 +228,23 @@ def sample_at_ticks(ticks, source_ticks, values, source_name):
 def run(stop_time_s=None, write_outputs=True, actuator=None,
         replay_commands=None, capture_commands=False, make_plots=True,
         config: HS2SimConfig = DEFAULT_CONFIG, cycle: MagneticCycleConfig | None = None,
-        shadow=None, navigation_consumer=None, disconnected_commands=None):
+        shadow=None, navigation_consumer=None, disconnected_commands=None,
+        control_source="SIMPLE_NAV_REFERENCE"):
+    if control_source not in ("SIMPLE_NAV_REFERENCE", "MEKF_DEVELOPMENT"):
+        raise ValueError("Unknown explicit control source")
+    mekf_control = control_source == "MEKF_DEVELOPMENT"
+    if mekf_control:
+        from attitude_mekf_adapter import ShadowOptions
+        from disconnected_command_observer import ObserverOptions
+        # This phase authorizes only the existing nominal fixture and a short
+        # horizon. No fault callback, delayed/dropout sensor fixture or implicit
+        # full-duration closed-loop run is enabled by this switch.
+        if (stop_time_s is None or not 0 < stop_time_s <= 10 or cycle != diagnostic_cycle_config()
+                or shadow != ShadowOptions(ideal_sun=True) or disconnected_commands is not None
+                or replay_commands is not None):
+            raise ValueError("MEKF_DEVELOPMENT requires explicit <=10 s nominal run, diagnostic cycle, "
+                             "ShadowOptions(ideal_sun=True), and no observer fixture/replay")
+        disconnected_commands = ObserverOptions()
     if disconnected_commands is not None:
         from disconnected_command_observer import ObserverOptions
         from attitude_navigation_consumer import ConsumerOptions, Source
@@ -287,11 +310,20 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
     cycled_driver = None
     if cycle is not None:
         cycled_driver = MagneticCycleDriver(cycle, step_ns, tam, nav.attOutMsg,
-                                           sc.scStateOutMsg, mag.envOutMsgs[0], adcs_cfg)
+                                           sc.scStateOutMsg, mag.envOutMsgs[0], adcs_cfg,
+                                           external_command_owner=mekf_control)
         cycled_driver.ModelTag = "MagneticCycleDriver"
         ctrl = cycled_driver
 
     command_source = ctrl
+    development_owner = None
+    if mekf_control:
+        from mekf_command_owner import MEKFCommandOwner
+        if cycled_driver is None:
+            raise ValueError("MEKF command ownership requires the explicit magnetic cycle")
+        development_owner = MEKFCommandOwner(cycled_driver)
+        development_owner.ModelTag = "MEKFDevelopmentCommandOwner"
+        command_source = development_owner
     if replay_commands is not None:
         command_source = ReplayDipoles(replay_commands, tam.tamDataOutMsg)
         command_source.ModelTag = "ValidationCommandReplay"
@@ -359,9 +391,10 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         sim.AddModelToTask("DynamicsTask", effector, ModelPriority=500)
     # Only ExtForceTorque must latch the NEW torque for the NEXT step here.
 
-    # Phase 7D: lazy, explicitly selected SHADOW path. The existing controller
-    # subscriptions and priorities above remain untouched. No output is fed back.
+    # Phase 7D adapter remains read-only. Only the explicit Phase 7G-1 owner
+    # below can connect the reused navigation/7F chain to native actuation.
     shadow_observer = shadow_adapter = None
+    mekf_nav_log = None
     if shadow is not None:
         from attitude_mekf_adapter import (ShadowOptions, IdealLiveBridge,
                                            MEKFNavigationAdapter, ShadowNavigationObserver)
@@ -376,6 +409,10 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
                                      (shadow_observer, "ShadowNavMonitor", 570)):
             model.ModelTag = tag
             sim.AddModelToTask("DynamicsTask", model, ModelPriority=priority)
+        if mekf_control:
+            # Independent native message record, not copied observer diagnostics.
+            mekf_nav_log = shadow_adapter.navOutMsg.recorder(rec_dt)
+            sim.AddModelToTask("DynamicsTask", mekf_nav_log)
 
     dummy_point = dummy_frozen = None
     if navigation_consumer is not None:
@@ -390,6 +427,9 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         from disconnected_command_observer import attach_observer
         command_observer = attach_observer(sim, cycle, config, tam.tamDataOutMsg,
             shadow_bridge, shadow_adapter, dummy_point, disconnected_commands)
+    if development_owner is not None:
+        development_owner.observer = command_observer
+        sim.AddModelToTask("DynamicsTask", development_owner, ModelPriority=548)
 
     sc_log = sc.scStateOutMsg.recorder(rec_dt)
     mag_log = mag.envOutMsgs[0].recorder(rec_dt)
@@ -592,6 +632,24 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         df.attrs["disconnected_command_records"] = command_observer.records()
         df.attrs["disconnected_command_trace"] = command_observer.trace
         out_csv = out_csv.with_name(out_csv.stem + "_disconnected.csv")
+    if development_owner is not None:
+        from mekf_command_owner import SCOPE
+        df.attrs["mekf_command_owner"] = development_owner.history
+        df.attrs["control_source"] = control_source
+        df.attrs["control_scope"] = SCOPE
+        df["control_source"] = control_source
+        df["cycle_navigation_source"] = "MEKF coherent frozen snapshot"
+        df["nav_source"] = "SimpleNav diagnostic witness; not the selected controller input"
+        df["mekf_nav_publication_ns"] = written(mekf_nav_log)
+        # Recorder zero payloads before acquisition are invalid sentinels. The
+        # adapter intentionally leaves NavAtt unwritten until valid acquisition.
+        df["mekf_nav_valid"] = [row["valid"] for row in shadow_adapter.history]
+        for i, axis in enumerate("xyz"):
+            df[f"mekf_nav_omega_B_{axis}_rad_s"] = sampled(mekf_nav_log, "omega_BN_B")[:, i]
+            df[f"mekf_nav_sigma_BN_{i+1}"] = sampled(mekf_nav_log, "sigma_BN")[:, i]
+        # Keep the independent command-chain records, but never label this host
+        # as disconnected. It now has explicit actuator authority via the owner.
+        out_csv = out_csv.with_name(out_csv.stem.removesuffix("_disconnected") + "_mekf_closed_loop.csv")
     if write_outputs:
         df.to_csv(out_csv, index=False)
         out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
@@ -605,11 +663,15 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
             manifest.update(magnetic_cycle=cycle.to_dict(), cycle_sha256=cycle.fingerprint(),
                             actual_record_step_ns=step_ns, telemetry_schema_version=5)
             out_csv.with_name(out_csv.stem + "_cycle.json").write_text(json.dumps(cycle.to_dict(), indent=2), encoding="utf-8")
+        if development_owner is not None:
+            manifest.update(control_source=control_source, scope=df.attrs["control_scope"])
+            out_csv.with_name(out_csv.stem + "_owner.json").write_text(
+                json.dumps(development_owner.history, indent=2, allow_nan=False), encoding="utf-8")
         out_csv.with_name(out_csv.stem + "_run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         if shadow_observer is not None:
             df.attrs["shadow_telemetry"].to_csv(out_csv.with_name(out_csv.stem + "_nav.csv"), index=False)
             out_csv.with_name(out_csv.stem + "_status.json").write_text(json.dumps({
-                "scope": "SHADOW DEVELOPMENT INTEGRATION / NOT FLIGHT VALIDATED",
+                "scope": df.attrs.get("control_scope", "SHADOW DEVELOPMENT INTEGRATION / NOT FLIGHT VALIDATED"),
                 "options": df.attrs["shadow_options"], "status": df.attrs["shadow_status"]}, indent=2), encoding="utf-8")
         if command_observer is not None:
             out_csv.with_name(out_csv.stem + "_commands.json").write_text(
@@ -638,6 +700,8 @@ def main(argv=None):
     selection.add_argument("--profile", choices=PROFILE_NAMES, default="regression_baseline",
                            help="Physical profile; candidate is an explicit opt-in sensitivity case")
     parser.add_argument("--duration", type=float, default=None)
+    parser.add_argument("--control-source", choices=("SIMPLE_NAV_REFERENCE", "MEKF_DEVELOPMENT"),
+                        default="SIMPLE_NAV_REFERENCE", help="MEKF is nominal <=10 s development only")
     parser.add_argument("--no-plots", action="store_true")
     parser.add_argument("--navigation", choices=("simple-nav", "shadow-mekf"), default="simple-nav")
     parser.add_argument("--shadow-ideal-sun", action="store_true",
@@ -665,7 +729,7 @@ def main(argv=None):
         config=get_profile_config(args.profile) if args.config is None else HS2SimConfig.load(args.config),
         cycle=(MagneticCycleConfig.load(args.cycle_config) if args.cycle_config else
                diagnostic_cycle_config() if args.magnetic_cycle == "diagnostic" else None), shadow=shadow,
-        disconnected_commands=disconnected)
+        disconnected_commands=disconnected, control_source=args.control_source)
 
 
 if __name__ == "__main__":

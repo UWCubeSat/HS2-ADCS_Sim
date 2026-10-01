@@ -6,6 +6,29 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7G-1 first nominal MEKF closed-loop A/B - 2026-09-30
+
+**FIRST MEKF CLOSED-LOOP DEVELOPMENT INTEGRATION / NOMINAL SHORT-RUN ONLY /
+NOT FLIGHT VALIDATED.** Committed starting checkpoint: `29e4149` (7F-2C).
+This section supersedes earlier disconnected-only statements for the explicit
+`MEKF_DEVELOPMENT` option. `SIMPLE_NAV_REFERENCE` remains the production default.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / selection | First native-actuator connection of the verified MEKF, snapshot, unchanged controller calculation and application health gate. Explicit `--control-source MEKF_DEVELOPMENT`; nominal diagnostic cycle, explicit ideal Sun, explicit duration <=10 s required. No fixture callback, delayed/dropout sensor option or implicit full run. |
+| Inputs | Existing regression-baseline profile, initial tumble, 0.1 s plant step, WMM/Earth orientation, actuator limits, controller gain/law and test-only sensor/covariance configuration unchanged. A/B both use the same existing ideal bridge: 0.7 s Sun cadence, first vector at 0.4 s. |
+| Ownership | One native MTBCmd subscriber source: `MEKFCommandOwner` at priority 548. In opt-in mode the cycle driver does not publish MTBCmd and does not calculate a SimpleNav command. It retains acquisition at 600; native MtbEffector remains the sole magnetic dynamics effector. |
+| Timing / provenance | Actual TAM/MEKF sample and capture 0.4 s, unchanged calculation 0.5 s, health decision and publication 0.6 s, first completed nonzero-torque interval at 0.7 s. Repeats each existing cycle. Sample/cycle/command/generation IDs and publication/subscriber epochs are retained. |
+| Zero enforcement | Fresh zero payload each invocation unless that tick's existing chain decision is usable. Pre-acquisition, SAMPLE, COMPUTE and quiet phases command zero. Quiet history reflects actual final publication. A COIL_OFF row can report torque from the preceding burst; checks use held inputs. |
+| Independent evidence | Native subscriber readback/module ID, independent MEKF NavAtt recorder, native final-RK-stage output, accepted plant state, held inputs and RK4/work reconstruction. Applied torque is never overwritten. |
+| Nominal result | PASS for two 6 s runs: six cycles, 24 energized and 36 zero intervals; all bounds, freshness, finite-state/covariance, torque, state-step and work checks pass. Nine focused tests and 121 relevant existing regressions pass. |
+| A/B differences | Final rate: SimpleNav 0.8742458216779315 rad/s; MEKF 0.8742458126971391 rad/s. Maximum rate-vector difference 1.8620311143422534e-8 rad/s; attitude difference 2.4724589342520592e-8 rad. Small estimated-bias corrections change commands and subsequent plant feedback. This is not a performance comparison or improvement claim. |
+| Preservation | Committed-versus-working six-second continuous baseline, continuous candidate and cycled baseline CSV serializations are byte-identical. Both changed runtime modules are loaded from HEAD for the committed comparison. No physical parameters, MEKF math, cycle durations or controller tuning changed. |
+| Limits / next | Nominal native control only; faults/resets were not newly exercised with actuator authority. Next justified work is a separately authorized short CLOSED-LOOP fault/inhibition test. Stability envelopes, detumble requirements, hardware realism, pointing and flight performance remain unverified. |
+
+Details, tolerances, commands, and artifact provenance are in the
+[Phase 7G-1 architecture record](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7g-1-first-nominal-closed-loop-integration---2026-09-30).
+
 ## Phase 7F-2C live disconnected command-chain observer - 2026-09-30
 
 **LIVE DISCONNECTED COMMAND-CHAIN OBSERVER / NO ACTUATOR AUTHORITY /

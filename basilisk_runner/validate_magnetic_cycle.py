@@ -107,9 +107,20 @@ def cycle_checks(df: pd.DataFrame, config: HS2SimConfig):
     check("recorded_TAM_sample", np.array_equal(sample_b, vector("tam_sample_B_B", "_T")))
     sample_sigma, sample_w = vector("cycle_sample_sigma_BN"), vector("cycle_sample_omega_B")
     truth_sigma = df[[f"sigma_BN_{j}" for j in (1, 2, 3)]].to_numpy(dtype=float)
+    reference_sigma, reference_w = truth_sigma, vector("omega_B", "_rad_s")
+    if "control_source" in df:
+        if not (df.control_source == "MEKF_DEVELOPMENT").all():
+            raise ValueError("Unknown or mixed explicit cycle control source")
+        # Phase 7G-1 records the native MEKF NavAtt separately. Estimated nav
+        # must match that source at acquisition; it need not equal plant truth.
+        # Truth still independently verifies the physical TAM transform below.
+        reference_sigma = df[[f"mekf_nav_sigma_BN_{j}" for j in (1, 2, 3)]].to_numpy(dtype=float)
+        reference_w = vector("mekf_nav_omega_B", "_rad_s")
+        check("mekf_sample_publication", (df.mekf_nav_publication_ns.to_numpy()[sample] == ticks[sample])
+              & df.mekf_nav_valid.to_numpy(dtype=bool)[sample])
     check("sample_state_and_field", np.allclose(sample_bn[sample], vector("B_N", "_T")[sample], rtol=0, atol=1e-18)
-          and np.allclose(sample_w[sample], vector("omega_B", "_rad_s")[sample], rtol=0, atol=1e-14)
-          and np.allclose(sample_sigma[sample], truth_sigma[sample], rtol=0, atol=1e-14)
+          and np.allclose(sample_w[sample], reference_w[sample], rtol=0, atol=1e-14)
+          and np.allclose(sample_sigma[sample], reference_sigma[sample], rtol=0, atol=1e-14)
           and np.allclose(sample_b[sample], rotate_inertial_to_body(truth_sigma[sample], sample_bn[sample]), rtol=0, atol=1e-18))
     for prefix in ("cycle_sample_B_B", "cycle_sample_B_N", "cycle_sample_sigma_BN", "cycle_sample_omega_B"):
         values = vector(prefix)
