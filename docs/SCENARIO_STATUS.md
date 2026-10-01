@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7G-2B closed-loop reset / reacquisition - 2026-10-01
+
+**MEKF CLOSED-LOOP RESET / REACQUISITION / DEVELOPMENT TEST / NOT FLIGHT VALIDATED.**
+Starting checkpoint: `a1d29d1` (7G-2A). PASS for one controlled lifecycle.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / scope | Verify that reset/reacquisition cannot revive pre-reset actuation. New validation harness/tests only; all shared runtime, controller, estimator, owner, cycle, physical and environment code remain unchanged. |
+| Fixture | Existing InputBatch validity/reset interface and ObserverOptions hook; one fault at 0.8 s, explicit reset at 1.0 s, unchanged old-envelope replay at 7.7 s. Nine-second TEST-ONLY horizon. No new reset architecture or fault model. |
+| Reacquisition | Existing 0.7 s ideal-Sun cadence and 1 s TAM cycle next coincide at 7.4 s. Gate lifecycle REACQUIRING / estimator UNINITIALIZED from reset until then; actuator stays zero. No sensor cadence was shortened. |
+| Generation | Tuple is (observer reset serial, estimator acquisition count, observer health-revocation serial). Initial (0,1,0), fault (0,1,1), reset (1,1,1), reacquired/fresh (1,2,1). The adapter retains its acquisition counter across the in-run reset event. |
+| Reacquisition alone | Coherent candidate 7.4 s / calculation 7.5 s remains unusable at 7.6 s: fresh_post_reacquisition_snapshot_required. Existing policy requires a sample strictly later than reacquisition. |
+| Old-command replay | At 7.7 s, replay immutable command ID 1 with sample 0.4 s / computation 0.5 s / generation (0,1,0). Healthy source cannot authorize it: snapshot_predates_current_acquisition, generation mismatch, native zero. Epochs/deadlines were not relabeled. |
+| Fresh restart | TAM, native MEKF state/publication and capture 8.4 s; new calculation 8.5 s; command ID 3, generation (1,2,1), reaches native MtbEffector at 8.6 s. First completed resumed torque record 8.7 s. |
+| Native safety / physics | 78 consecutive zero publications over [0.8,8.6 s), including 64 REACQUIRING boundaries. Quiet/sample phases remain zero. Resumed dipole [-0.2,0.2,0.8220612696753196] A m^2 matches the gated result; independent maximum torque error 3.4145e-21 N m. |
+| Validation / preservation | Eight focused tests and live validator pass. Fresh snapshot matches independent TAM/NavAtt records. Finite continuous plant and energy/work checks pass. Three short production traces remain byte-identical to HEAD; no shared runtime changes required broader regression reruns. |
+| Limits / next | In-run lifecycle only; no process restart/counter reset, arbitrary event timing, sensor realism, flight latency, detumble requirement or pointing claim. Next smallest test: one late fault at the gate-to-owner publication boundary. |
+
+See the [generation, timing and actuator evidence](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7g-2b-closed-loop-reset--reacquisition---2026-10-01).
+
 ## Phase 7G-2A closed-loop fault inhibition - 2026-10-01
 
 **MEKF CLOSED-LOOP FAULT INHIBITION / DEVELOPMENT TEST / NOT FLIGHT VALIDATED.**

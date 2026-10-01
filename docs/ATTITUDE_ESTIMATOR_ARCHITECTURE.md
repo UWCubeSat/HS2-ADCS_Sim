@@ -1717,3 +1717,121 @@ post-reacquisition command are necessary before native nonzero actuation resumes
 This phase does not perform that experiment. General fault coverage, arbitrary
 event arrival times, process restart, hardware safeing/latency, realistic sensors,
 requirements-grade detumble, attitude knowledge and pointing remain unverified.
+
+## Phase 7G-2B closed-loop reset / reacquisition - 2026-10-01
+
+**MEKF CLOSED-LOOP RESET / REACQUISITION / DEVELOPMENT TEST / NOT FLIGHT VALIDATED.**
+Engineering gate: **PASS for this one controlled in-run lifecycle**. Starting HEAD
+`a1d29d1` contains 7G-2A; the working tree was clean. No shared runtime or scenario
+wiring was changed. The new harness uses existing ObserverOptions/InputBatch hooks
+and unchanged snapshot, controller, health gate, command owner and native actuator.
+
+### Existing generation semantics, inspected before implementation
+
+The source/command generation is the observer tuple `(reset serial, acquisition
+count, revocation serial)`, bound to the snapshot at capture and copied into its
+immutable PendingCalculation. The middle element is the adapter's monotonically
+increasing acquisition count. There is no new estimator reset-ID field: the
+observer increments its reset serial on the existing delivered
+`InputBatch.reset_acquisition` event, and increments its revocation serial on a
+healthy-to-unhealthy transition. The adapter clears its engine/fault on this event
+while retaining the acquisition count. The test does not call SysModel.Reset or
+restart a process/counter, and adds no reset semantics.
+
+| Event | Source generation | Command provenance / authority |
+|---|---|---|
+| Initial capture 0.4 s / calculation 0.5 s | (0,1,0) | Command ID 1 drives native actuation at 0.6/0.7 s. |
+| Fault 0.8 s | (0,1,1) | Old generation revoked; owner/native input zero. |
+| Explicit reset 1.0 s | (1,1,1) | Prior provenance obsolete; gate REACQUIRING, source UNINITIALIZED; zero persists. |
+| Reacquisition 7.4 s | (1,2,1) | Source healthy, but acquisition alone grants no command authority. |
+| Same-acquisition candidate 7.4 / 7.5 s | (1,2,1) | Command ID 2 is numerically valid but rejected at 7.6 s: fresh_post_reacquisition_snapshot_required. |
+| Replay old envelope 7.7 s | Current (1,2,1), old command (0,1,0) | ID 1 retains sample 0.4 s, computation 0.5 s and original application window. Rejected; native input stays zero. |
+| Fresh capture 8.4 s / calculation 8.5 s | (1,2,1) | ID 3 is eligible and reaches native actuator at 8.6 s. |
+
+The key invariant remains: an old pre-reset command cannot become usable after
+reset. Reacquisition restores source health, not authority for historical inputs.
+The existing gate additionally requires a sample strictly after reacquisition;
+a coherent same-epoch acquisition sample is insufficient. These policies were
+already present in 7F-2B/2C and were not changed to achieve a passing result.
+
+### One live sequence and explicit replay rejection
+
+Source: `validate_closed_loop_reacquisition.py`, revision 2026-10-01. All event
+times and the 9 s horizon are **ASSUMED / TEST-ONLY**. The input relay at priority
+588 delivers the already-supported `gyro_valid=False` fault at 0.8 s and
+`reset_acquisition=True` at 1.0 s. The owned-view fixture at 556 replays the saved
+immutable envelope at 7.7 s. It does not forge quality, modify numeric command
+values, relabel timestamps, renew deadlines or touch actuator messages.
+
+The current ideal-Sun cadence is 0.7 s, first vector 0.4 s; TAM acquisition is
+once per existing 1 s cycle at offset 0.4 s. The next coincident post-reset pair is
+7.4 s. The initial-acquisition contract requires a current common-epoch pair, so
+absolute navigation remains invalid during the intervening gyro/vector activity.
+This waiting time is a fixture scheduling consequence, not demonstrated hardware
+reacquisition performance. The sensor cadence and magnetic cycle were preserved.
+
+At 7.6 s the source is healthy and the new same-acquisition candidate has matching
+generation/cycle but remains inhibited by the strict fresh-sample rule. At 7.7 s
+the old envelope is separately rejected with `snapshot_predates_current_acquisition`.
+The captured inputs and numeric calculation remain valid finite historical data,
+and the current source is healthy. The rejection therefore occurs on provenance
+before the gate reaches application-window checks; it is not merely a failed old
+deadline. The observer also records a generation mismatch. Old numerical
+diagnostics remain visible without replacing independently recorded native input
+or applied torque.
+
+The next TAM/MEKF sample at 8.4 s is strictly later than both reset and reacquisition.
+Its body rate, attitude, TAM transform and publication epochs match independent
+native NavAtt/TAM records. Computation at 8.5 s creates ID 3 in generation (1,2,1).
+The current health/application gate accepts it at 8.6 s; the single unchanged owner
+publishes `[-0.2,0.2,0.8220612696753196] A m^2`, exactly matching native readback.
+The first completed resumed-torque record at 8.7 s is
+`[1.0465049729882324e-6,1.8364838631639162e-5,-4.213392431318644e-6] N m`.
+These are **CONFIRMED numerical observations for the assumed development fixture**,
+not released flight actuator values or a required resumed command.
+
+### Independent evidence and verification boundary
+
+There are 78 consecutive fresh zero publications over [0.8,8.6 s), including all
+64 boundaries with gate lifecycle REACQUIRING. Native torque is exactly zero on
+the completed corresponding intervals; the 8.6 s torque record still describes
+the previous zero interval. Quiet/sample phases remain zero before and after
+recovery, and TAM quiet-window checks remain valid. SimpleNav remains available
+but never acquires control; publisher identity stays singular and unchanged.
+
+Independent held-input RK4 reconstruction verifies every accepted spacecraft step
+through fault, reset, reacquisition and resumption. Maximum native-stage torque
+error is 3.4144989710325696e-21 N m, coupled-state component error
+1.1102230246251565e-16, and interval energy/work residual 7.401933358369738e-15 J.
+Test-only limits remain 1e-15 N m torque, 1e-12 coupled-state component error and
+1e-10 J interval work residual. The plant remains finite and rotates naturally
+while command torque is zero; neither reset nor replay rewrites plant state.
+
+Eight focused tests and the standalone lifecycle validator pass. Negative
+evidence checks reject premature command resumption and altered native torque.
+The three established short continuous-baseline, candidate and cycled-baseline
+preservation cases remain byte-identical to HEAD. Shared runtime/wiring did not
+change, so the previously passed broad regression suites were not repeated.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_closed_loop_reacquisition.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_closed_loop_reacquisition.py --report basilisk_runner\output_data\phase7g2b_reacquisition.json
+git diff --check
+```
+
+The dedicated ignored JSON/CSV artifacts carry the correct reset/reacquisition
+scope, event/generation/envelope records, source/configuration/CSV hashes, current
+health/quality, owner/native/plant evidence and preservation results. The harness
+uses `write_outputs=False`; the existing scenario's fault-inhibition manifest is
+not emitted or relabeled, and prior production artifacts are not replaced.
+Compilation and diff/allowlist checks pass. Expected invalid startup NavAtt
+recorder warnings retain their existing 0-0.3 s meaning.
+
+**Next smallest experiment:** one late-fault test at the health-gate-to-owner
+publication boundary, establishing which interval may still use an earlier
+decision and verifying deterministic inhibition at the first eligible boundary.
+This phase does not establish arbitrary arrival-time safety, process restart or
+counter-reset semantics, broad fault robustness, hardware latency, realistic
+sensor/estimator performance, requirements-grade detumble or pointing. A longer
+performance campaign is not the next step.
