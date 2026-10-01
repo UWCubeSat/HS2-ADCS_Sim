@@ -229,22 +229,27 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         replay_commands=None, capture_commands=False, make_plots=True,
         config: HS2SimConfig = DEFAULT_CONFIG, cycle: MagneticCycleConfig | None = None,
         shadow=None, navigation_consumer=None, disconnected_commands=None,
-        control_source="SIMPLE_NAV_REFERENCE"):
+        control_source="SIMPLE_NAV_REFERENCE", mekf_fault_test=None):
     if control_source not in ("SIMPLE_NAV_REFERENCE", "MEKF_DEVELOPMENT"):
         raise ValueError("Unknown explicit control source")
     mekf_control = control_source == "MEKF_DEVELOPMENT"
+    if mekf_fault_test is not None and not mekf_control:
+        raise ValueError("Closed-loop fault fixture requires explicit MEKF_DEVELOPMENT ownership")
     if mekf_control:
         from attitude_mekf_adapter import ShadowOptions
         from disconnected_command_observer import ObserverOptions
-        # This phase authorizes only the existing nominal fixture and a short
-        # horizon. No fault callback, delayed/dropout sensor fixture or implicit
-        # full-duration closed-loop run is enabled by this switch.
+        # A short nominal run remains the CLI default. Phase 7G-2A permits an
+        # explicit Python-only ObserverOptions fault fixture; no CLI fault flag,
+        # sensor model change or implicit full-duration run is introduced.
         if (stop_time_s is None or not 0 < stop_time_s <= 10 or cycle != diagnostic_cycle_config()
                 or shadow != ShadowOptions(ideal_sun=True) or disconnected_commands is not None
                 or replay_commands is not None):
             raise ValueError("MEKF_DEVELOPMENT requires explicit <=10 s nominal run, diagnostic cycle, "
                              "ShadowOptions(ideal_sun=True), and no observer fixture/replay")
-        disconnected_commands = ObserverOptions()
+        if mekf_fault_test is not None:
+            if not isinstance(mekf_fault_test, ObserverOptions) or not callable(mekf_fault_test.test_setup):
+                raise ValueError("Explicit ObserverOptions with a test-only fault callback required")
+        disconnected_commands = mekf_fault_test if mekf_fault_test is not None else ObserverOptions()
     if disconnected_commands is not None:
         from disconnected_command_observer import ObserverOptions
         from attitude_navigation_consumer import ConsumerOptions, Source
@@ -650,6 +655,17 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         # Keep the independent command-chain records, but never label this host
         # as disconnected. It now has explicit actuator authority via the owner.
         out_csv = out_csv.with_name(out_csv.stem.removesuffix("_disconnected") + "_mekf_closed_loop.csv")
+        if mekf_fault_test is not None:
+            df.attrs["control_scope"] = "MEKF CLOSED-LOOP FAULT INHIBITION / DEVELOPMENT TEST / NOT FLIGHT VALIDATED"
+            df.attrs["closed_loop_fault_fixture"] = mekf_fault_test.label
+            # A failed capture leaves acquisition diagnostics in the cycle
+            # driver, but those values never become MEKF control inputs. Do not
+            # label them as a coherent snapshot once the new cycle has none.
+            captured = [r["sample_epoch_ns"] is not None for r in command_observer.history]
+            df["cycle_control_snapshot_captured"] = captured
+            df["cycle_navigation_source"] = ["MEKF coherent frozen snapshot" if present else
+                "NO_CURRENT_COHERENT_CONTROL_SNAPSHOT; acquisition diagnostics only" for present in captured]
+            out_csv = out_csv.with_name(out_csv.stem + "_fault_inhibition.csv")
     if write_outputs:
         df.to_csv(out_csv, index=False)
         out_csv.with_name(out_csv.stem + "_config.json").write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
@@ -665,6 +681,8 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
             out_csv.with_name(out_csv.stem + "_cycle.json").write_text(json.dumps(cycle.to_dict(), indent=2), encoding="utf-8")
         if development_owner is not None:
             manifest.update(control_source=control_source, scope=df.attrs["control_scope"])
+            if mekf_fault_test is not None:
+                manifest["closed_loop_fault_fixture"] = mekf_fault_test.label
             out_csv.with_name(out_csv.stem + "_owner.json").write_text(
                 json.dumps(development_owner.history, indent=2, allow_nan=False), encoding="utf-8")
         out_csv.with_name(out_csv.stem + "_run.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

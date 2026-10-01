@@ -1604,3 +1604,116 @@ reset/fresh-generation restoration. Existing disconnected fault regressions stil
 pass, but this phase adds no closed-loop fault campaign. Performance campaigns,
 requirements verification, hardware realism, pointing and flight claims remain
 blocked by their previously documented evidence gaps.
+
+## Phase 7G-2A closed-loop fault inhibition - 2026-10-01
+
+**MEKF CLOSED-LOOP FAULT INHIBITION / DEVELOPMENT TEST / NOT FLIGHT VALIDATED.**
+Engineering gate: **PASS for the single tested persistent fault**. Starting HEAD
+`0569ad8` contains 7G-1; the initial working tree was clean. No controller equation,
+gain, magnetic-cycle duration, MEKF mathematics, physical configuration, orbit,
+environment or actuator limit changed.
+
+### One existing fault, real prior actuator authority
+
+Source: `validate_closed_loop_inhibition.py`, revision 2026-10-01. The harness
+reuses `validate_disconnected_command_chain.LiveFixtures('mid_burst_fault')` and
+the existing input-validity interface. Its single event sets `gyro_valid=False`
+with reason `7F2C_TEST_ONLY_fault` at 800000000 ns, priority 588, after the normal
+bridge at 590 and before MEKF at 580. The existing adapter fault, navigation latch
+and health gate stay faulted thereafter. Subsequent input batches are otherwise
+normal; clearing input validity alone does not clear the latched source fault.
+No reset, source handover, reacquisition or new sensor-failure model is injected.
+
+The only runtime extension is an explicit Python-only `mekf_fault_test` argument
+carrying existing `ObserverOptions` with a test callback. It is rejected outside
+MEKF_DEVELOPMENT. Normal CLI/API operation remains unchanged, and the 10 s
+development ceiling remains. The new harness runs 3 s: prior real actuation plus
+two complete post-fault sample/burst cycles. Fault timing/duration and ideal
+sensor/covariance fixtures are **ASSUMED / TEST-ONLY**, not flight requirements.
+
+The existing task relationship is preserved: acquisition 600; early witness 595;
+bridge 590; test relay 588; TAM tap 587; MEKF 580; monitor 570; navigation consumers
+565/560/555; capture/current health 554; calculation 552; application gate 550;
+sole MEKF owner 548. The reused fixture's 568/556 callbacks do not inject quality,
+reset or owned-view changes in this case. Native propagation/torque recording
+still precede these stages. No gate, observer or command-owner algorithm changed.
+
+### Timing, zeroing and continued rotation
+
+The following are **CONFIRMED software observations for this test configuration**:
+
+| Event | Simulation epoch / evidence |
+|---|---|
+| Coherent sample / calculation | 0.4 / 0.5 s; command ID 1, initial generation (0,1,0). |
+| Native nonzero publications | 0.6 and 0.7 s; dipole [-0.2,-0.2,0.42702955144649996] A m^2 in the unchanged body-aligned fixture. |
+| Real pre-fault application | [0.6,0.7 s) and [0.7,0.8 s); native torque is nonzero and the plant responds normally. |
+| Fault / first health observation | 0.8 s at priority 588 / 554; current adapter quality is invalid. |
+| First application inhibition | 0.8 s at 550, reason estimator_fault:7F2C_TEST_ONLY_fault. The historical numeric command remains valid/nonzero, but unusable. |
+| Zero owner publication / native input | 0.8 s at 548; payload, native subscriber values and message epoch agree exactly. |
+| First zero commanded-torque interval | [0.8,0.9 s); held input/epoch guard confirm the zero command used for integration. |
+| First completed zero native-torque record | 0.9 s. The nonzero torque recorded at 0.8 s correctly belongs to the preceding interval. |
+| Persistent fault | 23 fresh zero publications from 0.8 through 3.0 s, including all 10 remaining ACTUATE boundaries. Completed post-fault integration covers 2.2 s; the last publication at 3.0 s has no subsequent simulated interval. |
+| Continued acquisition | TAM samples at 1.4 and 2.4 s remain valid; actual quiet ages 0.6 and 1.6 s. Three total valid acquisitions, zero rejected. |
+| Source selection | Consumer requests MEKF throughout; selected source becomes NONE. SimpleNav remains published/current but never gains actuator ownership. |
+
+Event-to-health detection, event-to-zero publication and event-to-zero-interval
+start are all **0 simulation ns** for this aligned event and single-threaded task
+ordering. The completed native-torque record follows **0.1 s** later. This is not
+an asynchronous-fault latency bound, flight timing allocation or coil-current
+decay measurement. The native algebraic actuator still lacks electrical decay.
+
+The actuator receives a new zero at every inhibited boundary. The old computed
+command is not erased to make the test pass: its original sample, computation,
+generation and nonzero clipped dipole remain visible at first inhibition. Current
+health revokes its use. At later cycles failed MEKF captures do not restore it.
+Acquisition diagnostics remaining in the cycle driver are explicitly labeled
+`NO_CURRENT_COHERENT_CONTROL_SNAPSHOT`; they are not SimpleNav fallback control.
+
+Validation compares separate health decisions, owner publications, native input
+readback/module identity, held messages, native final-RK-stage torque and accepted
+spacecraft state. Independent held-input RK4 predicts the state/torque, and stage
+torque-dot-rate work is compared with rotational energy. The state is identical
+to a matching nominal MEKF run through the 0.8 s propagated state, before the new
+command acts. It remains finite and follows torque-free dynamics afterward.
+Continued rotation is expected: inhibition removes new commanded magnetic torque,
+not angular momentum. Numerical tolerances are TEST-ONLY: 1e-15 N m torque,
+1e-12 coupled-state component error and 1e-10 J interval work residual.
+
+### Verification and next boundary
+
+Nine focused tests exercise prior real nonzero actuation, delivery of the fault,
+immediate native zeroing, fresh persistent zeros, cycle/quiet compatibility,
+finite continuous plant response, no fallback, explicit fixture selection and
+default preservation. Two tests alter saved evidence to ensure nonzero native
+torque or a retained command cannot produce a passing report. Existing estimator
+and health policy tests are reused rather than reimplemented.
+
+All nine focused tests and 52 relevant regression tests pass; the standalone live
+validator and all three byte-preservation cases pass. Maximum native torque error
+is 9.470116246213047e-22 N m; coupled-state step error is 1.1102230246251565e-16;
+interval energy/work residual is 5.195858281860778e-15 J. Final rate remains
+0.877273881915547 rad/s, consistent with continuing rotation after torque removal.
+These are fixture observations, not flight-performance results. Compilation and
+diff/allowlist checks pass. Expected unwritten-NavAtt warnings before the first
+0.4 s acquisition retain the Phase 7G-1 invalid-startup semantics.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_closed_loop_inhibition.py -v
+.\.venv\Scripts\python.exe -B -c "import sys,unittest;sys.path.insert(0,'basilisk_runner');names=['test_mekf_closed_loop','test_disconnected_command_observer','test_magnetic_control_cycle','test_attitude_mekf_adapter','test_native_magnetic_actuation'];result=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromNames(names));sys.exit(not result.wasSuccessful())"
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_closed_loop_inhibition.py --report basilisk_runner\output_data\phase7g2a_inhibition.json
+git diff --check
+```
+
+The dedicated ignored JSON/CSV artifacts retain the base commit, source/CSV
+hashes, configuration/cycle/sensor provenance, fault mechanism/event, independent
+native/plant records, current quality/consumer/health records, latency and every
+owner decision. Preservation reloads the committed runtime modules and compares
+three short default cases byte-for-byte; no production output is replaced.
+
+**Next smallest justified experiment:** separately authorized CLOSED-LOOP RESET /
+REACQUISITION, proving that explicit restart and a completely fresh coherent
+post-reacquisition command are necessary before native nonzero actuation resumes.
+This phase does not perform that experiment. General fault coverage, arbitrary
+event arrival times, process restart, hardware safeing/latency, realistic sensors,
+requirements-grade detumble, attitude knowledge and pointing remain unverified.

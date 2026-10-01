@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7G-2A closed-loop fault inhibition - 2026-10-01
+
+**MEKF CLOSED-LOOP FAULT INHIBITION / DEVELOPMENT TEST / NOT FLIGHT VALIDATED.**
+Committed starting checkpoint: `0569ad8` (7G-1). PASS for the single tested fault.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / inputs | Prove revocation of real nonzero native actuation. Existing MEKF, cycle, physical configuration, controller, ideal sensor bridge and actuator limits unchanged; 3 s TEST-ONLY horizon. |
+| Fault | Reuse 7F-2C `LiveFixtures('mid_burst_fault')`: one `InputBatch.gyro_valid=False` event at 0.8 s, priority 588. Existing estimator fault `7F2C_TEST_ONLY_fault` stays latched despite subsequent valid input. No reset/reacquisition injection or new failure model. |
+| Connection | Python-only `mekf_fault_test=ObserverOptions(...)` requires explicit MEKF_DEVELOPMENT ownership. No CLI fault flag. Gate/owner/effector logic and task priorities are unchanged; no second publisher or automatic SimpleNav fallback. |
+| Pre-fault proof | Sample/capture 0.4 s, computation 0.5 s; nonzero commands at 0.6/0.7 s produce real native torque over two completed intervals. The stored calculation remains nonzero when revoked at 0.8 s. |
+| Inhibition / latency | Event 0.8 s -> current gate health and native zero input 0.8 s -> zero-torque interval [0.8,0.9 s), recorded at 0.9 s. Event-to-zero-interval-start latency is 0 simulation ns in this schedule; completion/readback is 0.1 s later. This is not a flight latency requirement. |
+| Persistence / cycle | All 23 publications from 0.8 through 3.0 s are fresh zero, including 10 ACTUATE boundaries. TAM acquisitions at 1.4/2.4 s remain valid with 0.6/1.6 s quiet age; no rejected acquisitions. No old command returns. |
+| Independent validation | Gate/owner/native subscriber records, independent held-input recorder/epoch guard, native torque and propagated state agree. Native torque is exactly zero throughout completed inhibited intervals; rigid-body/energy checks confirm continuous torque-free rotation. |
+| Telemetry | In fault fixtures, acquisition-only navigation diagnostics after a failed capture are explicitly labeled NO_CURRENT_COHERENT_CONTROL_SNAPSHOT. Historical numeric calculations remain diagnostic; they are not command authority. Nominal/default telemetry is preserved. |
+| Tests / preservation | Nine focused actuator-boundary tests and 52 relevant regressions pass, including rejection of altered native-torque and retained-command evidence. Short committed-versus-working continuous baseline, candidate and cycled baseline remain byte-identical. See architecture record for commands and numerical results. |
+| Boundary / next | PASS only for this delivered fault and deterministic schedule. Next: separately authorized CLOSED-LOOP RESET / REACQUISITION. No restart test, hardware latency, realistic sensor performance, mission detumble, pointing or flight claim. |
+
+See the [fault-inhibition evidence and commands](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7g-2a-closed-loop-fault-inhibition---2026-10-01).
+
 ## Phase 7G-1 first nominal MEKF closed-loop A/B - 2026-09-30
 
 **FIRST MEKF CLOSED-LOOP DEVELOPMENT INTEGRATION / NOMINAL SHORT-RUN ONLY /
