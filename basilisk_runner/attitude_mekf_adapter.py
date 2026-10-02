@@ -19,6 +19,7 @@ from Basilisk.utilities import RigidBodyKinematics as rbk
 from attitude_mekf import MEKF, ReplayEstimator, VectorSample, epoch, vector
 from attitude_mekf_prototype import independent_error, load_test_policy, magnetic_cycle_sample
 from gyro_sensor_model import GyroConfig, GyroModel, GyroSample
+from tam_sensor_model import TAMConfig, TAMModel, CleanlinessContext
 
 T = TypeVar("T")
 
@@ -56,8 +57,13 @@ class ShadowOptions:
     initial_q_BN: tuple[float, float, float, float] | None = None
     label: str = "ASSUMED / TEST-ONLY; SHADOW DEVELOPMENT INTEGRATION"
     gyro_model: GyroConfig | None = None  # Explicit Python-only shadow opt-in; default bridge unchanged.
+    tam_model: TAMConfig | None = None  # 8B-1: ideal shadow only; native controller TAM is untouched.
 
     def validate(self, step_ns: int):
+        if self.tam_model is not None:
+            if not isinstance(self.tam_model, TAMConfig):
+                raise ValueError("explicit TAMConfig required for modeled TAM")
+            self.tam_model.validate_live()
         if self.gyro_model is not None:
             if not isinstance(self.gyro_model, GyroConfig):
                 raise ValueError("explicit GyroConfig required for modeled gyro")
@@ -117,6 +123,8 @@ class IdealLiveBridge(sysModel.SysModel):
         for reader, source in ((self.state, state_msg), (self.tam, tam_msg), (self.magnetic, field_msg)):
             reader.subscribeTo(source)
         self.c_sb = np.array(c_sb, dtype=float)
+        if options.tam_model is not None and not np.array_equal(self.c_sb, options.tam_model.mounting_C_SB.value):
+            raise ValueError("ideal TAM regression requires the same explicit native/model mounting")
         policy, fixture = load_test_policy()
         self.sun_n = vector(fixture["sun_reference_n"]["value"])
         self.parts = fixture["gyro_substeps"]["value"]
@@ -128,6 +136,8 @@ class IdealLiveBridge(sysModel.SysModel):
         self.previous: tuple[int, np.ndarray] | None = None
         self.pending: list[tuple[int, VectorSample]] = []
         self.gyro_model = GyroModel(self.options.gyro_model) if self.options.gyro_model is not None else None
+        self.tam_model = TAMModel(self.options.tam_model) if self.options.tam_model is not None else None
+        self.tam_history: list[dict] = []
 
     def magnetic_acquisition(self, tick: int) -> VectorSample:
         """Invalid/missing native sensor data remain explicit rejected inputs."""
@@ -145,6 +155,27 @@ class IdealLiveBridge(sysModel.SysModel):
                 row[f"tam_sample_B_B_{axis}_T"] = float(raw_tam[j])
                 row[f"applied_torque_B_{axis}_Nm"] = float(torque[j])
             sample = magnetic_cycle_sample(row, self.driver.cycle)
+            if self.tam_model is not None:
+                # Independent value path: current SCStates/WMM -> B -> S. The
+                # existing native acquisition remains the cycle-validity witness
+                # and the sole controller input; it is never overwritten.
+                field_n = vector(self.magnetic().magField_N)
+                body_true = np.asarray(rbk.MRP2C(self.state().sigma_BN)) @ field_n
+                context = CleanlinessContext(tick, row["cycle_phase"], int(row["cycle_index"]),
+                    tuple(row[f"cycle_pre_native_command_{a}"] for a in "xyz"),
+                    tuple(row[f"cycle_pre_native_effective_dipole_{a}"] for a in "xyz"),
+                    int(row["cycle_time_since_disabled_ns"]), self.driver.cycle.sample_offset_ns,
+                    bool(sample.valid and self.state.isWritten() and self.state.timeWritten() == tick),
+                    "TEST_ONLY_SCHEDULER", "Phase 6A instantaneous acquisition and zero native command/dipole/torque; physical settling TBD",
+                    self.driver.cycle.fingerprint(), coil_current_A=None)
+                modeled = self.tam_model.acquire(body_true, truth_epoch_ns=int(self.magnetic.timeWritten()), acquisition_ns=tick,
+                    context=context, field_source="current WMM B_N transformed by current C_BN; spacecraft/coil contamination deferred")
+                self.tam_history.append(dict(sample=asdict(modeled), state_epoch_ns=int(self.state.timeWritten()),
+                    body_truth_T=body_true.tolist(), field_N_T=field_n.tolist(), native_tam_S_T=raw_tam.tolist()))
+                return replace(sample, measured=modeled.measurement_S_T, valid=sample.valid and modeled.valid,
+                    invalid_reason=sample.invalid_reason if not modeled.rejection_reasons or not sample.valid else ";".join(modeled.rejection_reasons),
+                    frame="S", c_sb=self.c_sb,
+                    source="TAMModel IDEAL_REGRESSION from C_BN WMM B_N; native TAM/cycle is independent witness")
             return replace(sample, frame="S", c_sb=self.c_sb,
                 source="live TAMSensorMsg.tam_S + acquisition WMM B_N; explicit C_SB")
         except (ValueError, IndexError) as error:
@@ -191,6 +222,10 @@ class IdealLiveBridge(sysModel.SysModel):
                 # Driver's historical *_B_B labels currently hold raw tam_S.
                 # The new bridge explicitly carries C_SB instead of relabeling S.
                 delay = self.options.magnetic_delay_ns if tick >= self.options.delay_after_ns else 0
+                if self.tam_model is not None and self.tam_history and self.tam_history[-1]["sample"]["acquisition_ns"] == tick:
+                    # Model publication (availability) and bridge transport/
+                    # processing are distinct. Only zero model latency is live.
+                    self.tam_history[-1]["bridge_delivery_ns"] = tick+delay
                 self.pending.append((tick+delay, sample))
                 batch.source_status["magnetic"] = "acquired" if sample.valid else "invalid_acquisition"
         if not self.options.magnetic_enabled:

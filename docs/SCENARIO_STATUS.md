@@ -6,6 +6,50 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 8B-1 parametric TAM measurement and validity - 2026-10-02
+
+**TAM MEASUREMENT / VALIDITY MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** PASS for ideal equivalence
+and explicit contracts, not realistic magnetic performance. HEAD `7b93165`; prior
+uncommitted 8A-2C work preserved.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / value model | Canonical Tesla; C_SB maps B to S; sensor-frame bias/gain/cross-axis/noise, optional clipping, explicit S and reconstructed B outputs. Caller-supplied local B is the future contamination insertion point; live input remains WMM-only. |
+| Inputs / evidence | All profile errors are ASSUMED / TEST-ONLY, tam_sensor_model.py revision 2026-10-02; runtime_usable_for_flight=false. Native/actuator configuration and Phase 6A timing remain unchanged. |
+| Validity / timing | Finite vector separate from eligibility; coil context, quiet evidence, saturation, source/fingerprint and age checks. Live current evidence is absent, not measured zero. Truth/acquisition/publication at 0.4/1.4/2.4 s; delayed processing at 0.4/1.6/2.6 s. |
+| Live scope | Only exact IDEAL_REGRESSION can opt into the shadow bridge. Perturbations/delay are isolated-only; all TAM model selections rejected for MEKF actuator ownership. Native TAM still drives detumble. |
+| Equivalence | 31-epoch native/Python value difference <=1.016440e-20 T; accepted live sample difference <=6.776264e-21 T. MEKF q/bias/P differences <=3.330669e-16 / 5.070441e-16 rad/s / 6.505213e-19. Event order, epochs and validity exact. |
+| Rejection / preservation | One shadow-only invalid cycle-metadata sample is rejected identically while preserving its finite field. HEAD/current/model host bytes identical; default input/estimator traces exact. |
+| Validation | 10 isolated + 5 live TAM + 17 adapter + 9 nominal-control tests pass. All 13 top-level validator checks pass. No shared cycle changes or perturbation-performance campaign. |
+| Blocked / next | Installed calibration/mounting and coil-to-sensor recovery/filter history remain TBD. Next: one separately authorized deterministic TAM-bias shadow response, maintaining fixed Q/R and zero modeled-TAM actuator authority. |
+
+Numerical observations are CONFIRMED only for the software fixture, source
+validate_tam_sensor_model.py / phase8b1_tam_model.json, revision 2026-10-02.
+See the [measurement, validity and equivalence contract](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8b-1-parametric-tam-measurement-and-validity---2026-10-02).
+
+## Phase 8A-2C live combined synthetic gyro bias and noise - 2026-10-02
+
+**COMBINED SYNTHETIC GYRO BIAS + NOISE RESPONSE / SHADOW DEVELOPMENT TEST /
+NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Checkpoint `7b93165`.
+PASS for composition in one short live fixture; no shared runtime changes.
+
+| FIELD | FINDING |
+|---|---|
+| Profile / inputs | Harness-only TEST_BIAS_PLUS_NOISE, runtime_usable_for_flight=false. Existing bias [0.003,-0.002,0.001] rad/s, per-sample sigma [0.001,0.002,0.003] rad/s, seed 8101; identity C_SB, unit scale, zero cross-axis error/latency, same 3 s schedule/Q/R/P0. ASSUMED / TEST-ONLY Parameters reused from gyro_sensor_model.py revision 2026-10-01. |
+| Composition | All 31 delivered measurements equal ideal + bias + independently seeded noise exactly. Same raw draws as noise-only, unchanged epochs, no extra/double effects. Critical gate precedes estimator interpretation. |
+| Reference / repeat | All three references reused from source-bound 8A-2A/2B evidence; combined case run twice. Inputs, estimator histories, innovations, covariance, validity and event/replay counts match exactly. |
+| Bias | Final estimate [3.599426e-3,-1.109702e-3,9.793997e-4] rad/s; error [5.994256e-4,8.902977e-4,-2.060026e-5] rad/s. Correct injected signs; maximum witnessed norm 3.891854e-3 rad/s; changes explained by vector updates, no convergence target or observed short-window runaway. |
+| Attitude / innovations | Final error 6.231268e-4 rad; published/witnessed maxima 1.852583e-3 / 2.315632e-3 rad. Independent combined endpoint-interpolation check passes; all actual vector updates reduce measured-vector residuals. Nonlinear results need not superpose. |
+| Covariance | Finite, symmetric, positive definite; minimum eigenvalue 7.951123e-6 in numerical SI-state coordinates. No unexplained growth/collapse; Q/R/P0 unchanged and uncalibrated. |
+| Isolation | SimpleNav controls the host, no MEKF command owner, combined modeled-gyro closed-loop selection rejected. Host bytes match all three references and repeat. |
+| Verification | Eight focused tests / 25 live checks pass. No prior statistical campaign, shared-code changes, Monte Carlo or long run. Five distinct post-acquisition updates, six callbacks, two replays, zero rejections. |
+| Next / blocked | TAM measurement/validity branch first because calibration and actuation contamination affect both detumble and estimation. CSS geometry/channel reconstruction remains unresolved. Priority is architectural, not a measured error-budget ranking; installed calibration and justified covariance remain required. |
+
+Numerical observations are CONFIRMED only for this TEST-ONLY experiment, source
+validate_gyro_bias_noise_response.py / phase8a2c_gyro_bias_noise.json, revision 2026-10-02.
+See the [four-case comparison and sensor-branch decision](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8a-2c-live-combined-synthetic-gyro-bias-and-noise---2026-10-02).
+
 ## Phase 8A-2B live synthetic gyro-noise response - 2026-10-02
 
 **SYNTHETIC GYRO-NOISE ESTIMATOR RESPONSE / SHADOW DEVELOPMENT TEST /

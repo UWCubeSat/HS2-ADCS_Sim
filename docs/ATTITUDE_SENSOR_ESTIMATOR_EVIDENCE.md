@@ -8,6 +8,31 @@ The documented candidate is one VN-100 Rugged supplying raw gyro/internal magnet
 
 A limited vendor-prior component study and estimator architecture decisions can begin in a later authorized task. A realistic flight estimator, credible control-pointing prediction and total payload pointing number remain blocked. This phase creates only the two evidence files.
 
+## Phase 8B-1 TAM model evidence disposition - 2026-10-02
+
+**TAM MEASUREMENT / VALIDITY MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** This is a software
+framework disposition, not new hardware evidence. The Phase 7A source decisions
+and companion evidence JSON are unchanged. Runtime profile parameters are sourced
+in tam_sensor_model.py, revision 2026-10-02, all ASSUMED / TEST-ONLY;
+runtime_usable_for_flight=false. The current implementation's known contract is
+distinct from vendor priors and unresolved installed configuration.
+
+| EVIDENCE / STATUS | DISPOSITION IN 8B-1 |
+|---|---|
+| KNOWN SOFTWARE CONTRACT / CONFIRMED | N-to-B C_BN; B-to-S C_SB; canonical Tesla; acquisition/publication/processing separated. Ideal values reproduce native TAM to roundoff; eligibility reuses the existing cycle bookkeeping. This confirms implementation behavior only. |
+| ASSUMED / TEST-ONLY | Identity mounting, zero-error ideal profile, synthetic isolated bias [1,-2,3] microtesla, scale [1.01,0.98,1.03], discrete sigma [0.1,0.2,0.3] microtesla with PCG64 seed 8201. No installed inference or vendor-density conversion. |
+| ASSUMED / TEST-ONLY timing | Existing 0.4 s diagnostic off-history, instantaneous sample, 1 s cycle and zero model availability latency. These are not measured current decay, magnetic settling, aperture or flight packet timing. Source: diagnostic_cycle_config, Phase 6A; preserved unchanged. |
+| VENDOR PRIOR ONLY | Already-recorded VN-100 range +/-250 microtesla, noise density 14 nT/sqrt(Hz), resolution 0.15 microtesla; [P04](#p04) and [E05](MAGNETIC_CONTROL_EVIDENCE.md#magnetometer-validity). No value is promoted to configured flight bias, discrete noise, quantization or clipping. |
+| TBC / TBD installed behavior | Unit/BOM/firmware, channel/body transform, hard/soft-iron calibration, temperature response, actual packet/filter history, spacecraft residual field and coil-to-sensor recovery remain unclosed. Zero commanded dipole is not measured zero current or magnetic cleanliness. |
+| Measurement versus validity | A finite vector can be rejected for coil context, inadequate quiet evidence, age, saturation or provenance. No contamination amplitude is manufactured to represent rejection; finite rejected values are retained. |
+
+Most limiting physical evidence remains installed field-versus-time and sensor
+response across actual coil/polarity/driver states, tied to an approved cleanliness
+criterion and the full acquisition/filter history, plus the installed calibration
+and mounting map. See [ADCS-MAG-005/006](ADCS_MAGNETIC_TEST_PLAN.md#proposed-tests).
+The framework does not close those tests or authorize perturbed magnetic control.
+
 ## Phase 8A-1 gyro model evidence disposition - 2026-10-01
 
 **GYRO SENSOR MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /

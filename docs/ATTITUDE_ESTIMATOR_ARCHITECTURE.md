@@ -2434,3 +2434,325 @@ vector-sensor errors and an evidence-based estimator covariance configuration.
 using the already separate synthetic bias/noise magnitudes, the same recorded
 seed, schedule and fixed Q/R/P0, under separate authorization. It is not executed
 here and would still establish only software/model consistency.
+
+## Phase 8A-2C live combined synthetic gyro bias and noise - 2026-10-02
+
+**COMBINED SYNTHETIC GYRO BIAS + NOISE RESPONSE / SHADOW DEVELOPMENT TEST /
+NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Engineering gate: **PASS** for
+composability of the previously verified synthetic effects. Checkpoint `7b93165`
+contains 8A-2B; the starting working tree was clean. No runtime, sensor-model
+registry, flight configuration, estimator math, Q/R/P0, controller, timing,
+actuator, spacecraft or environment changes were made.
+
+### Combined configuration and critical measurement gate
+
+The validation harness constructs TEST_BIAS_PLUS_NOISE with dataclasses.replace,
+copying the existing sourced bias/noise Parameters. This is **ASSUMED / TEST-ONLY**,
+runtime_usable_for_flight=false, not a new registered production gyro mode.
+Bias_S=[0.003,-0.002,0.001] rad/s, discrete sigma_S=[0.001,0.002,0.003] rad/s per
+sample, and PCG64 seed=8101 are unchanged Phase 8A-1 fixtures from
+gyro_sensor_model.py, revision 2026-10-01. C_SB is identity (S=B), scale is unity,
+cross-axis error is zero, clipping is disabled and latency is zero. The existing
+3 s horizon, 0.1 s gyro cadence, vector schedule and numerical policy are retained.
+
+Before characterizing the estimator, every delivered sample is checked against
+ideal_measurement + deterministic_bias + independently generated seeded_noise.
+All 31 measurements match exactly, with the same raw noise draws as 8A-2B and
+unchanged acquisition/publication/processing epochs. Combined minus noise-only
+recovers the deterministic bias within subtraction roundoff. S/B measurements,
+configuration fingerprints and unchanged truth-rate history are checked. The
+critical gate saves failed evidence and skips estimator interpretation if
+composition fails; negative tests reject missing bias, doubled bias and doubled
+noise. No Gaussian-distribution or prior isolated-estimator campaign is repeated.
+
+Source-bound passing evidence in phase8a2a_gyro_bias.json and
+phase8a2b_gyro_noise.json supplies IDEAL, BIAS_ONLY and NOISE_ONLY. Artifact/source
+hashes are checked; overlapping ideal evidence must agree, or the validator
+raises a contradiction. All references were reused in this phase. If ignored
+artifacts are absent/unbound, only missing references are regenerated from the
+unchanged short fixture. The combined case is run twice with seed 8101; inputs,
+attitude/bias/covariance, innovations, native navigation telemetry, validity and
+event/replay counts reproduce exactly. There is no alternate seed or Monte Carlo.
+
+### Four-case development comparison
+
+These are **CONFIRMED numerical observations of TEST-ONLY software fixtures**.
+Source: validate_gyro_bias_noise_response.py / phase8a2c_gyro_bias_noise.json,
+revision 2026-10-02; reference values reuse their source-bound 8A-2A/2B histories.
+Bias components are B-frame rad/s. Bias error means estimate minus injected
+deterministic bias; injected bias is zero for IDEAL and NOISE_ONLY. Maxima cover
+recorded states, not continuous time. Witnessed maxima include pre/post vector
+updates and replay; innovation maxima use each event's last retained evaluation.
+
+| METRIC | IDEAL | BIAS_ONLY | NOISE_ONLY | BIAS_PLUS_NOISE |
+|---|---|---|---|---|
+| Final principal attitude error, rad | 3.720384e-6 | 2.781083e-4 | 7.411605e-4 | 6.231268e-4 |
+| Maximum published attitude error, rad | 1.369167e-5 | 2.231006e-3 | 1.391670e-3 | 1.852583e-3 |
+| Maximum witnessed attitude error, rad | 1.594657e-5 | 2.602469e-3 | 1.438195e-3 | 2.315632e-3 |
+| Final estimated bias, rad/s | [-1.790200e-5,1.085055e-5,5.648901e-7] | [2.797670e-3,-1.858275e-3,9.182657e-4] | [7.843059e-4,7.599627e-4,6.150821e-5] | [3.599426e-3,-1.109702e-3,9.793997e-4] |
+| Final bias error, rad/s | [-1.790200e-5,1.085055e-5,5.648901e-7] | [-2.023299e-4,1.417249e-4,-8.173425e-5] | [7.843059e-4,7.599627e-4,6.150821e-5] | [5.994256e-4,8.902977e-4,-2.060026e-5] |
+| Maximum witnessed bias-estimate norm, rad/s | 2.094123e-5 | 3.481861e-3 | 1.280840e-3 | 3.891854e-3 |
+| Maximum magnetic tangent-innovation norm, dimensionless | 7.474803e-6 | 1.249729e-3 | 6.617142e-4 | 1.739300e-3 |
+| Maximum Sun tangent-innovation norm, dimensionless | 1.566772e-5 | 2.560933e-3 | 1.214317e-3 | 2.178413e-3 |
+| Minimum covariance eigenvalue, numerical SI-state coordinates | 7.951391e-6 | 7.951371e-6 | 7.951144e-6 | 7.951123e-6 |
+| Maximum covariance eigenvalue, same coordinates | 0.10113308 | 0.10113263 | 0.10113308 | 0.10113264 |
+| Maximum covariance asymmetry | 0 | 0 | 0 | 0 |
+| Validity | Valid from 0.4 s | Same | Same | Same |
+| Rejected events | 0 | 0 | 0 | 0 |
+| Magnetic / Sun updates including acquisition | 3 / 4 | 3 / 4 | 3 / 4 | 3 / 4 |
+| Delayed-vector replays | 2 | 2 | 2 | 2 |
+| Distinct post-acquisition updates / actual callbacks | 5 / 6 | 5 / 6 | 5 / 6 | 5 / 6 |
+
+Combined initial bias estimate is zero; the first meaningful correction at the
+1.1 s Sun update is [+1.392610e-5,-5.348455e-6,+2.655848e-6] rad/s. First and
+final directions agree with the injected deterministic signs in this realization.
+Final combined-minus-noise-only bias estimate also has the injected signs, without
+requiring linear superposition. All estimates remain finite. Bias is exactly held
+during gyro-only intervals; every published change matches the last actual vector
+update at that processing epoch, including replay. No unexplained discontinuity
+or short-window runaway is observed. No long-term stability, convergence speed or
+flight bias limit is established.
+
+The final combined bias error is larger than bias-only; final attitude error is
+larger than bias-only but smaller than noise-only. Magnetic innovation maximum
+exceeds both isolated cases while the Sun maximum lies between them. This is
+consistent with the direction/time-dependent interaction of the fixed noise
+realization and deterministic drift. Independent composition and geometric
+checks expose no unexplained math/frame effect. Scalar error norms are not
+required to add, and this nonlinear filter is not required to obey superposition.
+No tuning or extended horizon was used to change these outcomes.
+
+Every actual vector update reduces its measured-vector residual, including replay,
+with finite innovations and independently checked correction direction. All five
+final-history updates also reduce full truth-angle error in this case; this is not
+a general single-vector observability guarantee. Combined maximum gyro-only
+sample-to-sample error-vector change is 6.023065e-4 rad. Full histories retain
+propagation variation and pre/post-update errors at their actual epochs.
+
+### Independent local check and covariance health
+
+For [0.4,0.5 s], after identical vector acquisition and before a vector/bias
+correction, the independent increment is
+(bias + 0.5*(noise_at_0.4s + noise_at_0.5s))*0.1 s. This accounts for both
+endpoints of the existing linear gyro interpolation. Expected excess rotation is
+[2.117003e-4,-2.322122e-4,1.764728e-4] rad; observed combined-minus-ideal excess
+is [2.115064e-4,-2.311320e-4,1.779557e-4] rad. Norms are 3.603917e-4 and
+3.603126e-4 rad. Directional projection is positive; discrepancy 1.844867e-6 rad
+is within the 3.389218e-5 rad local first-order rotation-transport allowance.
+Excess rotation uses the passive principal vector of C_est C_truth.T, opposite to
+the MEKF true-minus-estimate correction convention. This is not a long-term model.
+
+Combined covariance is finite, symmetric and positive definite; no negative
+variances, NaNs/Infs or numerical collapse appear. Minimum eigenvalue exceeds the
+5.68434e-14 numerical tolerance. Maximum attitude trace is 0.301439414 rad^2,
+below the unchanged zero-Q kinematic bound 0.654 rad^2; bias diagonals never exceed
+P0 [0.001,0.001,0.001] (rad/s)^2. There is no unexplained explosive growth.
+Q/R/P0 remain unchanged TEST-ONLY fixtures, not calibrated uncertainty for the
+combined injected errors or installed hardware.
+
+### Isolation, verification and next sensor branch
+
+SimpleNav remains the actual control source. No MEKF command owner is created,
+and selecting MEKF_DEVELOPMENT with the combined modeled gyro is rejected by the
+unchanged runtime guard. Combined/repeat host CSV bytes match all three reference
+host hashes, covering spacecraft state, commands and independently applied torque.
+The combined profile never gains actuator authority.
+
+**Eight focused tests / 25 live checks pass.** Compilation and whitespace checks
+pass. Shared runtime/helpers/configuration match HEAD; prior isolated suites and
+long performance simulations were not rerun. The ignored JSON stores source and
+reference-artifact hashes, complete four-case histories, original sourced profile
+parameters, policy, independent expectations and repeat hashes. Two new ignored
+CSV artifacts retain the combined/repeat host outputs.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_gyro_bias_noise_response.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_gyro_bias_noise_response.py --report basilisk_runner\output_data\phase8a2c_gyro_bias_noise.json
+git diff --check
+```
+
+**Next highest-value branch: magnetic/TAM measurement and validity model.**
+The existing evidence register identifies installed magnetic calibration and
+actuation contamination as unresolved [INPUT-07](ATTITUDE_SENSOR_ESTIMATOR_EVIDENCE.md#input-07),
+with characterization in [MEAS-03](ATTITUDE_SENSOR_ESTIMATOR_EVIDENCE.md#meas-03).
+TAM is used by both detumble feedback and estimator correction, so its frame,
+calibration, local-field contamination and clean-acquisition/filter-history
+contract affect two active chains. A narrow next phase should define and test a
+parametric shadow TAM measurement/validity interface with ideal regression and
+explicit provenance, preserving cycle timing and keeping unsupported magnitudes
+TBD/TEST-ONLY until installed data exist. No such model is implemented here.
+
+CSS/Sun-vector reconstruction remains essential for absolute attitude availability,
+but [INPUT-08](ATTITUDE_SENSOR_ESTIMATOR_EVIDENCE.md#input-08) retains unresolved
+array selection/count, populated normals, channel calibration and inversion.
+That branch needs its geometry/channel contract before realistic reconstruction.
+TAM-first is an engineering priority based on shared impact and available
+interfaces, not proof that magnetic error numerically dominates an error budget.
+Installed sensor characterization and evidence-based covariance remain blockers
+to realistic HS-2 prediction. No new sensor-evidence classification was established.
+
+## Phase 8B-1 parametric TAM measurement and validity - 2026-10-02
+
+**TAM MEASUREMENT / VALIDITY MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Engineering gate: **PASS**
+for the explicit measurement/validity contract and ideal live equivalence only.
+HEAD was `7b93165`; the completed 8A-2C validator/tests and documentation were
+already uncommitted and are preserved. No gyro campaign was repeated.
+
+### Existing path and opt-in boundary
+
+The existing environment is unchanged: WMM evaluates current spacecraft position
+and Earth orientation and publishes B_N in Tesla, in Earth-centered inertial N.
+Current sigma_BN gives C_BN, mapping N to mathematical body B. Native TAM reports
+tam_S = C_SB C_BN B_N in sensor S, with C_SB mapping B to S. The physical HS-2
+body/mounting registration remains unresolved. Native TAM executes at the cycle's
+SAMPLE event; the cycle retains that sample and acquisition-epoch SimpleNav for
+detumble. Historical cycle fields named *_B_B still contain raw tam_S. The MEKF
+bridge already carries S plus C_SB and uses C_SB.T for reconstruction.
+
+Only explicit Python ShadowOptions(tam_model=TAMConfig()) selects the new path.
+At unchanged bridge priority 590 it independently computes B_B from current
+SCStates/WMM, then calls the model. Native TAM and the original
+magnetic_cycle_sample predicate remain the acquisition/validity witnesses and
+the unchanged controller input. MEKF runs at 580 afterward. All other task order,
+control equations/gains, actuator, environment and cycle timings are unchanged.
+The default tam_model=None path matches the read-only HEAD adapter exactly.
+
+Live opt-in permits only the complete unchanged IDEAL_REGRESSION configuration;
+renaming a perturbed configuration to IDEAL does not bypass this guard. Bias,
+scale, noise and nonzero model latency remain isolated-only. Existing
+MEKF_DEVELOPMENT selection rejects every non-None TAM model, including ideal.
+The value module has no Basilisk dependency, actuator handle or command publisher.
+
+### Value, frames, units and provenance contract
+
+The standalone module implements:
+
+```text
+B_S,true = C_SB B_local,B
+y_S,raw  = (diag(scale) + cross_axis) B_S,true + bias_S + noise_S
+y_S      = optional per-axis clipping of y_S,raw
+y_B      = C_SB.T y_S                 # reconstructed measurement, not truth
+```
+
+All field/bias/noise/range values are in **Tesla**. Gains/matrices are
+dimensionless; epochs/latency are integer simulation ns. Explicit vector helpers
+convert microtesla to Tesla by 1e-6 and back by 1e6. Configuration rejects uT/nT
+where T is required; input names explicitly require Tesla, with no magnitude-based
+unit guessing. C_SB must be a proper rotation, cross-axis diagonal must be zero,
+and gains positive. Nonidentity signed axes, arbitrary sensor bases, inverse
+reconstruction and cross-axis/bias ordering are independently tested.
+
+The caller-supplied B_local,B is the insertion point for future
+B_environment + B_spacecraft + B_coil_residual at one field epoch. The present
+live bridge supplies environment only and records that limitation. No residual
+dipole, contamination amplitude, current decay, ADC, aperture or filter is added.
+Such future fields can enter before mounting/calibration without redesigning the
+value model, but require evidence and separate implementation authorization.
+
+TAMConfig parameters carry value, units, frame, status, source/date and treatment;
+all are ASSUMED / TEST-ONLY, source tam_sensor_model.py, revision 2026-10-02.
+runtime_usable_for_flight is required false. Profiles are IDEAL_REGRESSION,
+TEST_BIAS_ONLY ([1,-2,3] microtesla), TEST_SCALE_ONLY ([1.01,0.98,1.03]), and
+TEST_NOISE_ONLY (discrete sigma [0.1,0.2,0.3] microtesla, PCG64 seed 8201).
+Perturbations are unit-test inputs, not installed specifications. No vendor
+density-to-sigma conversion is made. Zero noise creates no RNG; seeded draws occur
+once per valid numeric acquisition, even if cleanliness makes that value ineligible.
+Duplicate acquisition epochs are rejected. A fingerprint binds the full config.
+
+### Separate acquisition eligibility and later usability
+
+TAMSample carries S measurement, reconstructed B measurement, truth/acquisition/
+publication epochs, noise realization, saturation axes, validity/rejection reasons,
+configuration fingerprint, field source and CleanlinessContext. Finite values are
+retained when ineligible; clipping retains the clipped vector but flags invalid.
+Nonfinite/unavailable model values are None, not fabricated zero fields.
+The legacy bridge's missing/native-invalid exception handling remains an explicit
+invalid input; it does not substitute accepted truth for a failed native witness.
+
+CleanlinessContext carries phase/cycle identity, commanded actuator-axis dipoles,
+effective B-frame dipole, optional coil-current evidence, quiet history and required
+history, context epoch/source and cycle fingerprint. Any nonzero command/effective
+dipole or supplied current rejects clean acquisition. Missing/stale metadata,
+non-SAMPLE/ineligible phase, insufficient quiet history, or unestablished evidence
+also reject it. The implementation supports **TEST_ONLY_SCHEDULER** eligibility;
+it does not interpret measured zero current alone as physical magnetic settling.
+Current is None in live records: no measured coil current is available.
+
+The current 0.4 s requirement comes from unchanged Phase 6A diagnostic bookkeeping,
+not invented flight settling. The existing predicate still requires matching
+TAM/WMM/acquisition epochs, actual zero native command/effective dipole/torque,
+valid sample event and matching frozen sensor readback. Unknown physical settling
+remains TBD even when a sample is eligible under this simulated contract.
+
+At acquisition, valid means eligible under that context. usable_at separately
+checks publication availability, caller-specified maximum age and expected
+fingerprint; no flight age threshold is chosen. Isolated model latency tests
+preserve acquisition while shifting availability. Live model latency remains zero:
+truth = acquisition = publication at 0.4, 1.4, 2.4 s. The existing bridge transport
+delay yields actual MEKF processing at 0.4, 1.6, 2.6 s, without retimestamping
+acquisition or adding a second delay. Scheduled delivery and actual processing
+are cross-checked in the validator.
+
+### Independent equivalence, rejection and preservation results
+
+All numbers here are CONFIRMED software observations of this TEST-ONLY fixture,
+source validate_tam_sensor_model.py / phase8b1_tam_model.json, revision 2026-10-02.
+The native sensor independently executes against all 31 recorded WMM/state epochs;
+the live comparison includes all three accepted cycle acquisitions. A second A/B
+pair temporarily invalidates the 1.4 s cycle metadata only for the shadow bridge,
+restoring it before subsequent control. This rejects a finite field at 1.6 s in
+both cases, with the same reason and original acquisition time. No actuator or
+sensor value is modified by that test hook.
+
+| CHECK | RESULT |
+|---|---|
+| Isolated ideal axes/arbitrary fields | Exact equality; nonidentity mounting and units tests pass |
+| 31-epoch WMM/native sensor value comparison | Max difference 1.016440e-20 T; numerical allowance 6.469456e-19 T |
+| Three accepted live sensor vectors | Max difference 6.776264e-21 T; numerical allowance 6.467362e-19 T |
+| Nominal maximum quaternion-component difference | 3.330669e-16 |
+| Nominal maximum bias-component difference | 5.070441e-16 rad/s |
+| Nominal maximum P-entry difference | 6.505213e-19 in numerical SI-state coordinates |
+| Estimator numerical equivalence criterion | Existing TEST-ONLY 1e-12 absolute, not accuracy acceptance |
+| Accepted/rejected sequence, epochs, event order, counts | Exact, both nominal and rejection A/B pairs |
+| Nominal updates / replays / rejects | Magnetic 3, Sun 4; 2 replays; 0 rejects |
+| Rejection fixture updates / replays / rejects | Magnetic 2, Sun 4; 1 replay; one magnetic_cycle_invalid |
+| Disabled path versus read-only HEAD adapter | Input/estimator traces and host CSV exact |
+| Host spacecraft/commands/applied torque | Byte-identical between HEAD, current default, ideal model and shadow rejection fixture |
+
+Tiny ideal-mode numeric differences come from independent Python versus native
+C++ field transformations; no time shifts, data substitution or fitted tolerance
+were used. Finite rejected model values equal their nominal counterparts. Source
+labels intentionally identify the new producer. The legacy VectorSample reason
+string is meaningful only when valid=false; new TAMSample rejection_reasons is
+empty for eligible samples.
+
+Ten isolated TAM tests, five live TAM tests, 17 affected adapter regressions and
+nine nominal-control regressions pass (41 tests). All 13 top-level validator
+checks and both six-check A/B comparisons pass. Compilation and diff checks pass.
+Nominal-control regressions emit the existing unwritten-NavAtt startup warnings;
+validity-gated initialization tests pass. Magnetic-cycle code was not changed,
+so its separate suite was not rerun. No gyro/long-orbit/perturbation-performance
+campaign was run, and no MEKF Q/R or controller gains were changed.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_tam_*.py' -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_attitude_mekf_adapter.py -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_mekf_closed_loop.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_tam_sensor_model.py --report basilisk_runner\output_data\phase8b1_tam_model.json
+git diff --check
+```
+
+The JSON retains sourced profiles, cycle/configuration, field/context samples,
+native/model estimator histories, rejection evidence, source hashes and host hashes;
+native/model host CSVs are isolated ignored artifacts. Existing 8A-2C work is not
+overwritten. The most limiting physical gap is installed coil-to-TAM field/sensor
+recovery against an approved cleanliness criterion over the complete aperture/filter
+history, together with mounting and hard/soft-iron calibration.
+
+**Next smallest justified experiment:** one deterministic TEST_BIAS_ONLY TAM offset
+through the shadow MEKF, with frame/sign and innovation/rejection checks, ideal
+gyro/Sun and fixed Q/R. This needs a separately authorized narrow live opt-in while
+retaining the actuator guard; it is not enabled or evaluated in 8B-1.
