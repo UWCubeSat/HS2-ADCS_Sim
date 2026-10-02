@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 8A-2A live synthetic gyro-bias response - 2026-10-01
+
+**SYNTHETIC GYRO-BIAS ESTIMATOR RESPONSE / SHADOW DEVELOPMENT TEST /
+NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Checkpoint `d8eb4d2`.
+PASS for one deterministic bias case; no shared runtime changes.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / inputs | Compare committed 8A-1 IDEAL_REGRESSION and TEST_BIAS_ONLY over the unchanged 3 s horizon/vector schedule. Identity C_SB, bias [0.003,-0.002,0.001] rad/s in S=B, zero stochastic noise/gyro latency. |
+| Measurement / sign | All 31 delivered samples contain bias exactly once. Native NavAtt equals delivered measurement minus posterior estimated bias, exactly. First correction at 1.1 s has +X/-Y/+Z signs. |
+| Bias state | Initial estimate zero at 0.4 s; final [0.002797670,-0.001858275,0.000918266] rad/s. Residual [-2.023299e-4,1.417249e-4,-8.173425e-5] rad/s: partial convergence, no speed requirement or extended run. |
+| Attitude | Final ideal/bias errors 3.720384e-6 / 2.781083e-4 rad. Maximum witnessed including pre-update peaks 1.594657e-5 / 2.602469e-3 rad. Development truth comparison, not HS-2 knowledge. |
+| Innovations | Magnetic/Sun residuals expose bias drift; every actual update reduces its vector residual with independently verified correction sign. Five distinct post-acquisition vector events, six callbacks including replay; no duplicate-event counting as new data. |
+| Covariance / tuning | Finite symmetric positive definite; bias-case minimum eigenvalue 7.951371e-6 in numerical SI-state coordinates. No observed collapse/divergence. Existing TEST-ONLY Q/R/P0 unchanged and uncalibrated. |
+| Isolation | SimpleNav controls the host; ideal/bias host CSV bytes match the prior ideal baseline. No MEKF command owner; existing modeled-gyro closed-loop guard still rejects selection. |
+| Validation | Seven focused tests / 18 live checks pass, including b*dt short-interval sign/growth and tampered-evidence failures. No earlier audits, sensor-development suite, long campaign or shared-code changes. |
+| Next / limit | NOISE-ONLY shadow response with existing seed and fixed Q/R/P0. Actual installed gyro/sensor calibration, timing and realistic estimator performance remain blocked by missing evidence. |
+
+See the [full bias, innovation, covariance and isolation evidence](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8a-2a-live-synthetic-gyro-bias-response---2026-10-01).
+
 ## Phase 8A-1 configurable gyro sensor model - 2026-10-01
 
 **GYRO SENSOR MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /

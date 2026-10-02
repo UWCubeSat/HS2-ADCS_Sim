@@ -2134,3 +2134,156 @@ model/estimator consistency limits before any evidence-based tuning or closed-lo
 performance claim. Installed sensor calibration evidence is still required to
 turn such a software experiment into realistic HS-2 prediction. Do not execute
 that next experiment as part of this phase.
+
+## Phase 8A-2A live synthetic gyro-bias response - 2026-10-01
+
+**SYNTHETIC GYRO-BIAS ESTIMATOR RESPONSE / SHADOW DEVELOPMENT TEST /
+NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Engineering gate: **PASS** for
+the single deterministic estimator/model consistency claim. Starting checkpoint
+`d8eb4d2` contains 8A-1; the working tree was clean. No shared runtime, sensor
+model, MEKF equation, Q/R/P0, controller, cycle, actuator or physical parameter
+was changed. Two validation files and this/scenario documentation are added.
+The sensor-evidence register receives no new installed-hardware classification.
+
+### Fixed experiment and read-only live witnesses
+
+Reuse the committed 8A-1 three-second IDEAL_REGRESSION case: same 0.1 s gyro
+cadence, identity C_SB, zero latency/noise, existing ideal Sun and TAM inputs,
+and existing 0.2 s magnetic delivery delay after 1 s. The only perturbation is
+the existing TEST_BIAS_ONLY profile, bias_S = [0.003,-0.002,0.001] rad/s; S=B.
+All such inputs and numerical policies are **ASSUMED / TEST-ONLY**, sourced in
+gyro_sensor_model.py and config/attitude_mekf_test_only.json, unchanged at this
+checkpoint. The horizon was not extended to seek convergence.
+
+Temporary validation-only wrappers around the existing adapter update and core
+observe calls copy pre/post states and record the processing epoch. They call the
+original methods exactly once with unchanged arguments/return values and restore
+the methods afterward. The record includes every actual callback during replay;
+it does not fabricate a fresh observation when an older event is replayed.
+No actuator handle is acquired. The ideal estimator trace and host CSV match the
+source-bound saved 8A-1 reference exactly, checking instrumentation neutrality.
+If that ignored reference is unavailable, the validator uses a short
+uninstrumented ideal run and still requires unchanged shared runtime versus HEAD.
+
+### Measurement sign, bias response and independent expectation
+
+All 31 delivered samples satisfy y_B = omega_true_B + [0.003,-0.002,0.001]
+rad/s exactly. Acquisition/publication/processing epochs remain equal for this
+zero-latency profile. Independent native NavAtt readback equals delivered y_B
+minus the current posterior bias estimate, with zero numerical discrepancy.
+Thus bias is added once in S=B and subtracted once by the estimator.
+
+Bias estimates below are **CONFIRMED numerical observations of this TEST-ONLY
+case**, source validate_gyro_bias_response.py, revision 2026-10-01, in rad/s:
+
+| AXIS | INITIAL ESTIMATE AT 0.4 s | FIRST CORRECTION, SUN AT 1.1 s | FINAL ESTIMATE AT 3 s | FINAL ESTIMATE MINUS INJECTED BIAS |
+|---|---|---|---|---|
+| X | 0 | +1.5450121e-5 | +0.0027976701 | -0.0002023299 |
+| Y | 0 | -8.6062267e-6 | -0.0018582751 | +0.0001417249 |
+| Z | 0 | +2.0355536e-6 | +0.0009182657 | -0.0000817343 |
+
+The first and subsequent estimates have the injected signs, remain finite, and
+move toward the known bias as vector information becomes available. Full
+convergence is not achieved at 3 s. No acceptance criterion specifies convergence
+speed; no estimator tuning or additional horizon was used to reduce the residual.
+
+An independent small-interval check uses only b*dt over [0.4,0.5 s), before any
+post-acquisition vector correction. Define excess estimated rotation by the
+principal passive rotation of C_est C_truth.T, approximately +b*dt; this is the
+opposite sign of the MEKF's true-minus-estimate correction convention. Expected
+vector is [0.0003,-0.0002,0.0001] rad; observed bias-minus-ideal excess is
+[0.00029836156,-0.00020048051,0.00010383615] rad. Norms are 0.00037416574 and
+0.00037415772 rad respectively. Vector discrepancy 4.19898e-6 rad is within the
+1.64866e-5 rad first-order body-rotation transport allowance derived from the
+observed rate and interval. This is a local sign/growth sanity check, not a second
+MEKF or a flight performance model.
+
+### Direct ideal-versus-bias comparison
+
+These metrics are simulation-truth development diagnostics only. Published-state
+maxima exclude pre-update peaks. Witnessed maxima also include pre/post vector
+updates, including replay states; neither is a continuous-time maximum claim.
+Final-history innovations count each event once using its last replay evaluation.
+
+| METRIC | IDEAL_REGRESSION | TEST_BIAS_ONLY |
+|---|---|---|
+| Final principal attitude error, rad | 3.720384e-6 | 2.781083e-4 |
+| Maximum published attitude error, rad | 1.369167e-5 | 2.231006e-3 |
+| Maximum witnessed attitude error, rad | 1.594657e-5 | 2.602469e-3 |
+| Final estimated bias, rad/s | [-1.790200e-5,1.085055e-5,5.648901e-7] | [0.002797670,-0.001858275,0.000918266] |
+| Final bias error, estimate minus injected, rad/s | [-1.790200e-5,1.085055e-5,5.648901e-7] | [-2.023299e-4,1.417249e-4,-8.173425e-5] |
+| Maximum magnetic angular residual, rad | 7.474803e-6 | 1.249729e-3 |
+| Maximum Sun angular residual, rad | 1.566772e-5 | 2.560936e-3 |
+| Maximum magnetic tangent-innovation norm, dimensionless | 7.474803e-6 | 1.249729e-3 |
+| Maximum Sun tangent-innovation norm, dimensionless | 1.566772e-5 | 2.560933e-3 |
+| Covariance minimum eigenvalue, numerical SI-state coordinates | 7.951391e-6 | 7.951371e-6 |
+| Covariance maximum eigenvalue, same coordinates | 0.10113308 | 0.10113263 |
+| Maximum covariance asymmetry | 0 | 0 |
+| Estimator validity | Uninitialized until 0.4 s; then valid | Same |
+| Rejected events | 0 | 0 |
+| Magnetic / Sun update counts, including acquisition pair | 3 / 4 | 3 / 4 |
+| Delayed-vector replays | 2 | 2 |
+| Distinct post-acquisition vector updates / actual callbacks | 5 / 6 | 5 / 6 |
+
+The bias-case final excess-rotation vector is
+[2.122940e-4,-1.576353e-4,8.617781e-5] rad. Error grows during gyro-only intervals
+and decreases on valid corrections. At the first Sun update, the full principal
+error drops from 2.602469e-3 to 4.630367e-4 rad; that vector's angular residual
+drops from 2.560936e-3 to 2.548739e-6 rad. A small single-vector residual does not
+prove small error about that vector's unobservable axis. All five final-history
+updates reduce full truth-angle error in this particular case; this is not a
+general single-vector guarantee.
+
+Every actual update, including replay, reduces its measured-vector residual.
+Independent geometric descent direction body_vector cross predicted_vector has
+nonnegative projection onto the observed attitude correction. Recorded tangent
+innovation norm matches the independent cross-product norm (sin of residual
+angle), and all innovations are finite. Both vector types expose the injected
+propagation error without a new acceptance threshold. The small existing ideal
+baseline residual and nonzero estimated bias are preserved, not attributed to
+the new perturbation; this phase does not isolate their numerical contributions.
+
+### Covariance, isolation and verification
+
+The existing P0 attitude diagonal is [0.1,0.1,0.1] rad^2 and bias diagonal is
+[0.001,0.001,0.001] (rad/s)^2; Q remains zero and the vector algebra weight remains
+0.0001 in its existing TEST-ONLY convention. The biased final attitude diagonal
+is [1.781607e-4,2.374448e-4,1.409711e-4] rad^2; bias diagonal is
+[7.564262e-5,1.417780e-4,1.528130e-4] (rad/s)^2. All sampled/pre/post-update
+covariances are finite, symmetric and positive definite, well above the numerical
+5.68434e-14 health tolerance. Bias covariance does not grow above P0; attitude
+trace remains below the zero-Q kinematic bound 0.654 rad^2. There is no observed
+numerical collapse or divergence. None of these results calibrates covariance
+statistically to the synthetic perturbation or to installed hardware.
+
+SimpleNav remains the actual production controller input. Ideal and biased host
+CSV bytes, including commands/applied torque/spacecraft state, are identical and
+match the saved 8A-1 host hash. No development command owner is present. An actual
+attempt to select MEKF_DEVELOPMENT with TEST_BIAS_ONLY is rejected by the unchanged
+guard. Shared runtime and numerical-policy files match HEAD; Q/R/P0 were not tuned.
+
+Seven focused tests and all 18 live checks pass. Negative evidence tests reject
+double-addition-style measurement inconsistency and reversed correction evidence.
+Compilation and diff checks pass. Shared code did not change, so earlier sensor
+and core suites and redundant production campaigns were not rerun.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_gyro_bias_response.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_gyro_bias_response.py --report basilisk_runner\output_data\phase8a2a_gyro_bias.json
+git diff --check
+```
+
+Ignored JSON and ideal/bias host CSV artifacts carry the source/checkpoint hashes,
+complete model and unchanged numerical-policy provenance, timestamped gyro/bias/
+attitude/covariance/validity histories, raw and unique replay/update witnesses,
+independent expectations and preservation evidence. Actual HS-2 installed gyro
+calibration, mounting, noise/filter/timing and realistic sensor/estimator accuracy
+remain unresolved. No new mathematics defect or reason to change equations was
+exposed by this deterministic case.
+
+**Next smallest justified experiment: NOISE-ONLY shadow estimator response.** Use
+the existing TEST_NOISE_ONLY profile with zero injected bias, its recorded seed,
+unchanged vector schedule and Q/R/P0, to isolate stochastic response before any
+combined bias/noise case. Do not claim statistically calibrated confidence or
+flight accuracy. That experiment is not executed in Phase 8A-2A.
