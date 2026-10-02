@@ -2756,3 +2756,165 @@ history, together with mounting and hard/soft-iron calibration.
 through the shadow MEKF, with frame/sign and innovation/rejection checks, ideal
 gyro/Sun and fixed Q/R. This needs a separately authorized narrow live opt-in while
 retaining the actuator guard; it is not enabled or evaluated in 8B-1.
+
+## Phase 8B-2A post-acquisition synthetic TAM bias - 2026-10-02
+
+**SYNTHETIC TAM-BIAS ESTIMATOR RESPONSE / POST-ACQUISITION SHADOW DEVELOPMENT TEST /
+COLD-START ACQUISITION LIMIT IDENTIFIED / NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.**
+Start checkpoint `60c428f`, initially clean. PASS applies only to the running
+estimator after normal ideal acquisition. Cold-start acquisition with the same
+offset remains blocked by the unchanged consistency gate. Sensor validity is not
+estimator acquisition acceptance.
+
+### Configuration and explicit transition
+
+Reuse the unchanged 8B-1 TEST_BIAS_ONLY profile: sensor-frame S bias
+[1,-2,3] microtesla = [1e-6,-2e-6,3e-6] T; identity C_SB (B to S), unit scale,
+zero cross-axis error/noise, no clipping, zero model publication latency.
+All are ASSUMED / TEST-ONLY, source tam_sensor_model.py revision 2026-10-02;
+runtime_usable_for_flight=false. Configuration fingerprint:
+`ea58a793c99beb1ad738a662748682e6e7a6c7355e38f53d3dde93f6d609acdb`.
+No installed magnetic calibration or contamination value is inferred.
+
+The Python-only ShadowOptions.tam_bias_test_only flag permits only that exact
+profile with the existing ideal gyro/Sun and no initial attitude override.
+Without the flag, the prior ideal-only guard remains. Noise/scale profiles,
+renamed profiles, gyro-model combinations and off-grid boundaries are rejected.
+The existing MEKF_DEVELOPMENT guard rejects both cold-start and delayed-bias
+options; no modeled TAM owns an actuator or replaces native controller TAM.
+
+ShadowOptions.tam_bias_enable_ns explicitly selects a TEST-ONLY acquisition
+boundary. Zero retains the cold-start test. At 1,400,000,000 ns, the bridge uses
+IDEAL_REGRESSION for the 0.4 s acquisition and TEST_BIAS_ONLY at 1.4/2.4 s.
+Each sample retains its actual selected model fingerprint/source. The transition
+does not initialize the estimator, alter a message timestamp, or change cycle
+timing. The validator independently verifies successful ideal initialization
+before the transition.
+
+| EVENT | EPOCH / SOURCE |
+|---|---|
+| Initial ideal TAM/Sun acquisition and ordinary MEKF initialization | 0.4 s, existing diagnostic fixture |
+| Explicit bias enable / first biased acquisition | 1.4 s, user-authorized TEST-ONLY experiment boundary |
+| Subsequent biased acquisition | 2.4 s, unchanged cycle |
+| Model publication | Same as each acquisition; unchanged zero availability latency |
+| Biased measurement processing | 1.6 and 2.6 s, existing 0.2 s bridge delay/replay |
+
+All estimator states before the first biased delivery match the ideal reference
+exactly. Every delivered biased measurement equals its ideal S-frame vector plus
+the declared offset exactly. Body reconstruction is independently checked by
+scalar sensor-axis projections; canonical Tesla, epoch/reference, gyro and Sun
+inputs are unchanged. No model-contract audit or noise campaign was repeated.
+
+### Case A: cold-start acquisition boundary
+
+The three cold-start TAM acquisitions all contain the finite, correctly biased
+field and remain eligible under the diagnostic quiet contract. At 0.4 s,
+independent pairwise dot products give body-pair cosine -0.582042714899338 versus
+reference cosine -0.4951140437674714: disagreement 0.08692867113186659. The
+unchanged acquisition_pair_tolerance is 1e-8 (dimensionless cosine difference,
+ASSUMED / TEST-ONLY, config/attitude_mekf_test_only.json, Phase 7C 2026-09-07).
+Rotation preserves this pairwise angle; acquisition therefore returns
+inconsistent_acquisition_pair. Later delayed magnetic events cannot initialize
+the existing current-pair acquisition path (two initial_pair_not_current rejects).
+The estimator remains UNINITIALIZED, with no correction/covariance-response claim.
+Undefined results are null, never zero errors or a healthy-filter assertion.
+
+The original BLOCKED/nonzero discovery report is retained under
+cold_start_discovery in the final JSON. Its original source hashes describe that
+earlier observation. Current cold-start traces are also retained. The final report
+explicitly declares cold_start_bias_acquisition_supported=false. Overall validator
+success verifies this boundary and the separate post-acquisition response; it
+does not validate biased cold-start capability.
+
+### Case B: running-estimator response
+
+Numbers below are CONFIRMED software observations of the three-second TEST-ONLY
+fixture, source validate_tam_bias_response.py / phase8b2a_tam_bias.json, 2026-10-02.
+No Q/R/P0, acquisition tolerance, controller gain, cycle/environment or plant
+parameter was changed. Covariance values refer to numerical SI-state coordinates,
+not calibrated confidence in installed hardware.
+
+| METRIC | IDEAL_REGRESSION | POST_ACQUISITION_TAM_BIAS |
+|---|---|---|
+| Bias in S, microtesla | [0,0,0] | [1,-2,3], beginning at 1.4 s |
+| Final principal attitude error, rad | 3.720384e-6 | 0.1188546133 |
+| Maximum published error, rad | 1.369167e-5 | 0.1662205166 |
+| Maximum witnessed error including pre-update states, rad | 1.594657e-5 | 0.1771549633 |
+| Final estimated gyro bias in B, rad/s | [-1.790200e-5,1.085055e-5,5.648901e-7] | [-0.002107963,0.000109611,-0.004804438] |
+| Maximum magnetic tangent innovation norm, dimensionless | 7.474803e-6 | 0.1644910032 |
+| Maximum Sun tangent innovation norm, dimensionless | 1.566772e-5 | 0.1481721571 |
+| Minimum covariance eigenvalue | 7.951391e-6 | 7.934908e-6 |
+| Maximum covariance eigenvalue | 0.1011330799 | 0.1011330799 |
+| Maximum covariance asymmetry | 0 | 0 |
+| Estimator valid after acquisition / rejected events | true / 0 | true / 0 |
+| Magnetic / Sun counts (including acquisition) | 3 / 4 | 3 / 4 |
+| Replay count | 2 | 2 |
+
+The final retained event history below distinguishes acquisition from processing.
+All six actual update callbacks (five distinct events, including replay of a Sun
+update) remain in the artifact; geometric/residual checks cover every callback.
+
+| ACQUISITION / PROCESSING s | UPDATE | MEASURED-VECTOR RESIDUAL BEFORE -> AFTER, rad | TRUTH ATTITUDE ERROR BEFORE -> AFTER, rad |
+|---|---|---|---|
+| 1.4 / 1.6 | Biased magnetic | 0.165241963 -> 0.046711970 | 7.936841e-6 -> 0.135515785 |
+| 1.8 / 1.8 | Ideal Sun | 0.148719771 -> 0.042033330 | 0.177154963 -> 0.105249147 |
+| 2.4 / 2.6 | Biased magnetic | 0.071266091 -> 0.017266651 | 0.097960197 -> 0.136829080 |
+| 2.5 / 2.6 | Ideal Sun, retained replay | 0.089537626 -> 0.047099471 | 0.138836687 -> 0.117945965 |
+
+At the first biased update, direct normalization of B_ideal+bias changes direction
+by 0.1652491694 rad. The recorded innovation, decoded from its tangent coordinates,
+matches the independently projected vector difference. The known-bias shift
+discrepancy is 3.47e-17; correction dot the introduced passive rotation axis is
+positive (0.0203272549). No Kalman gain or state-update equations are duplicated.
+Every magnetic/Sun correction follows its measured-vector descent direction and
+reduces that residual. The first magnetic correction increases simultaneous ideal
+Sun disagreement from 6.608617e-6 to 0.091394421 rad; later ideal Sun updates act
+against it. Increased truth error under biased magnetic data is expected here.
+
+The ideal gyro contains no injected rate bias, but the coupled estimator's bias
+state moves at vector corrections. Maximum witnessed bias-estimate norm is
+0.1440956746 rad/s, at the first biased magnetic update; the following Sun update
+reverses much of that movement. Full bias histories and update increments are
+retained. Bias holds exactly during propagation-only intervals, and published
+posterior bias matches the last observed correction at each processing epoch.
+These are inferred filter states under inconsistent absolute references, not
+real gyro bias, a convergence claim, or acceptable flight performance.
+
+Covariance remains finite, symmetric and positive definite, with nonnegative
+diagonals. Bias covariance stays within unchanged P0 and attitude trace within
+the existing zero-Q kinematic bound. This checks numerical health only; no
+statistical calibration is claimed. Numerical geometry allowance is 256 machine
+epsilons, not a newly selected innovation acceptance gate.
+
+### Validity, preservation and verification
+
+Bias changes value without changing quiet eligibility. A separate shadow-only
+metadata rejection at 1.4 s retains the finite biased field and explicit
+magnetic_cycle_invalid reason. Native TAM, the frozen controller acquisition,
+SimpleNav, command and applied-torque paths remain untouched.
+
+Host CSV SHA256 is identical for committed 8B-1 ideal, current ideal, cold-start
+bias, post-acquisition bias and the rejected-sample fixture:
+`1b9c7c38321df3ea9c650a03e2a52e7571212d995a28a2d89de409646c1f6f1c`.
+The current ideal estimator/input traces also match the read-only HEAD adapter.
+Only the shared adapter's explicit TEST-ONLY opt-in/source selection changed.
+
+Thirteen focused 8B-2A tests and 17 affected adapter regressions pass. All 24
+validator checks pass, compilation passes, and git diff --check passes. Negative
+tests reject wrong units/sign/double bias, reversed correction evidence and a
+negative covariance witness. No unrelated suite, long run, noise or CSS campaign.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_tam_bias_response.py -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_attitude_mekf_adapter.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_tam_bias_response.py --report basilisk_runner\output_data\phase8b2a_tam_bias.json
+git diff --check
+```
+
+**Next:** narrowly characterize acquisition-consistency robustness before a TAM
+noise-only response study. Acquisition currently assumes essentially ideal pair
+geometry and can prevent an otherwise finite sensor stream from producing any
+navigation state. Characterize that boundary without tuning the gate or claiming
+an evidence-based tolerance. Installed calibration, contamination/recovery,
+realistic vector errors and requirements-grade estimator performance remain blocked.

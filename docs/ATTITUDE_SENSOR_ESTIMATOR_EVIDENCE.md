@@ -8,6 +8,24 @@ The documented candidate is one VN-100 Rugged supplying raw gyro/internal magnet
 
 A limited vendor-prior component study and estimator architecture decisions can begin in a later authorized task. A realistic flight estimator, credible control-pointing prediction and total payload pointing number remain blocked. This phase creates only the two evidence files.
 
+## Phase 8B-2A acquisition-validity distinction - 2026-10-02
+
+**SYNTHETIC TAM-BIAS ESTIMATOR RESPONSE / POST-ACQUISITION SHADOW DEVELOPMENT TEST /
+COLD-START ACQUISITION LIMIT IDENTIFIED / NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.**
+New software evidence, not new installed-sensor evidence: a finite, quiet-eligible
+TAM measurement can fail the estimator's independent acquisition-consistency gate.
+
+| STATUS / SOURCE | OBSERVATION / DISPOSITION |
+|---|---|
+| ASSUMED / TEST-ONLY; tam_sensor_model.py, 2026-10-02 | Existing [1,-2,3] microtesla offset in sensor S, identity mounting; no installed bias inference. |
+| ASSUMED / TEST-ONLY; attitude_mekf_test_only.json, Phase 7C 2026-09-07 | Acquisition-pair tolerance 1e-8 in dimensionless cosine difference remains unchanged. It is an ideal-data software gate, not an approved sensor-error allocation. |
+| CONFIRMED software observation; validate_tam_bias_response.py / phase8b2a_tam_bias.json, 2026-10-02 | Cold-start biased pair disagreement is 0.0869286711; sensor validity stays true, but inconsistent_acquisition_pair prevents initialization. |
+| CONFIRMED limited software response; same source/date | After normal ideal acquisition, the same offset produces consistent magnetic/Sun corrections and numerically healthy covariance. This does not demonstrate robust acquisition with imperfect sensors. |
+| TBD / TBC | Evidence-based acquisition tolerance, installed mounting/calibration/error distributions, contamination/recovery, and requirements-grade acquisition robustness remain unresolved. |
+
+The companion Phase 7A evidence JSON and its hardware-source decisions remain
+unchanged. The complete boundary/result is in the [8B-2A architecture record](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8b-2a-post-acquisition-synthetic-tam-bias---2026-10-02).
+
 ## Phase 8B-1 TAM model evidence disposition - 2026-10-02
 
 **TAM MEASUREMENT / VALIDITY MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /

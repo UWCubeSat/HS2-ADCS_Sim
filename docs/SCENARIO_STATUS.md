@@ -6,6 +6,28 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 8B-2A post-acquisition synthetic TAM bias - 2026-10-02
+
+**SYNTHETIC TAM-BIAS ESTIMATOR RESPONSE / POST-ACQUISITION SHADOW DEVELOPMENT TEST /
+COLD-START ACQUISITION LIMIT IDENTIFIED / NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.**
+Checkpoint `60c428f`, initially clean. PASS for the running-estimator response only.
+
+| FIELD | FINDING |
+|---|---|
+| Profile | Unchanged TEST_BIAS_ONLY: [1,-2,3] microtesla in S, canonical Tesla, identity mounting, no noise/scale/cross-axis changes. ASSUMED / TEST-ONLY, tam_sensor_model.py revision 2026-10-02; runtime_usable_for_flight=false. |
+| Cold start | Three finite, quiet-eligible biased TAM samples; pair cosine disagreement 0.0869286711 exceeds unchanged 1e-8 TEST-ONLY tolerance. inconsistent_acquisition_pair; estimator UNINITIALIZED. Cold-start capability remains BLOCKED, independently of sensor validity. |
+| Post-acquisition boundary | Normal ideal TAM/Sun acquisition and initialization at 0.4 s; explicit bias enable at 1.4 s, biased acquisitions 1.4/2.4 s, processing 1.6/2.6 s. No forced state or acquisition-gate change. |
+| Response | Bias delivered exactly once. Both magnetic updates reduce measured residual and pull truth attitude toward the biased reference; subsequent ideal Sun updates reduce their own disagreement. Independent vector geometry confirms innovation/correction signs. |
+| Attitude / bias state | Final / peak published / peak witnessed attitude error 0.118854613 / 0.166220517 / 0.177154963 rad. Estimated gyro-bias peak norm 0.144095675 rad/s despite ideal gyro; movement occurs at vector corrections, not injected gyro bias. |
+| Health / timing | Covariance finite, symmetric, positive definite; minimum eigenvalue 7.934908e-6 in numerical SI-state coordinates. Magnetic/Sun counts 3/4, two replays, no post-acquisition rejects. Q/R/P0 unchanged. |
+| Isolation | Native TAM retains controller ownership; both bias selections rejected for MEKF actuation. Committed/current ideal and both biased host CSVs are byte-identical. Rejected shadow samples retain finite values. |
+| Verification | 13 focused tests + 17 adapter regressions pass; 24 validator checks pass. Original BLOCKED cold-start artifact is retained inside the final evidence. Overall success explicitly retains cold_start_bias_acquisition_supported=false. |
+| Next / blocked | Characterize acquisition-consistency robustness without gate tuning. Installed calibration, physical recovery, realistic vector errors and flight/requirements performance remain unresolved. |
+
+Numerical observations are CONFIRMED only for this TEST-ONLY fixture, source
+validate_tam_bias_response.py / phase8b2a_tam_bias.json, revision 2026-10-02.
+See the [two-case contract and response evidence](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8b-2a-post-acquisition-synthetic-tam-bias---2026-10-02).
+
 ## Phase 8B-1 parametric TAM measurement and validity - 2026-10-02
 
 **TAM MEASUREMENT / VALIDITY MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /

@@ -19,7 +19,7 @@ from Basilisk.utilities import RigidBodyKinematics as rbk
 from attitude_mekf import MEKF, ReplayEstimator, VectorSample, epoch, vector
 from attitude_mekf_prototype import independent_error, load_test_policy, magnetic_cycle_sample
 from gyro_sensor_model import GyroConfig, GyroModel, GyroSample
-from tam_sensor_model import TAMConfig, TAMModel, CleanlinessContext
+from tam_sensor_model import TAMConfig, TAMModel, CleanlinessContext, profile_config as tam_profile
 
 T = TypeVar("T")
 
@@ -57,13 +57,24 @@ class ShadowOptions:
     initial_q_BN: tuple[float, float, float, float] | None = None
     label: str = "ASSUMED / TEST-ONLY; SHADOW DEVELOPMENT INTEGRATION"
     gyro_model: GyroConfig | None = None  # Explicit Python-only shadow opt-in; default bridge unchanged.
-    tam_model: TAMConfig | None = None  # 8B-1: ideal shadow only; native controller TAM is untouched.
+    tam_model: TAMConfig | None = None  # Native controller TAM is untouched.
+    tam_bias_test_only: bool = False  # 8B-2A explicit, single unchanged bias fixture; no actuator ownership.
+    tam_bias_enable_ns: int = 0  # TEST-ONLY acquisition boundary; zero preserves cold-start experiment.
 
     def validate(self, step_ns: int):
+        if type(self.tam_bias_test_only) is not bool:
+            raise ValueError("tam_bias_test_only requires an explicit bool")
+        epoch(self.tam_bias_enable_ns)
+        if self.tam_bias_enable_ns % step_ns or (self.tam_bias_enable_ns and not self.tam_bias_test_only):
+            raise ValueError("TAM bias boundary requires explicit bias test and an existing task-grid epoch")
+        if self.tam_bias_test_only and (self.tam_model != tam_profile("TEST_BIAS_ONLY")
+                or self.gyro_model is not None or not self.ideal_sun or self.initial_q_BN is not None):
+            raise ValueError("TAM bias test requires unchanged TEST_BIAS_ONLY, ideal gyro/Sun, and existing acquisition")
         if self.tam_model is not None:
             if not isinstance(self.tam_model, TAMConfig):
                 raise ValueError("explicit TAMConfig required for modeled TAM")
-            self.tam_model.validate_live()
+            if not self.tam_bias_test_only:
+                self.tam_model.validate_live()
         if self.gyro_model is not None:
             if not isinstance(self.gyro_model, GyroConfig):
                 raise ValueError("explicit GyroConfig required for modeled gyro")
@@ -124,7 +135,7 @@ class IdealLiveBridge(sysModel.SysModel):
             reader.subscribeTo(source)
         self.c_sb = np.array(c_sb, dtype=float)
         if options.tam_model is not None and not np.array_equal(self.c_sb, options.tam_model.mounting_C_SB.value):
-            raise ValueError("ideal TAM regression requires the same explicit native/model mounting")
+            raise ValueError("modeled TAM requires the same explicit native/model mounting")
         policy, fixture = load_test_policy()
         self.sun_n = vector(fixture["sun_reference_n"]["value"])
         self.parts = fixture["gyro_substeps"]["value"]
@@ -137,6 +148,7 @@ class IdealLiveBridge(sysModel.SysModel):
         self.pending: list[tuple[int, VectorSample]] = []
         self.gyro_model = GyroModel(self.options.gyro_model) if self.options.gyro_model is not None else None
         self.tam_model = TAMModel(self.options.tam_model) if self.options.tam_model is not None else None
+        self.tam_initial_ideal = TAMModel(TAMConfig()) if self.options.tam_bias_enable_ns else None
         self.tam_history: list[dict] = []
 
     def magnetic_acquisition(self, tick: int) -> VectorSample:
@@ -168,14 +180,18 @@ class IdealLiveBridge(sysModel.SysModel):
                     bool(sample.valid and self.state.isWritten() and self.state.timeWritten() == tick),
                     "TEST_ONLY_SCHEDULER", "Phase 6A instantaneous acquisition and zero native command/dipole/torque; physical settling TBD",
                     self.driver.cycle.fingerprint(), coil_current_A=None)
-                modeled = self.tam_model.acquire(body_true, truth_epoch_ns=int(self.magnetic.timeWritten()), acquisition_ns=tick,
+                # Explicit TEST-ONLY profile transition at acquisition, never a
+                # forced estimator initialization or change of acquisition gate.
+                model = self.tam_initial_ideal if tick < self.options.tam_bias_enable_ns else self.tam_model
+                assert model is not None
+                modeled = model.acquire(body_true, truth_epoch_ns=int(self.magnetic.timeWritten()), acquisition_ns=tick,
                     context=context, field_source="current WMM B_N transformed by current C_BN; spacecraft/coil contamination deferred")
                 self.tam_history.append(dict(sample=asdict(modeled), state_epoch_ns=int(self.state.timeWritten()),
                     body_truth_T=body_true.tolist(), field_N_T=field_n.tolist(), native_tam_S_T=raw_tam.tolist()))
                 return replace(sample, measured=modeled.measurement_S_T, valid=sample.valid and modeled.valid,
                     invalid_reason=sample.invalid_reason if not modeled.rejection_reasons or not sample.valid else ";".join(modeled.rejection_reasons),
                     frame="S", c_sb=self.c_sb,
-                    source="TAMModel IDEAL_REGRESSION from C_BN WMM B_N; native TAM/cycle is independent witness")
+                    source=f"TAMModel {model.config.profile} from C_BN WMM B_N; native TAM/cycle is independent witness")
             return replace(sample, frame="S", c_sb=self.c_sb,
                 source="live TAMSensorMsg.tam_S + acquisition WMM B_N; explicit C_SB")
         except (ValueError, IndexError) as error:
