@@ -1975,3 +1975,162 @@ No further experiment is executed or authorized by this recommendation. This
 phase establishes neither flight safeing latency, arbitrary fault-arrival
 coverage, process-restart behavior, realistic hardware latency, realistic
 estimator performance, requirements-grade detumble nor pointing performance.
+
+## Phase 8A-1 configurable gyro sensor model - 2026-10-01
+
+**GYRO SENSOR MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Gate: **PASS for
+software/model behavior and ideal equivalence**, not installed-sensor fidelity.
+Starting checkpoint `3fdffd2`; initially clean working tree. The only shared
+runtime change is an optional gyro source in attitude_mekf_adapter.py. Scenario
+wiring, task order, magnetic cycle, MEKF equations/P0/Q/R, controller, spacecraft,
+actuator and environment are unchanged. SimpleNav remains the default.
+
+### Measurement, frame and sign contract
+
+Input is current point truth omega_BN_B in rad/s, expressed in the existing
+simulation body frame B. Numeric B-to-installed-spacecraft alignment is still
+unresolved. For a proper right-handed C_SB mapping B components to sensor S:
+
+```text
+omega_S = C_SB * omega_BN_B
+u_S = (diag(scale) + cross_axis) * omega_S + bias_S + noise_S
+y_S = clip(u_S, -range_S, +range_S)       # only when range is enabled
+y_B = transpose(C_SB) * y_S
+MEKF current body rate = y_B - estimated_bias_B
+```
+
+Scale stores gains (unity means no error). Cross-axis terms are dimensionless
+off-diagonal additive gains with an enforced zero diagonal; they are not another
+rotation matrix or a conversion of the vendor angular cross-axis specification.
+Bias is additive in S and rotates into B before estimator consumption. The sensor
+model never subtracts the MEKF estimate. Rotation validity, parameter units/frame,
+finite values, positive scales/ranges, nonnegative noise and integer epochs are
+checked. Independent axis projections, a signed quarter turn, arbitrary bases,
+known bias/scale and off-diagonal leakage verify direction/sign and round trips.
+
+Optional hard clipping occurs in S before inverse mounting. Saturated axes are
+recorded; a saturated sample is explicitly invalid for this linear gyro consumer.
+Clipped measurements remain available as diagnostics. Invalid/nonfinite truth
+produces an invalid record rather than a fabricated valid rate. No ADC resolution,
+aperture filter, temperature dependence, drift, random walk or g sensitivity is
+claimed. These are future evidence-dependent model additions.
+
+### Discrete noise, cadence and timing contract
+
+Noise is independent zero-mean Gaussian per acquired sample/axis in S with the
+configured discrete rad/s sigma; covariance in B is C_SB.T diag(sigma_S^2) C_SB.
+An explicit PCG64 seed is required for nonzero noise. Zero noise constructs no
+RNG and draws nothing. Off-grid observation calls draw nothing. No VN-100 noise
+density, bandwidth, bias stability or RMS attitude value is converted into sigma,
+random walk, covariance or estimator tuning. A 20,000-sample synthetic test checks
+mean, variance and inter-axis correlations with stated six-standard-error bounds.
+This is a software distribution check, not calibrated statistical confidence.
+
+The isolated model accepts monotonically advancing integer simulation ns calls;
+acquisition occurs only at offset + k*period, k >= 0. Off-grid calls return no
+sample. Duplicate/out-of-order epochs are rejected. The caller supplies truth
+for the requested epoch and owns delivery; skipped acquisitions are not invented.
+Publication availability equals acquisition + configured latency. The immutable
+sample retains both epochs. age(processing) is processing minus acquisition and
+rejects processing before availability. A publication epoch is an availability
+contract, not evidence that a message was actually transported at that instant.
+
+**Live boundary:** the current adapter accepts only its existing 0.1 s task
+cadence, zero offset and zero gyro latency. It receives the modeled current-point
+B rate and runs the unchanged ten-subinterval linear endpoint reconstruction.
+That reconstruction is a development aperture approximation: interpolated noise
+is correlated between subintervals, not ten new independent gyro observations.
+IDEAL_REGRESSION preserves endpoint values exactly, including signed zero.
+
+The existing ReplayEstimator supports delayed vector updates with contiguous,
+forward gyro coverage; it does not provide arbitrary delayed gyro ingestion.
+Nonzero-latency/different-cadence gyro profiles are therefore isolated-only and
+are explicitly rejected by live configuration validation. A delayed sample sent
+directly with its original acquisition epoch triggers the existing
+gyro_or_batch_epoch_mismatch guard; no epoch is relabeled. Delayed-vector replay
+with the ideal gyro model remains exact. No asynchronous gyro reconstruction or
+new stale-gyro hold/extrapolation policy was introduced to make tests pass.
+
+### Profiles, provenance and opt-in ownership
+
+All numerical defaults/profiles are **ASSUMED / TEST-ONLY**, revision 2026-10-01,
+sourced in gyro_sensor_model.py; actual installed parameters remain TBD/TBC.
+
+| PROFILE | NONIDEAL TERMS | TIMING / USE |
+|---|---|---|
+| IDEAL_REGRESSION | Identity C_SB, zero bias/cross/noise, unity gain, no range clipping | Existing 0.1 s acquisitions, zero latency; live shadow or isolated. |
+| TEST_BIAS_ONLY | [0.003,-0.002,0.001] rad/s in S; Phase 7C synthetic fixture values | Same timing; no convergence/accuracy acceptance. |
+| TEST_SCALE_ONLY | [1.01,0.98,1.03] dimensionless gains | Same timing; synthetic +1%, -2%, +3% errors. |
+| TEST_NOISE_ONLY | [0.001,0.002,0.003] rad/s discrete sigma in S; seed 8101 | Same timing; no density-to-sigma conversion. |
+| TEST_DELAYED_SAMPLE | 200000000 ns publication latency | Isolated-only; original acquisition timestamp retained. |
+
+GyroConfig reuses the provenance-bearing Parameter type without editing
+hs2_sim_config.py or importing any vendor prior into runtime configuration.
+Each parameter carries units, frame, source/revision, status and treatment.
+to_dict() reports runtime_usable_for_flight:false; a SHA-256 fingerprint binds
+each sample to the configuration. Frozen configurations can be explicitly
+replaced with new provenance-bearing parameters; there is no implicit fallback.
+Profiles are defined once in code and exported in the validator report, avoiding
+a second independently maintained JSON constant set.
+
+Opt-in example (Python API only):
+
+```python
+from attitude_mekf_adapter import ShadowOptions
+from gyro_sensor_model import profile_config
+# Pass this to the existing run(..., shadow=...) with SIMPLE_NAV_REFERENCE.
+shadow = ShadowOptions(ideal_sun=True, gyro_model=profile_config("IDEAL_REGRESSION"))
+```
+
+The default gyro_model=None keeps the original source. Additive InputBatch
+gyro_sample metadata records modeled acquisition/publication and validity;
+original input fields and current processing epochs keep their prior meanings.
+The existing MEKF_DEVELOPMENT option guard rejects every modeled gyro profile,
+including IDEAL_REGRESSION. Perturbed measurements have no actuator authority;
+the one live bias case is shadow-only. There is no new CLI flag or controller
+connection. Existing unmodeled MEKF development control remains unchanged.
+
+### Verification and remaining gate
+
+The validator loads the committed adapter directly from HEAD, then compares it
+with the current default and current ideal-model adapters on identical 3 s runs
+with delayed magnetic vector delivery. All 31 point measurements, gyro intervals,
+vector events, estimator states, bias/covariance histories, update counts, epochs,
+status and shadow telemetry match exactly. Chronological replay has zero
+quaternion/bias/P difference. Committed/default/ideal-model/bias-shadow host CSV
+bytes are identical; synthetic bias reaches the shadow MEKF once without changing
+the host controller/actuator/plant. A separate committed-versus-current unmodeled
+MEKF closed-loop run also preserves CSV and estimator trace exactly.
+
+**Results:** 18 new tests, 41 existing MEKF/adapter regressions, 9 existing nominal
+closed-loop regressions pass (68 total); all 12 live equivalence checks pass.
+Three six-second SimpleNav preservation cases (continuous baseline, candidate,
+cycled baseline) remain byte-identical to HEAD. These are CONFIRMED software
+observations for ASSUMED fixtures. No full-orbit or performance campaign ran.
+Expected pre-acquisition unwritten NavAtt warnings retain their previous meaning.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_gyro*.py' -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_attitude_mekf*.py' -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_mekf_closed_loop.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_gyro_sensor_model.py --report basilisk_runner\output_data\phase8a1_gyro_model.json
+git diff --check
+```
+
+Ignored phase8a1_gyro_model JSON/CSV artifacts retain the checkpoint, source hashes,
+profile provenance, sample/config fingerprints, estimator trace, CSV hashes and
+preservation evidence. Installed model/serial/firmware, mounting/calibration,
+bias, scale/coupling, noise spectrum/correlation, sample/filter configuration,
+acquisition aperture and clock/latency remain unresolved. See the bounded
+[gyro evidence disposition](ATTITUDE_SENSOR_ESTIMATOR_EVIDENCE.md#phase-8a-1-gyro-model-evidence-disposition---2026-10-01).
+
+**Smallest next experiment:** a shadow-only, single-axis controlled bias plus
+seeded discrete-noise case, compared with the unchanged ideal run, recording
+innovation, bias-state response, covariance behavior and validity/rejections.
+Keep existing Q/R fixed and label all inputs synthetic; use the result to expose
+model/estimator consistency limits before any evidence-based tuning or closed-loop
+performance claim. Installed sensor calibration evidence is still required to
+turn such a software experiment into realistic HS-2 prediction. Do not execute
+that next experiment as part of this phase.

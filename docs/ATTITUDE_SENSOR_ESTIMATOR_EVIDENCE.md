@@ -8,6 +8,45 @@ The documented candidate is one VN-100 Rugged supplying raw gyro/internal magnet
 
 A limited vendor-prior component study and estimator architecture decisions can begin in a later authorized task. A realistic flight estimator, credible control-pointing prediction and total payload pointing number remain blocked. This phase creates only the two evidence files.
 
+## Phase 8A-1 gyro model evidence disposition - 2026-10-01
+
+**GYRO SENSOR MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** This addendum reuses
+the gyro evidence below; no Drive/web audit or source refresh was performed.
+The original evidence JSON and authoritative runtime spacecraft configuration
+are unchanged. Starting software checkpoint: `3fdffd2` (Phase 7G-2C).
+
+| GYRO FACT / CANDIDATE | CLASSIFICATION | EXISTING SOURCE / REVISION | MODEL TREATMENT |
+|---|---|---|---|
+| One VN-100 Rugged, raw rate to own estimator | CONFIRMED documented candidate; installed hardware/firmware/serial TBC | [S01](#s01); ICD-ADCS-001 internal rev 5, 2026-09-01; B3 design intent | Candidate identity only; model profiles are not flight configurations. |
+| Lateral-plate mounting; positive-axis map and numeric C_SB absent | TBD installed transform/calibration | [F02](#f02); ICD-ADCS-001 rev 5; H4 hardware v7.0 (2023) | Explicit configurable proper B-to-S DCM; identity is ASSUMED / TEST-ONLY. |
+| +/-2000 deg/s range; 0.02 deg/s resolution | VENDOR PRIOR ONLY | [P01](#p01); H4 Table 3 p5, DS100-CR-70-R1, hardware v7.0 (2023) | Neither is a default model limit or quantizer. MDD 400 deg/s remains conflicting TBC, not silently reconciled. |
+| 5 deg/h typical, 10 deg/h maximum in-run bias stability; cover says 5-7 deg/h typical | VENDOR PRIOR ONLY; cover/table distinction retained | [P02](#p02); same H4 Table 3/cover | Not initial constant bias, random walk, variance or installed stability. No conversion into a stochastic process. |
+| 0.0035 deg/s/sqrt(Hz) noise density | VENDOR PRIOR ONLY | [P02](#p02); same H4 Table 3 | Not converted to sample sigma. PSD convention, filter bandwidth, decimation and correlations remain unresolved. |
+| 800 Hz internal sampling / maximum IMU output capability; 265 Hz bandwidth; 0.05 deg cross-axis sensitivity | VENDOR PRIOR ONLY | [P03](#p03); same H4 Table 3/cover | Not configured output rate, effective filter bandwidth or installed cross-axis coefficients. |
+| 10 Hz manager intent versus historical 5 Hz estimate/control schedule | TBC | [S04](#s04); ICD-ADCS-001 rev 5 versus SW1/MDD MIS-00-06 rev 8 | Keep both. Existing 0.1 s simulation bridge is an ASSUMED software fixture, not resolution of the flight-rate conflict. |
+| Manufacturer factory calibration over -40 to +85 C | VENDOR PRIOR ONLY | [P07](#p07); H4 cover/3.2/5.2/5.5 | No installed bias/scale/temperature map or serial-specific calibration inferred. |
+| Installed bias, scale/cross-axis residuals, noise PSD/correlation, configured range/rate/filter, acquisition aperture, clock/latency and mounting survey | TBD/TBC | [P07](#p07), [S04](#s04), [F02](#f02); unfilled test records | These block realistic HS-2 prediction; zero/identity defaults are never evidence that the installed errors vanish. |
+
+**KNOWN software:** the isolated model has explicit mounting, additive constant
+bias, scale/off-diagonal gains, seeded discrete Gaussian noise, point-sample
+epochs/cadence, publication availability and optional hard clipping. These are
+verified mathematical mechanisms, not a sensor-identification result.
+
+**ASSUMED / TEST-ONLY profiles:** IDEAL_REGRESSION; TEST_BIAS_ONLY with
+[0.003,-0.002,0.001] rad/s in S (reuses Phase 7C synthetic values);
+TEST_SCALE_ONLY with gains [1.01,0.98,1.03]; TEST_NOISE_ONLY with per-sample
+sigma [0.001,0.002,0.003] rad/s in S and PCG64 seed 8101; TEST_DELAYED_SAMPLE
+with 0.2 s publication delay, isolated-only. All use the existing 0.1 s cadence
+unless explicitly replaced with another provenance-bearing test parameter.
+Default clipping is disabled; unit tests use synthetic [1,2,3] rad/s half-ranges,
+not the VN-100 vendor range. Every profile reports runtime_usable_for_flight:false.
+
+Source/revision: [gyro_sensor_model.py](../basilisk_runner/gyro_sensor_model.py),
+Phase 8A-1, 2026-10-01. Every configurable parameter carries value, units, status,
+source, revision, frame and treatment. No vendor performance number above is
+adopted as a runtime value. See the [measurement and timing contract](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8a-1-configurable-gyro-sensor-model---2026-10-01).
+
 ## Evidence boundary and authority
 
 - Committed D1-D5 and current C1-C3 were inspected first at the stated baseline commit. Historical 833b015 timing/ExtForceTorque statements in audit tables are not current defects; current code and later addenda define the repaired software behavior.

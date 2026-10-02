@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 8A-1 configurable gyro sensor model - 2026-10-01
+
+**GYRO SENSOR MODEL FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Checkpoint `3fdffd2`.
+PASS for the model framework and exact ideal-regression gate.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / source | Optional gyro_model in ShadowOptions; existing truth source remains default. Only attitude_mekf_adapter.py changes shared runtime. |
+| Measurement | Proper C_SB maps B to S; scale/off-diagonal gains, additive bias and discrete Gaussian noise act in S; optional S clipping precedes C_SB.T return to B. MEKF alone subtracts estimated bias. |
+| Profiles / provenance | IDEAL_REGRESSION, TEST_BIAS_ONLY, TEST_SCALE_ONLY, TEST_NOISE_ONLY, TEST_DELAYED_SAMPLE. All ASSUMED / TEST-ONLY with units/source/revision/frame/treatment and runtime_usable_for_flight:false. No vendor value adopted as installed truth. |
+| Timing | Acquisition and publication availability remain distinct integer ns. Isolated latency/cadence supported; live integration requires existing cadence, zero offset/latency. Delayed gyro is rejected, not relabeled. Existing delayed-vector replay is unchanged. |
+| Sensor limits | Optional hard clipping marks saturation invalid. No quantization, aperture/filter, temperature, drift, random walk, CSS or full magnetic error model. Installed gyro parameters remain TBD/TBC. |
+| Actuation isolation | Modeled gyro is shadow-only; unchanged MEKF_DEVELOPMENT guard rejects modeled profiles. Controller, plant, limits, scheduling and estimator tuning unchanged. |
+| Validation | 18 new tests, 41 MEKF/adapter regressions, 9 nominal closed-loop regressions pass; 12 live checks pass. 31 ideal samples and all estimator/input/status traces exactly match committed adapter. |
+| Preservation | Committed/default/ideal/bias-shadow host CSV bytes identical. Existing unmodeled closed-loop behavior unchanged. Three short production checks byte-identical. |
+| Next / limit | One shadow-only synthetic bias-plus-noise consistency experiment with fixed Q/R; no convergence/accuracy or requirements-grade performance claim. Installed calibration/timing evidence remains necessary. |
+
+See the [measurement, timing and verification contract](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8a-1-configurable-gyro-sensor-model---2026-10-01) and [gyro evidence](ATTITUDE_SENSOR_ESTIMATOR_EVIDENCE.md#phase-8a-1-gyro-model-evidence-disposition---2026-10-01).
+
 ## Phase 7G-2C late-fault command-validity boundary - 2026-10-01
 
 **LATE-FAULT COMMAND-VALIDITY BOUNDARY / DEVELOPMENT TIMING TEST / NOT FLIGHT VALIDATED.**

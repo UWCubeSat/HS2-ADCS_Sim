@@ -18,6 +18,7 @@ from Basilisk.utilities import RigidBodyKinematics as rbk
 
 from attitude_mekf import MEKF, ReplayEstimator, VectorSample, epoch, vector
 from attitude_mekf_prototype import independent_error, load_test_policy, magnetic_cycle_sample
+from gyro_sensor_model import GyroConfig, GyroModel, GyroSample
 
 T = TypeVar("T")
 
@@ -54,8 +55,13 @@ class ShadowOptions:
     drop_sun_after_ns: int | None = None
     initial_q_BN: tuple[float, float, float, float] | None = None
     label: str = "ASSUMED / TEST-ONLY; SHADOW DEVELOPMENT INTEGRATION"
+    gyro_model: GyroConfig | None = None  # Explicit Python-only shadow opt-in; default bridge unchanged.
 
     def validate(self, step_ns: int):
+        if self.gyro_model is not None:
+            if not isinstance(self.gyro_model, GyroConfig):
+                raise ValueError("explicit GyroConfig required for modeled gyro")
+            self.gyro_model.validate_live(step_ns)
         for value in (self.magnetic_delay_ns, self.sun_delay_ns, self.delay_after_ns,
                       self.sun_period_ns, self.sun_offset_ns):
             epoch(value)
@@ -79,6 +85,7 @@ class InputBatch:
     gyro_reason: str = ""
     source_status: dict[str, str] = field(default_factory=dict)
     reset_acquisition: bool = False
+    gyro_sample: GyroSample | None = None  # Acquisition/publication/provenance; never relabeled as processing time.
 
 
 def causal_gyro_intervals(start: int, end: int, first, last, parts: int):
@@ -120,6 +127,7 @@ class IdealLiveBridge(sysModel.SysModel):
     def Reset(self, tick):
         self.previous: tuple[int, np.ndarray] | None = None
         self.pending: list[tuple[int, VectorSample]] = []
+        self.gyro_model = GyroModel(self.options.gyro_model) if self.options.gyro_model is not None else None
 
     def magnetic_acquisition(self, tick: int) -> VectorSample:
         """Invalid/missing native sensor data remain explicit rejected inputs."""
@@ -154,6 +162,15 @@ class IdealLiveBridge(sysModel.SysModel):
             state = self.state()
             gyro = vector(state.omega_BN_B)
             sigma = vector(state.sigma_BN)
+            if self.gyro_model is not None:
+                sample = self.gyro_model.acquire(gyro, tick)
+                batch.gyro_sample = sample
+                if sample is None or not sample.valid or sample.measurement_B_rad_s is None:
+                    raise ValueError(sample.reason if sample is not None else "missing_modeled_gyro_sample")
+                # The current-point adapter requires zero latency/existing cadence.
+                # No estimator bias subtraction here; interpolate measured B-frame
+                # endpoints below using the unchanged development aperture model.
+                gyro = np.array(sample.measurement_B_rad_s)
             batch.gyro_point_B = gyro
             if self.previous is not None:
                 start, previous = self.previous
