@@ -6,6 +6,26 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 8B-2B cold-start acquisition boundary - 2026-10-02
+
+**COLD-START ACQUISITION-CONSISTENCY BOUNDARY / DEVELOPMENT CHARACTERIZATION /
+NO TUNING PERFORMED / NOT FLIGHT VALIDATED.** PASS for characterization only.
+Checkpoint `e78427c`, initially clean; no shared runtime changes.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / inputs | Source-bound saved 0.4 s acquisition from 8B-2A, replayed through fresh actual adapter/MEKF instances. Existing isolated TAM model supplies deterministic harness-only offsets; Sun/gyro/reference/quiet context unchanged. |
+| Predicate | Absolute difference of normalized measured/reference magnetic/Sun dot products <=1e-8, followed by both pair sines >1e-6. Both thresholds remain ASSUMED / TEST-ONLY, Phase 7C config 2026-09-07. |
+| Geometry / directions | Local B magnitude 22.7306052815 microtesla; included angle 2.08876241514 rad. Magnitude-only changes accept without polarity reversal; in-plane transverse bias is most sensitive locally, cross-plane enters at second order. |
+| Boundary | In-plane accept/reject [2.61623373109e-13,2.61624019152e-13] T; cross-plane [4.56849481484e-9,4.56850010722e-9] T. Original-direction lambda bracket [1.00865008790e-7,1.00865236163e-7]. Exact signed endpoint metrics retained. |
+| Stability / validity | All 237 tested points agree with independent 70-digit geometry. Endpoint decisions repeat across delivery order/idle history; finite values and quiet sensor validity survive acquisition rejection. |
+| Validation | 11 focused tests / 14 checks pass; compile and diff checks pass. No adapter change, simulation campaign or post-acquisition performance analysis. |
+| Next / blocked | Evidence-based acquisition design before selecting a flight criterion. Installed errors/calibration, timing, contamination/recovery, observability and approved acceptance requirements remain unresolved; no tuning performed. |
+
+Numerical observations are CONFIRMED only for this software fixture, source
+validate_acquisition_boundary.py / phase8b2b_acquisition_boundary.json, 2026-10-02.
+See the [predicate, basis and numerical resolution](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8b-2b-cold-start-acquisition-consistency-boundary---2026-10-02).
+
 ## Phase 8B-2A post-acquisition synthetic TAM bias - 2026-10-02
 
 **SYNTHETIC TAM-BIAS ESTIMATOR RESPONSE / POST-ACQUISITION SHADOW DEVELOPMENT TEST /

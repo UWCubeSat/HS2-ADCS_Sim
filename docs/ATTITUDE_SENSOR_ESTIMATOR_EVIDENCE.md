@@ -8,6 +8,22 @@ The documented candidate is one VN-100 Rugged supplying raw gyro/internal magnet
 
 A limited vendor-prior component study and estimator architecture decisions can begin in a later authorized task. A realistic flight estimator, credible control-pointing prediction and total payload pointing number remain blocked. This phase creates only the two evidence files.
 
+## Phase 8B-2B acquisition-boundary characterization - 2026-10-02
+
+**COLD-START ACQUISITION-CONSISTENCY BOUNDARY / DEVELOPMENT CHARACTERIZATION /
+NO TUNING PERFORMED / NOT FLIGHT VALIDATED.** New software geometry evidence only;
+the hardware source decisions and companion evidence JSON remain unchanged.
+
+| STATUS / SOURCE | DISPOSITION |
+|---|---|
+| ASSUMED / TEST-ONLY; attitude_mekf_test_only.json, Phase 7C 2026-09-07 | Unchanged 1e-8 is a dimensionless normalized-pair cosine-difference tolerance. A separate 1e-6 minimum pair sine guards degeneracy. Neither is an installed sensor specification. |
+| CONFIRMED software observation; validate_acquisition_boundary.py / phase8b2b_acquisition_boundary.json, 2026-10-02 | At the saved 0.4 s geometry, local B=22.7306052815 microtesla and B/Sun angle=2.08876241514 rad. Independent high-precision and actual adapter decisions agree at all 237 tested points. |
+| CONFIRMED local sensitivity; same source/date | In-plane transverse bias first rejects near 2.61624e-13 T; cross-plane near 4.56850e-9 T. Positive magnitude changes cancel after normalization. These are local software boundaries, not acceptable installed-error budgets. |
+| CONFIRMED existing-direction boundary; same source/date | lambda*[1,-2,3] microtesla transitions between lambda=1.00865008790e-7 (accept) and 1.00865236163e-7 (reject); lambda=1 remains rejected. Finite sensor validity remains independent of acquisition acceptance. |
+| TBD / TBC | Flight acquisition criterion requires installed magnetic/Sun error and calibration evidence, frames, timing, contamination/recovery, observability and approved acceptance requirements. No suitability decision or tolerance tuning follows from this characterization alone. |
+
+See the [exact predicate and directional brackets](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8b-2b-cold-start-acquisition-consistency-boundary---2026-10-02).
+
 ## Phase 8B-2A acquisition-validity distinction - 2026-10-02
 
 **SYNTHETIC TAM-BIAS ESTIMATOR RESPONSE / POST-ACQUISITION SHADOW DEVELOPMENT TEST /

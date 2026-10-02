@@ -2918,3 +2918,185 @@ geometry and can prevent an otherwise finite sensor stream from producing any
 navigation state. Characterize that boundary without tuning the gate or claiming
 an evidence-based tolerance. Installed calibration, contamination/recovery,
 realistic vector errors and requirements-grade estimator performance remain blocked.
+
+## Phase 8B-2B cold-start acquisition-consistency boundary - 2026-10-02
+
+**COLD-START ACQUISITION-CONSISTENCY BOUNDARY / DEVELOPMENT CHARACTERIZATION /
+NO TUNING PERFORMED / NOT FLIGHT VALIDATED.** PASS for deterministic geometric
+characterization at the saved 0.4 s acquisition. Checkpoint `e78427c`, initially
+clean. No runtime, model, tolerance, Q/R/P0, timing or controller code changed.
+No post-acquisition state/performance analysis was performed in this phase.
+
+### Exact current predicate
+
+For valid, current, common-epoch magnetic/Sun samples, let unit(v)=v/norm(v):
+
+```text
+m_B = unit(C_SB.T measured_magnetic_S)  # S to B; omit transform for explicit B input
+s_B = unit(measured_Sun_B)
+m_N = unit(magnetic_reference_N)
+s_N = unit(Sun_reference_N)
+D   = abs(dot(m_B,s_B) - dot(m_N,s_N))
+
+if D > acquisition_pair_tolerance: reject inconsistent_acquisition_pair
+otherwise: attempt TRIAD acquisition
+```
+
+The unchanged tolerance is **1e-8 in dimensionless cosine difference**, not radians
+or a magnetic-field tolerance. Equality passes this consistency test. Acceptance
+also requires finite, nonzero vectors, explicit proper mounting transforms and
+valid epoch/source metadata. Invalid sensor flags are rejected independently.
+The adapter's cold-start path requires a current common-epoch pair; the core does
+not propagate an arbitrary uninitialized attitude to repair missing acquisition.
+
+After consistency passes, TRIAD independently checks both measured and reference
+pair cross-product norms. A sine **<=1e-6** rejects acquisition_geometry; strictly
+greater passes this conditioning check. A zero vector rejects with finite nonzero
+vector required. A measured collinear pair inconsistent with a noncollinear
+reference fails the cosine test first. A separate algebraic test with consistent
+collinear measured/reference pairs reaches the later geometry rejection.
+
+Both 1e-8 and 1e-6 are ASSUMED / TEST-ONLY, source
+config/attitude_mekf_test_only.json, Phase 7C 2026-09-07. Exact implementation is
+VectorSample.body_and_reference, MEKF.observe and triad in attitude_mekf.py.
+Neither gate was changed, and this phase does not select a flight criterion.
+
+### Exact saved geometry and experiment boundary
+
+Reuse the passing, source-bound phase8b2a_tam_bias.json acquisition inputs; all 16
+source hashes still match. The validator replays only that pair through fresh
+MEKFNavigationAdapter/MEKF instances, never a plant or actuator. The Sun, gyro,
+reference vectors, timing and quiet evidence are copied unchanged. Deterministic
+offsets use the existing isolated TAM model with a harness-only ASSUMED Parameter
+in S; no live profile is added and runtime_usable_for_flight=false.
+
+Numerical observations in this section are CONFIRMED software results, source
+validate_acquisition_boundary.py / phase8b2b_acquisition_boundary.json, 2026-10-02.
+They are local to this TEST-ONLY acquisition geometry and are not flight limits.
+
+| QUANTITY | VALUE / FRAME / UNITS |
+|---|---|
+| Acquisition / publication | 0.4 / 0.4 s; copied from the existing diagnostic cycle |
+| Ideal magnetic vector in B | [-4.15595761375e-6,9.47344529923e-6,2.02401152896e-5] T |
+| Local magnetic magnitude | 2.27306052815e-5 T = 22.7306052815 microtesla |
+| Magnetic reference in N | [-6.78840641155e-6,2.11305859807e-6,2.15901120473e-5] T |
+| Sun unit vector in B | [0.327791540324,0.568288377914,-0.754719170036] |
+| Sun reference in N before normalization | [0.3,0.8,-0.5], existing synthetic direction |
+| B/Sun included angle | 2.08876241514 rad |
+| Included-angle cosine / sine | -0.495114043767 / 0.868827994291 |
+| Mounting | Existing identity C_SB, B to S; no installed mapping inferred |
+| Original [1,-2,3] microtesla offset in S | D = 0.0869286711318666; sensor valid; acquisition REJECT |
+
+### Basis and angular interpretation
+
+Construct e_parallel=unit(B), e_cross=unit(e_parallel cross unit(Sun)), and
+e_in_plane=unit(e_cross cross e_parallel). This right-handed orthonormal basis is
+well conditioned in the saved geometry; e_in_plane points toward the Sun's
+projection perpendicular to B.
+
+| BASIS DIRECTION IN B | COMPONENTS |
+|---|---|
+| e_parallel | [-0.182835325425,0.416770481116,0.890434506208] |
+| e_in_plane | [0.273088809946,0.891588785390,-0.361236680930] |
+| e_cross | [-0.944454205168,0.177120873522,-0.276829280431] |
+
+Let g=norm(B), c=cos(theta), k=sin(theta), and bias/g=a*e_parallel+b*e_in_plane+d*e_cross.
+Then, provided the perturbed vector is nonzero:
+
+```text
+c_measured = (c*(1+a) + k*b) / sqrt((1+a)^2+b^2+d^2)
+D          = abs(c_measured - c_reference)
+delta_B    = atan2(hypot(b,d),1+a)
+```
+
+These expressions reproduce the independently calculated metrics and field-angle
+changes to roundoff. D is an included-angle cosine discrepancy. It is not delta_B.
+Locally, a change in included angle gives D approximately k*abs(delta_theta), but
+magnetic direction can change without the same included-angle change.
+
+For pure in-plane perturbation beta=b, c_measured=(c+k*beta)/sqrt(1+beta^2)
+and delta_B=atan(abs(beta)). The first-order sensitivity is k/g per Tesla, the
+largest local sensitivity for a fixed small bias magnitude. For cross-plane beta=d,
+c_measured=c/sqrt(1+beta^2): sensitivity begins at second order,
+D approximately abs(c)*beta^2/2. Parallel magnitude perturbations preserve direction
+while 1+a>0 and therefore cancel under normalization.
+
+Actual parallel tests with a=[-0.9,-0.5,0.1,1,10] all accept: measured magnitude
+spans 0.1 to 11 times the original, with cosine discrepancy at roundoff. At a=-1
+the field vanishes and normalization rejects; at a=-2 polarity reverses and the
+consistency test rejects. These finite synthetic values retain sensor validity.
+The magnitude-only statement therefore excludes zero field and polarity reversal.
+
+### Measured accept/reject brackets
+
+Positive and negative perpendicular grids use fractions
+[1e-9,1e-8,1e-7,1e-5,1e-4,1e-3] of the local field. Deterministic bisection finds
+the first local departure from the zero-bias accepted region on each ray. Endpoints
+below are the largest tested accepted and smallest tested rejected magnitudes,
+not a claim about the last representable floating-point value.
+
+| DIRECTION | ACCEPTED MAGNITUDE T | REJECTED MAGNITUDE T | B-FRACTION BRACKET | B-ANGLE BRACKET rad |
+|---|---|---|---|---|
+| +in-plane | 2.61623373109e-13 | 2.61624019152e-13 | [1.15097407161e-8,1.15097691378e-8] | [1.15097406787e-8,1.15097691208e-8] |
+| -in-plane | 2.61623373109e-13 | 2.61624019152e-13 | [1.15097407161e-8,1.15097691378e-8] | [1.15097406787e-8,1.15097690735e-8] |
+| +cross-plane | 4.56849481484e-9 | 4.56850010722e-9 | [2.00984301046e-4,2.00984533876e-4] | [2.00984298339e-4,2.00984531170e-4] |
+| -cross-plane | 4.56849481484e-9 | 4.56850010722e-9 | [2.00984301046e-4,2.00984533876e-4] | [2.00984298339e-4,2.00984531170e-4] |
+| Scaled original direction | 3.77402305205e-13 | 3.77403155959e-13 | [1.66032668524e-8,1.66033042801e-8] | [1.48909418796e-8,1.48909754512e-8] |
+
+| DIRECTION | D AT ACCEPTED ENDPOINT | D AT REJECTED ENDPOINT |
+|---|---|---|
+| +in-plane | 9.99998497894e-9 | 1.00000096748e-8 |
+| -in-plane | 9.99998484436e-9 | 1.00000095403e-8 |
+| +cross-plane | 9.99998868591e-9 | 1.00000118921e-8 |
+| -cross-plane | 9.99998872676e-9 | 1.00000118586e-8 |
+| Scaled original direction | 9.99999110712e-9 | 1.00000136618e-8 |
+
+For lambda*[1,-2,3] microtesla, lambda is accepted at 1.00865008790e-7 and rejected
+at 1.00865236163e-7. Lambda=1 remains rejected. The most sensitive in-plane
+threshold is about 0.261624 picotesla, versus about 4.56850 nanotesla cross-plane.
+The nearly equal positive/negative brackets do not resolve higher-order in-plane
+asymmetry; exact cross-plane geometry is even in beta.
+
+### Numerical stability, validity and verification
+
+Independent normalization/dot products use 70-digit Decimal arithmetic on the
+exact input floats, without calling estimator predicate/math helpers. All 237
+tested grid/bisection points agree with actual adapter decisions. Both endpoints
+of all five boundaries repeat with identical decisions for fresh runs, reversed
+same-epoch delivery order and the original pre-acquisition idle history. Repeated
+measurement generation and high-precision calculations are exact.
+
+Maximum observed binary64 versus independent metric difference is 2.220446e-16.
+Bisection stops at a separately declared arithmetic band of 16 machine epsilons
+(3.552714e-15); it does not alter the 1e-8 gate. The final midpoint is explicitly
+geometry-only. Reported bracket widths are 6.460427e-19 T (in-plane), 5.292381e-15 T
+(cross-plane) and 8.507544e-19 T (original direction), about 1.16 to 2.47 parts per
+million relative. Finer last-bit transitions are not claimed; tested endpoints
+remain outside the arithmetic band. No NaN or ill-conditioned original geometry
+occurs. The zero-vector edge is deliberately separate.
+
+Every finite synthetic measurement retains the original quiet eligibility and
+its value after estimator rejection. Both existing TEST-ONLY quiet evidence and
+its configuration fingerprint are preserved. This establishes sensor-validity /
+acquisition-acceptance separation, not physical magnetic cleanliness.
+
+Eleven focused tests and all 14 validator checks pass; compilation and whitespace
+checks pass. One initial test assertion incorrectly demanded exact zero after
+70-digit normalization (observed 1e-70); its numerical assertion was corrected,
+with no predicate/model change. Shared adapter code is untouched, so its regression
+suite was not rerun. No prior phase, long run or estimator-performance study repeated.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_acquisition_boundary.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_acquisition_boundary.py --report basilisk_runner\output_data\phase8b2b_acquisition_boundary.json
+git diff --check
+```
+
+**Next:** an evidence-based acquisition-design phase. The current predicate is an
+ideal-pair consistency fixture with strongly direction-dependent sensitivity; this
+characterization alone cannot choose a flight tolerance. Define calibration/error,
+timing, geometry/observability and acceptance requirements first, retaining these
+tests as the unchanged baseline. Installed TAM/Sun errors, mounting, contamination,
+recovery and approved acquisition success criteria remain unresolved. No tuning is
+authorized or performed by this recommendation.
