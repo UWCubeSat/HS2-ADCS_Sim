@@ -6,6 +6,25 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 7G-2C late-fault command-validity boundary - 2026-10-01
+
+**LATE-FAULT COMMAND-VALIDITY BOUNDARY / DEVELOPMENT TIMING TEST / NOT FLIGHT VALIDATED.**
+Starting checkpoint: `c4bd9a7` (7G-2B). PASS for one deterministic scheduling test.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / scope | Establish the lifetime between health approval and native command publication. New harness/tests only; shared runtime and simulation configuration unchanged. |
+| Exact insertion | Actual DynamicsTask table: gate 550, TEST-ONLY late fault 549, owner 548, native readback witness 547. All share the same 0.8 s timestamp; ordered witnesses establish causality. |
+| Fault | Reuse existing late_quality mechanism: publish real 0.7 s quality with its original header after approval. Keep stale metadata exposed at priority 568 on later ticks. Source-interface freshness fault; internal MEKF remains healthy. No new sensor/fault model or fabricated health decision. |
+| Decision lifetime | Owner relies on same-tick approval without re-reading health. Published at 0.8 s means approved before the fault, not approved after it. Authorization expires for later ticks; it covers one publication and following 0.1 s integration interval. |
+| Native response | Approved ID 1 / generation (0,1,0) survives publication at 0.8 s. Exactly one post-fault nonzero interval [0.8,0.9 s); first native zero command 0.9 s, first zero-torque interval [0.9,1.0 s), completed record 1.0 s. |
+| Persistent fault | 22 later native publications through 3.0 s are zero; stale_quality inhibition, no new approval, no extra retained command, no second owner or SimpleNav fallback. |
+| Validation | Nine tests / 17 live checks pass. Native subscriber, held-input epochs, independent torque/state/work evidence agree. Maximum torque discrepancy 9.4701e-22 N m. Three short production traces byte-identical to HEAD. |
+| Architecture decision | OPTION 1: deterministic bounded development decision lifetime; no runtime correction or extra owner-side health recheck required for this tested architecture. Assumes scheduled callbacks continue executing. |
+| Limits / next | ASSUMED 0.8 s fault / 3 s horizon, not flight latency. Next highest-value phase: realistic sensor/estimator modeling, because ideal truth-derived inputs dominate knowledge/performance uncertainty. No campaign or pointing implementation in this phase. |
+
+See the [scheduler, decision lifetime and actuator evidence](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-7g-2c-late-fault-command-validity-boundary---2026-10-01).
+
 ## Phase 7G-2B closed-loop reset / reacquisition - 2026-10-01
 
 **MEKF CLOSED-LOOP RESET / REACQUISITION / DEVELOPMENT TEST / NOT FLIGHT VALIDATED.**

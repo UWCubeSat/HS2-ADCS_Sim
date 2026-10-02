@@ -1835,3 +1835,143 @@ This phase does not establish arbitrary arrival-time safety, process restart or
 counter-reset semantics, broad fault robustness, hardware latency, realistic
 sensor/estimator performance, requirements-grade detumble or pointing. A longer
 performance campaign is not the next step.
+
+## Phase 7G-2C late-fault command-validity boundary - 2026-10-01
+
+**LATE-FAULT COMMAND-VALIDITY BOUNDARY / DEVELOPMENT TIMING TEST /
+NOT FLIGHT VALIDATED.** Engineering gate: **PASS for one deterministic source
+quality fault between health evaluation and command publication**. Starting
+checkpoint `c4bd9a7` contains 7G-2B; the working tree was clean. The new validator
+and tests reuse the existing ObserverOptions hook. No shared runtime, estimator,
+controller, owner, actuator, magnetic cycle, physical or environment code changed.
+
+### Actual scheduler and decision-to-publication window
+
+The validator records the actual Basilisk task model table after setup and
+checks its ordering. All listed models run in DynamicsTask, period 0.1 s.
+Higher priorities run first. Priorities are CONFIRMED software configuration at
+this checkpoint, not flight scheduling allocations.
+
+| Priority | Role and epoch contract |
+|---|---|
+| 1100 / 1050 | Record held inputs; inspect native command/field subscribers from t - 0.1 s. |
+| 1000 | Spacecraft propagates the interval ending at t. Native MtbEffector reads held command and field during RK dynamics calls. |
+| 980 / 975 | MtbEffector publishes final RK-stage torque for that completed interval; native/logger records follow. UpdateState does not latch a new command. |
+| 925 / 910 / 900 | Existing Earth orientation, WMM guard and current WMM field. |
+| 800 / 600 | SimpleNav diagnostic; unchanged magnetic-cycle acquisition/quiet scheduling. Cycle publisher remains disabled for MEKF ownership. |
+| 595 / 590 / 587 | Early navigation witness, ideal input bridge, stored TAM input tap. |
+| 580 / 579 / 570 | MEKF NavAtt/quality publication, TEST-ONLY publication witness, normal shadow monitor. |
+| 568 | TEST-ONLY persistence: after the initial late fault, re-expose stale quality before consumers. No injection here on the initial fault tick. |
+| 565 / 560 / 555 | SimpleNav quality facade, point navigation consumer, frozen sample probe. |
+| 554 | Coherent snapshot capture/current source-health observation. |
+| 552 | Unchanged calculation at the existing compute offset only. |
+| 550 | Current application health/generation/cycle decision. |
+| 549 | TEST-ONLY witness of the completed gate decision, then the initial late quality fault. |
+| 548 | Sole MEKF command owner publishes; no independent health read here. |
+| 547 | TEST-ONLY independent native subscriber readback and exposed-quality witness. |
+| -1 | Current command, state, field and native navigation recorders. |
+
+The **decision-to-publication window** is causally between priorities 550 and 548.
+Integer priority 549 permits exact insertion. Simulation time does not advance
+between those callbacks, but this is not an atomic operation or a zero-width
+causal window. Witness sequence 25 (completed approval), 26 (fault), 27 (native
+readback after owner) all carry 0.8 s. Neither a wall-clock duration nor flight
+latency can be inferred from identical message timestamps.
+
+### Command-validity lifetime in this development schedule
+
+1. A decision becomes usable when the priority-550 evaluation completes with
+   current health, coherent command provenance, matching source generation and
+   an eligible cycle/application window. At 0.8 s it certifies the 0.8 s
+   NavAtt/quality/consumer evidence and generation (0,1,0), bound to command ID 1,
+   sample/capture 0.4 s and computation 0.5 s.
+2. The owner at 548 consumes that same-tick result. It checks the delivery epoch
+   and pending calculation; it does not re-read current source quality. A source
+   fault arriving after 550 therefore does not retroactively change that decision.
+   The published command was approved BEFORE the fault, not newly approved after it.
+3. That authorization is for the one scheduled publication at t, whose command
+   applies over [t,t + 0.1 s). It is not authority for a later tick. Each owner
+   call starts with a fresh zero payload, requires the current gate row, and each
+   scheduled gate evaluation reassesses health. The unchanged pending envelope
+   is a numeric record, not a retained usability authorization.
+4. For this persistent post-gate fault, the first eligible inhibition is the
+   next priority-550 evaluation followed by priority-548 publication, at 0.9 s.
+   The corresponding zero-torque interval is [0.9,1.0 s).
+
+This is OPTION 1: a bounded, explicit decision lifetime acceptable for this
+development test. **No additional owner-side health recheck is required for the
+current tested development architecture.** This conclusion assumes the recorded
+task executes each boundary; it does not cover scheduler stalls, extra owner
+calls, pending-envelope replacement, asynchronous hardware or process failure.
+No flight safeing-latency requirement is established here. Future requirements
+may impose a stricter maximum fault-to-safe delay.
+
+### Fault mechanism and independently observed actuator response
+
+Source: `validate_late_fault_boundary.py`, revision 2026-10-01. Fault time 0.8 s
+and horizon 3 s are **ASSUMED / TEST-ONLY**. The supported 7F-2C `late_quality`
+mechanism republishes the real 0.7 s quality payload with its original 0.7 s
+header. The fault is stale mandatory source metadata, **not an internal MEKF
+math fault**. No fault/valid bits, command values or epochs are fabricated.
+Native NavAtt remains current. Normal adapter/monitor history and the quality
+actually exposed to consumers are saved separately; the former remains healthy.
+
+At 0.8 s, approval precedes the stale publication at priority 549. On subsequent
+ticks the same stale payload is re-exposed at 568, after the normal 570 monitor
+and before the 560 consumer and 550 gate. This matches the existing late-quality
+fixture insertion and keeps the source-interface fault persistent at use events.
+The health gate reports `stale_quality` at 0.9 s and remains FAULTED; no new command
+is approved after the injected fault and no reset or fallback is requested.
+
+**CONFIRMED numerical observations for this assumed fixture:**
+
+| Evidence | Result |
+|---|---|
+| First post-fault owner/native input | 0.8 s, command ID 1, generation (0,1,0), exactly [-0.2,-0.2,0.42702955144649996] A m^2. |
+| Surviving decision lifetime | Exactly one post-fault nonzero publication; held during [0.8,0.9 s). No new post-fault approval. |
+| Final approved native torque | Record at 0.9 s: [-1.022381403694854e-5,3.265062364161126e-6,-3.25914290906363e-6] N m. Final RK-stage torque, not an interval average. |
+| Final approved interval work | -9.656230729328371e-7 J, included in independent work/state reconstruction. |
+| First zero native command | 0.9 s; fault-to-zero-input delay 0.1 simulation s. |
+| First zero torque interval | [0.9,1.0 s), completed native torque record at 1.0 s; fault-to-completed-readback delay 0.2 simulation s. |
+| Persistence | All 22 subsequent publications through 3.0 s are fresh zero, including later ACTUATE phases. No second publisher or SimpleNav fallback. |
+| Independent physics | Maximum native torque error 9.470116246213047e-22 N m; MRP/rate component step discrepancy 5.551115123125783e-17 in their respective native units; interval energy/work residual 5.195858281860778e-15 J. |
+
+The actual native subscriber is read separately after owner publication. Existing
+pre-propagation native epoch guards, held-input records, independently published
+native torque and integrated spacecraft state agree. The 0.9 s torque record
+still describes the final nonzero interval even though the new command is zero.
+All following completed intervals have exactly zero native torque. Finite,
+continuous inertial rotation is expected; it is not treated as a fault.
+
+Nine focused tests and all 17 live validation checks pass. Negative checks reject
+an extra retained command, unaccounted native torque and reversed event-order
+evidence. Three six-second committed-versus-working SimpleNav preservation cases
+(continuous baseline, continuous candidate, cycled baseline) are byte-identical
+and contain no development owner. No shared runtime change required broader
+regression reruns. Four expected unwritten startup NavAtt recorder warnings retain
+their existing pre-acquisition meaning.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_late_fault_boundary.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_late_fault_boundary.py --report basilisk_runner\output_data\phase7g2c_late_fault.json
+git diff --check
+```
+
+The ignored phase7g2c_late_fault JSON/CSV artifacts preserve the base commit,
+source/CSV hashes, assumed configuration, exact scheduler table, ordered fault
+witnesses, old approved envelope, native/owner/gate evidence and preservation
+results. Existing production artifacts are not overwritten.
+
+**Highest-value next phase: realistic sensor/estimator modeling.** Nominal control,
+inhibition, reset/reacquisition and this late-fault boundary now have development
+evidence. The ideal truth-derived gyro and Sun inputs still dominate uncertainty
+in estimator knowledge and resulting control performance. Build an explicitly
+sourced, bounded sensor/estimator fidelity assessment before requirements-grade
+detumble claims; preserve TBC/TBD/ASSUMED hardware parameters where unresolved.
+Broader timing robustness remains open, but another command-path micro-test or a
+longer run with the same ideal inputs would not address that dominant uncertainty.
+No further experiment is executed or authorized by this recommendation. This
+phase establishes neither flight safeing latency, arbitrary fault-arrival
+coverage, process-restart behavior, realistic hardware latency, realistic
+estimator performance, requirements-grade detumble nor pointing performance.
