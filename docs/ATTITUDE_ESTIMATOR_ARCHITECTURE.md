@@ -2287,3 +2287,150 @@ the existing TEST_NOISE_ONLY profile with zero injected bias, its recorded seed,
 unchanged vector schedule and Q/R/P0, to isolate stochastic response before any
 combined bias/noise case. Do not claim statistically calibrated confidence or
 flight accuracy. That experiment is not executed in Phase 8A-2A.
+
+## Phase 8A-2B live synthetic gyro-noise response - 2026-10-02
+
+**SYNTHETIC GYRO-NOISE ESTIMATOR RESPONSE / SHADOW DEVELOPMENT TEST /
+NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Engineering gate: **PASS** for
+one stochastic software/estimator consistency claim. Starting checkpoint
+`1366930` contains 8A-2A; the working tree was clean before this phase. The two
+new validation/test files reuse the committed 8A-2A live-case and read-only update
+witnesses. No shared runtime, gyro model, MEKF math, Q/R/P0, controller, timing,
+actuator, spacecraft or environment code was changed.
+
+### Fixed inputs, independent sequence and exact repeatability
+
+Use the same 3 s horizon, 0.1 s gyro cadence, initial state, ideal vector schedule
+and delayed-vector replay fixture as 8A-2A. TEST_NOISE_ONLY has identity C_SB
+(S=B), zero deterministic bias, unit scale, zero cross-axis error, no clipping,
+zero latency, discrete Gaussian sigma [0.001,0.002,0.003] rad/s per acquired
+sample, and PCG64 seed 8101. These are **ASSUMED / TEST-ONLY**, sourced from
+gyro_sensor_model.py, Phase 8A-1 revision 2026-10-01 at the starting checkpoint.
+They are not converted vendor noise density or confirmed HS-2 hardware values.
+The 31-sample realization is not required to reproduce population statistics.
+The earlier 20,000-sample distribution test was not repeated.
+
+An independent NumPy PCG64 generator constructs the complete expected sequence
+without calling GyroModel or using recorded noise to construct the expectation.
+Every logged raw noise draw matches exactly, starting with the t=0 acquisition;
+every delivered S/B measurement equals ideal measurement plus that draw exactly.
+Subtraction of the two delivered floating-point rates recovers the expected noise
+within arithmetic roundoff. All 31 acquisition/publication/processing epochs and
+configuration fingerprints are checked. No extra RNG draws, hidden scale/bias
+term or double noise addition appear.
+
+Two independent TEST_NOISE_ONLY live runs reproduce exactly: full input batches
+(including gyro metadata, interpolated intervals and vector events), attitude,
+bias, covariance, native navigation telemetry, validity, innovations, raw replay
+callbacks and counts. The JSON records the NumPy version, both case hashes,
+source hashes and checkpoint. No alternate seed or Monte Carlo was used.
+
+### Observed ideal-versus-noise response
+
+Numbers below are **CONFIRMED numerical observations of this TEST-ONLY case**,
+source validate_gyro_noise_response.py and output_data/phase8a2b_gyro_noise.json,
+revision 2026-10-02. Attitude errors compare C_est with spacecraft truth C_BN;
+bias components are in B. Published and witnessed maxima are sampled maxima,
+not continuous-time bounds. Witnessed maxima include pre/post vector updates and
+replay; innovation maxima use each event's final retained-history evaluation.
+
+| METRIC | IDEAL_REGRESSION | TEST_NOISE_ONLY |
+|---|---|---|
+| Final principal attitude error, rad | 3.720384e-6 | 7.411605e-4 |
+| Maximum published attitude error, rad | 1.369167e-5 | 1.391670e-3 |
+| Maximum witnessed attitude error, rad | 1.594657e-5 | 1.438195e-3 |
+| Maximum gyro-only sample-to-sample error-vector change, rad | 2.308185e-6 | 5.467263e-4 |
+| Final estimated bias, rad/s | [-1.790200e-5,1.085055e-5,5.648901e-7] | [7.843059e-4,7.599627e-4,6.150821e-5] |
+| Maximum witnessed bias-estimate norm, rad/s | 2.094123e-5 | 1.280840e-3 |
+| Maximum magnetic tangent-innovation norm, dimensionless | 7.474803e-6 | 6.617142e-4 |
+| Maximum Sun tangent-innovation norm, dimensionless | 1.566772e-5 | 1.214317e-3 |
+| Maximum magnetic angular residual, rad | 7.474803e-6 | 6.617143e-4 |
+| Maximum Sun angular residual, rad | 1.566772e-5 | 1.214318e-3 |
+| Minimum covariance eigenvalue, numerical SI-state coordinates | 7.951391e-6 | 7.951144e-6 |
+| Maximum covariance eigenvalue, same coordinates | 0.10113308 | 0.10113308 |
+| Maximum covariance asymmetry | 0 | 0 |
+| Validity | Uninitialized until 0.4 s, then valid | Same |
+| Rejected events | 0 | 0 |
+| Magnetic / Sun update counts, including acquisition pair | 3 / 4 | 3 / 4 |
+| Delayed-vector replays | 2 | 2 |
+| Distinct post-acquisition vector updates / actual callbacks | 5 / 6 | 5 / 6 |
+
+Noise perturbs propagation and subsequent magnetic/Sun residuals. Error need not
+grow or improve monotonically. Every actual vector update, including replay,
+reduces its corresponding measured-vector angular residual, with consistent
+geometric correction direction and finite innovations. Recorded tangent norm
+matches the independently reconstructed cross-product norm. The five final-history
+updates also reduce full truth-angle error in this realization; that is not a
+general single-vector observability guarantee or an innovation acceptance limit.
+
+Initial estimated bias is zero. Noise-case witnessed axis excursions, rad/s:
+X [-1.620780e-6,7.925890e-4], Y [-2.668329e-5,1.144243e-3],
+Z [-2.365657e-4,6.689737e-5]. With zero true deterministic bias, final bias error
+equals the final estimate above. Bias is held exactly through gyro-only intervals
+and changes on vector processing; individual random gyro samples are not assigned
+as a fixed known bias. No deterministic sign, zero final estimate or convergence
+speed is required. The recorded trajectory shows no runaway over this short
+window; it establishes no long-term stability or bias-performance bound.
+
+### Independent endpoint-interpolated propagation check
+
+Use [0.4,0.5 s], immediately after identical vector acquisition and before any
+post-acquisition vector correction or bias update. Existing midpoint substeps
+linearly interpolate the received endpoint gyro rates. Thus the independent
+first-order noise increment is 0.5*(n_0+n_1)*0.1 s, not either endpoint alone.
+The actual endpoint noise vectors, rad/s, are:
+[-0.0012080503,0.0034731817,-0.0013765342] and
+[-0.0005579447,-0.0041174260,0.0029059894].
+
+Expected excess rotation is [-8.829975e-5,-3.221222e-5,7.647276e-5] rad;
+observed noisy-minus-ideal excess is [-8.685414e-5,-3.064080e-5,7.413704e-5] rad.
+Norms are 1.211716e-4 and 1.182320e-4 rad, with positive directional projection.
+The vector discrepancy 3.164609e-6 rad is within the 2.237507e-5 rad first-order
+rotation-transport allowance derived from endpoint peak noise/rate and duration.
+The error convention is the passive principal rotation of C_est C_truth.T,
+excess estimated rotation, opposite to the MEKF true-minus-estimate correction.
+This local check is not a long-term random-walk model. Interpolation correlates
+subinterval errors and does not generate additional independent measurements.
+
+### Covariance, control isolation and verification
+
+All recorded covariances are finite, symmetric and positive definite; variances
+are positive, and the minimum eigenvalue remains well above the 5.68434e-14
+numerical tolerance. Noise-case final attitude covariance diagonal is
+[1.780689e-4,2.374570e-4,1.410240e-4] rad^2; final bias covariance diagonal is
+[7.558610e-5,1.415906e-4,1.528713e-4] (rad/s)^2. Maximum attitude trace is
+0.301439664 rad^2, below the existing zero-Q kinematic bound 0.654 rad^2; bias
+diagonals do not exceed P0 [0.001,0.001,0.001] (rad/s)^2. No observed numerical
+collapse or unexplained explosive growth. Q remains zero, R's existing algebra
+weight and P0 are unchanged. This covariance is not statistically calibrated to
+the injected noise; numerical health does not imply realistic uncertainty.
+
+SimpleNav remains wired to the actual controller. No MEKF command owner is
+created; an actual attempt to select MEKF_DEVELOPMENT with TEST_NOISE_ONLY is
+rejected by the unchanged guard. All three host CSVs, including spacecraft state,
+commands and independently applied torque, are byte-identical and match the
+source-bound saved 8A-2A ideal reference. The ideal estimator/update evidence
+also matches that reference exactly. If the ignored artifact is absent, the
+validator falls back to an uninstrumented ideal run with unchanged shared source.
+
+**Nine focused tests / 26 live checks pass.** Tests also reject doubled delivered
+noise, a shifted RNG draw, and altered covariance in repeatability evidence.
+Compilation and whitespace checks pass. No shared runtime changes occurred, so
+unrelated regression suites and previous audit/model campaigns were not rerun.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p test_gyro_noise_response.py -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_gyro_noise_response.py --report basilisk_runner\output_data\phase8a2b_gyro_noise.json
+git diff --check
+```
+
+The JSON and ideal/noise/repeat host CSV artifacts are ignored generated evidence.
+There is no new installed-sensor evidence classification. Realistic prediction
+still requires applicable gyro calibration, noise/bandwidth, mounting/timing,
+vector-sensor errors and an evidence-based estimator covariance configuration.
+
+**Next smallest justified experiment: combined BIAS + NOISE shadow response**
+using the already separate synthetic bias/noise magnitudes, the same recorded
+seed, schedule and fixed Q/R/P0, under separate authorization. It is not executed
+here and would still establish only software/model consistency.

@@ -6,6 +6,27 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 8A-2B live synthetic gyro-noise response - 2026-10-02
+
+**SYNTHETIC GYRO-NOISE ESTIMATOR RESPONSE / SHADOW DEVELOPMENT TEST /
+NOT HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Checkpoint `1366930`.
+PASS for the deterministic seeded stochastic-response claim; no shared runtime changes.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / inputs | Existing 3 s live ideal versus TEST_NOISE_ONLY case, repeated with seed 8101. Identity C_SB, zero deterministic bias/scale error, per-sample sigma [0.001,0.002,0.003] rad/s, unchanged vector schedule/Q/R/P0. All inputs ASSUMED / TEST-ONLY, gyro_sensor_model.py revision 2026-10-01. |
+| Sequence / repeatability | All 31 samples match an independent PCG64 sequence: raw draws and ideal-plus-noise measurements exactly; subtraction within roundoff. Same-seed inputs, estimator states, innovations, covariance, validity and counts reproduce exactly. No extra draws or double addition. |
+| Attitude | Final ideal/noise errors 3.720384e-6 / 7.411605e-4 rad; witnessed maxima 1.594657e-5 / 1.438195e-3 rad. Independent endpoint-interpolated local growth/sign check passes. No monotonicity or accuracy requirement. |
+| Bias state | Zero true deterministic bias; final estimate [7.843059e-4,7.599627e-4,6.150821e-5] rad/s; maximum witnessed norm 1.280840e-3 rad/s. Finite, held during gyro-only intervals, updated from vectors; no sign expectation or observed short-window runaway. |
+| Innovations / covariance | Both vector residual histories respond; all actual updates reduce their measured-vector residual with correct geometric direction. Covariance finite, symmetric and positive definite; no collapse/explosive growth. Not statistically calibrated to this injected noise. |
+| Isolation / preservation | SimpleNav remains actual control source; no MEKF command owner, modeled-gyro closed-loop selection rejected. Ideal/noise/repeat host CSVs byte-identical to the saved ideal reference. |
+| Verification | Nine focused tests / 26 live checks pass. Five distinct post-acquisition vector events, six callbacks, two replays, zero rejections. No broad suites, alternate seed, Monte Carlo or long run. |
+| Next / limits | Combined BIAS + NOISE shadow response is justified as the next separate experiment; not run here. Installed sensor calibration and evidence-based covariance remain prerequisites for realistic HS-2 prediction. |
+
+Numerical observations are CONFIRMED only for this TEST-ONLY experiment, source
+validate_gyro_noise_response.py / phase8a2b_gyro_noise.json, revision 2026-10-02.
+See the [full sequence, response and isolation evidence](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8a-2b-live-synthetic-gyro-noise-response---2026-10-02).
+
 ## Phase 8A-2A live synthetic gyro-bias response - 2026-10-01
 
 **SYNTHETIC GYRO-BIAS ESTIMATOR RESPONSE / SHADOW DEVELOPMENT TEST /
