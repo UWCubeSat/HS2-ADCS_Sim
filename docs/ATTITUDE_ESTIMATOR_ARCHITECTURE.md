@@ -3100,3 +3100,192 @@ timing, geometry/observability and acceptance requirements first, retaining thes
 tests as the unchanged baseline. Installed TAM/Sun errors, mounting, contamination,
 recovery and approved acquisition success criteria remain unresolved. No tuning is
 authorized or performed by this recommendation.
+
+## Phase 8B-2C acquisition criterion design basis - 2026-10-02
+
+**ACQUISITION CRITERION DESIGN BASIS / NO THRESHOLD CHANGE /
+NO FLIGHT CRITERION SELECTED.** Design-only continuation at committed `cfcf724`;
+no runtime, acquisition logic, Q/R/P0, sensor profile or controller edits.
+The complete derivation, evidence matrix and comparison are in
+[ACQUISITION_CRITERION_DESIGN.md](ACQUISITION_CRITERION_DESIGN.md).
+
+The unchanged predicate is the absolute measured/reference normalized-pair
+cosine difference D <=1e-8, followed by both pair cross norms >1e-6, with separate
+finite/nonzero/frame/epoch/sensor-validity prerequisites. Git traces the tolerance
+to `1b79a50` (2026-09-14), whose Phase 7C source revision is 2026-09-07:
+ASSUMED / TEST-ONLY ideal-pair consistency. No installed-error allocation or
+quantitative flight rationale supports this number.
+
+For active vector-error rotations in B, `delta_m=delta_phi_m cross m` and
+`delta_s=delta_phi_s cross s`, the signed cosine perturbation is
+`delta_c=(delta_phi_m-delta_phi_s) dot (m cross s)`. Reference cosine error is
+subtracted. The component of relative rotation normal to the B/Sun plane enters
+at first order with coefficient sin(theta); out-of-plane vector errors enter
+at second order locally. Using signed `r=c_measured-c_reference` and `D=abs(r)`,
+a future uncertainty calculation can use `sigma_r^2=J*P_joint*J^T`, including
+both sensor and reference errors and
+correlations. No covariance, sigma, quantile or threshold is selected here.
+
+**Common-rotation blind spot:** `(R*m) dot (R*s)=m dot s` exactly. A consistently
+wrong frame, mounting rotation or suitable common attitude-age error can pass
+pair consistency while attitude is wrong. Scalar normalization or an angle
+residual cannot repair this. Sensor validity, pair consistency and initialized
+attitude observability/accuracy need distinct evidence. Near parallel or
+antiparallel geometry loses one attitude degree of freedom; the existing sine
+floor is a numerical fixture, not a flight quality criterion.
+
+At the reused 0.4 s geometry, sin(theta)=0.868827994292. Illustrative deterministic
+1e-4 rad in-plane error in either sensor yields D=8.68852748546e-5; both toward
+each other yield 1.73775499981e-4. A common rotation leaves D zero to roundoff.
+These are ASSUMED / TEST-ONLY examples, not HS-2 accuracy or acceptance bounds.
+
+The isolated [analysis helper](../basilisk_runner/analyze_acquisition_criterion.py)
+passes 11 focused math/policy checks without runtime imports, simulation or output
+files. Checks include sign derivatives for both measured and reference vectors,
+cross-plane terms, common rotations, correlated uncertainty and information-matrix
+rank loss. The design document records exact commands and precision limits.
+
+**Next:** a CSS/Sun-vector measurement model framework. A credible numeric flight
+criterion needs Sun-direction uncertainty/availability (or equivalent installed
+end-to-end evidence), plus TAM calibration/cleanliness, reference/timing errors,
+observability requirements and false-accept/reject policy. A framework alone is
+not calibration. Existing sources cannot establish quantitative TAM-versus-Sun
+dominance; magnetic contamination/recovery remains independently unresolved.
+
+## Phase 8C-1 parametric CSS / Sun-vector measurement framework - 2026-10-02
+
+**CSS / SUN-VECTOR MEASUREMENT FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** Starting HEAD is
+`cfcf724`; the completed, uncommitted 8B-2C design changes are preserved. This
+phase adds a measurement framework and ideal shadow integration, not acquisition
+tuning, a selected flight array or demonstrated HS-2 attitude accuracy.
+
+### Truth, channel and reconstruction contract
+
+[sun_sensor_model.py](../basilisk_runner/sun_sensor_model.py) separates immutable
+SunTruth, ChannelMeasurement, SunReconstruction and SunSample records. The model
+has no Basilisk, spacecraft or actuator dependency. Configurations use the existing
+provenance-bearing Parameter type; every supplied profile is ASSUMED / TEST-ONLY,
+source sun_sensor_model.py, revision 2026-10-02, runtime_usable_for_flight=false.
+Profiles are defined in Python, following the gyro/TAM pattern; no duplicate JSON
+configuration or flight profile is introduced.
+
+| LAYER / QUANTITY | FRAME, UNITS, SIGN AND CONTRACT |
+|---|---|
+| Inertial Sun reference | Existing Phase 7C synthetic [0.3,0.8,-0.5], dimensionless, directed from spacecraft toward Sun in N. Not an ephemeris, irradiance or distance. |
+| Sun truth | C_BN maps N to B. Store original reference and normalized N/B directions at truth epoch. Requires a finite nonzero vector and proper rotation; invalid inputs remain explicitly invalid. |
+| Channel geometry | Unit normal in each S_i and proper C_SB mapping B to S_i. Thus normal_B=C_SB.T*normal_S. No installed orientation or count is implied. |
+| Incidence / eligibility | q_i=normal_B dot unit_sun_B; positive incidence is illuminated. Front-side q>0 and q>=cos(half_FOV) determine generic eligibility, with 16 machine epsilons of FOV arithmetic allowance. FOV boundary is inclusive; exactly perpendicular is not illuminated. This is not a physical signal/shadow threshold. |
+| Channel measurement | Dimensionless normalized response: y_i=gain_i*max(0,q_i)+offset_i+noise_i for eligible, unoccluded channels. Geometrically excluded/occluded channels report dark offset/noise and remain invalid; unavailable Sun or bad truth/metadata gives no response. This is a generic cosine development law, not a TensorCSS transfer function or voltage calibration. |
+| Calibration | Forward gain/offset and reconstruction-known gain/offset are separate parameters. Corrected response is (y_i-calibration_offset_i)/calibration_gain_i. Their mismatch can produce directional error. |
+| Optional effects | Seeded PCG64 independent discrete channel noise; optional upper clipping. Defaults zero/disabled, no noise-density conversion. Saturated readings are retained but excluded from reconstruction. No lower clipping, ADC, temperature, albedo or self-occlusion model is inferred. |
+| Reconstruction | Valid calibrated responses b and corresponding normal_B rows A only. Minimize the Euclidean norm of A*x-b by linear least squares, then normalize x. No truth vector or spacecraft attitude enters this method. Output direction is dimensionless in B. |
+| Reconstruction validity | At least three independent usable rows, rank 3, singular-value ratio above configured numerical floor, finite nonzero solution. This establishes a structurally available estimate, not an accuracy/confidence bound or a flight consistency decision. |
+| Invalid data | Channel validity and reconstruction validity are separate. Invalid channels are excluded; malformed metadata or nonfinite purportedly valid values reject. No illuminated/usable channels, rank loss, ill conditioning or zero solution yields None plus reasons, never a valid zero vector. |
+
+Array eligibility currently uses truth incidence/FOV and an explicit mask as
+development-model inputs. The illuminated flag means geometric q>0; physical
+availability and occlusion are recorded separately. No flight channel-selection algorithm
+or measured signal-validity threshold is claimed. The unconstrained linear fit
+does not certify a noisy solution's physical consistency or supply covariance.
+Future calibrated selection/error policy remains required.
+
+### Profiles and synthetic geometry
+
+| PROFILE / PARAMETER | VALUE / UNITS / STATUS / LIMIT |
+|---|---|
+| IDEAL_REGRESSION | DIRECT_VECTOR mode, no channels, zero error, zero latency. Explicit development truth bridge; NOT a physical CSS reconstruction. |
+| Direct-vector representation | Preserve C_BN*[0.3,0.8,-0.5] exactly as the old MEKF measurement payload, including its non-unit magnitude. Store normalized direction separately; MEKF performs its unchanged normalization. |
+| TEST_ARRAY_GEOMETRY | Eight unit cube-corner normals (+/-1,+/-1,+/-1)/sqrt(3), identity C_SB; synthetic algebra geometry only, NOT an HS-2 count/layout. |
+| Generic channel defaults | Forward and calibration gains 1; offsets and discrete noise sigma 0; half FOV pi/2 rad; upper clipping None. ASSUMED / TEST-ONLY. This hemisphere is not the vendor TensorCSS FOV. |
+| Reconstruction numerical guard | minimum_singular_ratio=1e-10, dimensionless ASSUMED / TEST-ONLY numerical floor. Not a flight observability/accuracy requirement. |
+| Timing and RNG defaults | Latency 0 ns; seed None; no random draws when noise is zero. Tests use explicitly sourced hypothetical 1e-4 response sigma / seed 8301 solely for reproducibility checks. |
+
+The array recovers the six signed axis directions and two arbitrary directions
+with maximum angular discrepancy **2.702860796744808e-16 rad** in the isolated
+validator. Arbitrarily rotated arrays/nonidentity attitude also pass focused
+tests. This is numerical algebra accuracy, not sensor accuracy. The [1,1,0]
+symmetry edge leaves two positive independent rows and rejects rank deficiency;
+valid individual channels are not enough. Uniform positive calibrated-response scaling leaves
+direction unchanged. A synthetic differential gain/offset changes direction;
+matching reconstruction calibration removes that known error to roundoff.
+
+### Availability, epochs and provenance
+
+SunAvailability carries epoch, explicit available/unavailable state, source and
+optional channel-occlusion mask/reason. Unavailable Sun (for example an externally
+supplied TEST-ONLY eclipse state) remains distinct from a visible Sun with invalid
+or obscured channels. Truth direction can remain defined even when no measurement
+is available. There is no new eclipse, irradiance, albedo or body-shadow model.
+
+| EPOCH / PROVENANCE | MEANING |
+|---|---|
+| Truth / acquisition | Integer nonnegative simulation ns. Must match; stale truth or availability metadata rejects. Repeated acquisition epochs raise rather than consume duplicate random draws. |
+| Channel publication | acquisition_ns + configured latency_ns. Isolated latency is a declared availability model, not a measured transport delay. |
+| Reconstruction | reconstruction_ns=publication_ns; no separate computational latency modeled. The functional model can calculate a future-available record immediately; usable_at enforces availability. |
+| MEKF processing | Actual bridge delivery tick, logged separately. Existing bridge transport delay preserves original acquisition/reference epochs; it never relabels old data as newly acquired. |
+| Fingerprint / source | Deterministic SHA-256 over full config/provenance; per-channel/sample fingerprint, truth/availability source, channel identities and original epochs retained. Reconstruction checks channel metadata against its own config. |
+
+### Live ideal shadow integration and authority boundary
+
+Opt in through `ShadowOptions(ideal_sun=True, sun_model=SunConfig())` with the
+existing ideal gyro and native TAM. The exact unchanged IDEAL_REGRESSION config
+is the only live Sun-model selection accepted; arrays, renamed arrays, error or
+latency changes stay isolated. `sun_model=None` retains the existing bridge.
+No CLI default, Sun cadence, acquisition gate, estimator math or Q/R/P0 changes.
+
+Task order remains spacecraft/current environment/sensors/cycle acquisition,
+then ideal input bridge priority 590, MEKF adapter 580, navigation observer 570.
+The new producer runs inside the existing Sun acquisition branch. Current Sun
+acquisitions remain offset 0.4 s, period 0.7 s, ASSUMED / TEST-ONLY. The short
+validator uses existing 0.2 s bridge transport delay after 1 s to exercise replay:
+Sun acquisitions 0.4/1.1/1.8/2.5 s process at 0.4/1.3/2.0/2.7 s. Model publication
+and reconstruction remain at acquisition in this live ideal case.
+
+The existing missing-Sun delivery fixture is kept separate from physical eclipse.
+It retains a finite but invalid event as before, while explicit unavailable input
+to the isolated model gives no inferred measurement. No false valid zero vector
+is substituted. New model records appear only in `sun_model_samples` DataFrame
+attributes; native spacecraft/actuator CSV values are unchanged.
+
+The existing exact-options MEKF_DEVELOPMENT guard rejects **every** modeled Sun
+configuration, including ideal direct mode. Native TAM/SimpleNav retain control
+ownership. No Sun-model object receives an effector or production command channel.
+
+### Verification and scope of the result
+
+[validate_sun_sensor_model.py](../basilisk_runner/validate_sun_sensor_model.py)
+uses three-second fixtures and loads committed scenario and adapter sources in
+memory. No checkout, long simulation or production-output replacement. Separate
+evidence: output_data/phase8c1_sun_model.json, including source hashes, configuration,
+sample/estimator records and preservation hashes.
+
+- 21 isolated model tests and six live/comparison tests pass (27 total).
+- 41 existing MEKF/core-adapter regression tests pass.
+- All 17 live validator checks pass. Nominal and rejected-delivery cases have
+  exactly equal measured vectors, event ordering/epochs/validity, acquisition
+  decisions, attitude, bias and covariance; all maximum numerical differences 0.
+- The producer label intentionally changes. The comparator canonicalizes only
+  those two exact known labels, including retained acquisition provenance; it
+  detects unknown sources, altered vectors/epochs and missing events. An initial
+  comparison failed on the retained source label only; no estimator/state change
+  was needed to resolve it.
+- Feature-disabled committed/current bridge inputs and source metadata match
+  exactly. Short continuous-native and diagnostic-cycle production CSVs are
+  byte-identical to HEAD. Cycled/ideal/rejected shadow-host SHA-256 remains
+  1b9c7c38321df3ea9c650a03e2a52e7571212d995a28a2d89de409646c1f6f1c.
+
+```powershell
+.\.venv\Scripts\python.exe -m compileall -q basilisk_runner
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_sun*.py' -v
+.\.venv\Scripts\python.exe -B -m unittest discover -s basilisk_runner -p 'test_attitude_mekf*.py' -v
+.\.venv\Scripts\python.exe -B basilisk_runner\validate_sun_sensor_model.py --report basilisk_runner\output_data\phase8c1_sun_model.json
+git diff --check
+```
+
+**Next:** isolated deterministic differential channel-calibration error versus
+reconstructed Sun direction, across valid synthetic geometry, retaining failed
+geometry cases. This is the smallest extension of the observed calibration
+sensitivity; no live perturbed Sun/MEKF control, acquisition tuning or flight
+error claim is justified. Installed CSS count/model/normals, per-channel response,
+calibration, visibility and timing remain TBD/TBC.

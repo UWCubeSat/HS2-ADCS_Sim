@@ -628,6 +628,8 @@ def run(stop_time_s=None, write_outputs=True, actuator=None,
         df.attrs["shadow_options"] = asdict(shadow)
         if getattr(shadow, "tam_model", None) is not None:
             df.attrs["tam_model_samples"] = shadow_bridge.tam_history
+        if getattr(shadow, "sun_model", None) is not None:
+            df.attrs["sun_model_samples"] = shadow_bridge.sun_history
         out_csv = out_csv.with_name(out_csv.stem + "_shadow_host.csv")
     if dummy_point is not None:
         df.attrs["navigation_consumer"] = dummy_point.history

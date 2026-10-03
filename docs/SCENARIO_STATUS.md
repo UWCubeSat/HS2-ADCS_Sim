@@ -6,6 +6,52 @@ All scenarios below are **NOT FLIGHT VALIDATED**. WORKING DEVELOPMENT BASELINE d
 
 Engineering values below are ASSUMED development inputs unless linked to a separately qualified source in [PHYSICAL_PARAMETERS.md](PHYSICAL_PARAMETERS.md).
 
+## Phase 8C-1 parametric Sun measurement framework - 2026-10-02
+
+**CSS / SUN-VECTOR MEASUREMENT FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** PASS for framework and
+ideal shadow equivalence. HEAD cfcf724; uncommitted 8B-2C design work preserved.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose | Explicit truth/channel/reconstruction pipeline and exact ideal direct-vector regression; no selected flight CSS array or performance claim. |
+| Inputs / sensors | Existing synthetic N-frame Sun reference and C_BN; configured normals/C_SB, gain/offset and separate reconstruction calibration, FOV, optional seeded noise/upper clipping, explicit availability/occlusion. All supplied values ASSUMED / TEST-ONLY, sun_sensor_model.py revision 2026-10-02. |
+| Reconstruction | Calibrated linear least squares on valid illuminated rows, rank 3 and configured numerical conditioning guard, then unit B-vector. No measurement substitutes for unavailable Sun or failed reconstruction. |
+| Environment / timing | No new ephemeris/eclipse/albedo/shadow model. Truth/acquisition/publication/reconstruction/processing epochs remain distinct. Live ideal model latency zero; existing bridge delay preserves acquisition/reference epochs. |
+| Actuator / controller | No model authority. Native TAM/SimpleNav/control path untouched; all modeled Sun selections rejected for MEKF_DEVELOPMENT control. Only exact ideal direct mode enters live shadow; arrays/errors/delay remain isolated. |
+| Validation | 27 focused Sun tests, 41 existing MEKF/core-adapter regressions and 17 validator checks pass. Nominal/rejected live vector and attitude/bias/covariance differences all zero. Three-second continuous/cycled production fixtures match committed CSV bytes. |
+| Synthetic geometry | Six signed axes and two arbitrary directions recovered with maximum 2.702860796744808e-16 rad numerical discrepancy; rotated geometry passes. Cube [1,1,0] edge correctly rejects insufficient independent illuminated rows. Not sensor accuracy. |
+| Limits | Installed hardware/count/normals/calibration/timing/response and reconstruction accuracy TBD/TBC. Generic cosine response and truth-based channel eligibility are development assumptions; no calibrated uncertainty, gate tuning or realistic Sun-vector performance. |
+| Next | Isolated deterministic differential channel-calibration response versus reconstructed direction over valid synthetic geometry; retain invalid/poor-geometry cases. |
+| Status | WORKING DEVELOPMENT BASELINE for model framework; NOT FLIGHT VALIDATED. |
+
+Contract and commands: [8C-1 architecture](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8c-1-parametric-css--sun-vector-measurement-framework---2026-10-02).
+Separate reproducibility artifact: basilisk_runner/output_data/phase8c1_sun_model.json;
+source/config fingerprints and sample/estimator/preservation records included.
+
+## Phase 8B-2C acquisition criterion design basis - 2026-10-02
+
+**ACQUISITION CRITERION DESIGN BASIS / NO THRESHOLD CHANGE /
+NO FLIGHT CRITERION SELECTED.** PASS for design analysis only, not flight acquisition.
+Checkpoint `cfcf724`; initially clean. No simulation or runtime behavior changed.
+
+| FIELD | FINDING |
+|---|---|
+| Purpose / inputs | Joint TAM/Sun error and observability design, existing evidence register, unchanged test policy, rounded committed 0.4 s geometry. No re-run of 8B-2B characterization. |
+| Actuator / controller / environment | None in the standalone analysis. Production plant, controller, scheduling, environment, estimator and Q/R/P0 untouched. |
+| Measurement treatment | Symbolic TAM/Sun direction errors and correlations; reference and timing errors explicit. Deterministic illustrative 1e-4 rad angles are ASSUMED / TEST-ONLY, not installed noise or allowable errors. |
+| Current criterion / provenance | D<=1e-8 then both cross norms>1e-6, plus independent validity/frame/epoch checks. ASSUMED Phase 7C fixture revision 2026-09-07, introduced in 1b79a50 (2026-09-14); no installed-error rationale. |
+| Result | Relative rotation normal to the vector plane drives first-order cosine disagreement with sin(theta) sensitivity. A common rotation cancels exactly; consistently wrong vectors may pass. Near collinearity loses attitude observability. |
+| Candidate forms | Fixed cosine, angle difference, normalized residual, geometry-dependent bound and covariance/statistical tests compared. None selected; all require separate validity and observability evidence. |
+| Validation | Eleven focused math/policy checks pass in analyze_acquisition_criterion.py; no production imports or output writes. Compilation, whitespace, 27 new local links/anchors, six new tables and file-scope/preservation checks pass. |
+| Limits / next | Numeric flight criterion blocked by joint calibrated errors, cleanliness, geometry/availability, timing/reference uncertainty and acceptance policy. Next software branch: CSS/Sun-vector measurement model framework; quantitative sensor dominance is unknown. |
+| Status | DESIGN BASIS COMPLETE; NO FLIGHT CRITERION SELECTED; NOT FLIGHT VALIDATED. |
+
+See [ACQUISITION_CRITERION_DESIGN.md](ACQUISITION_CRITERION_DESIGN.md) for the
+derivation, common-rotation blind spot, source/status matrix, minimum evidence and
+reproducible examples. Existing evidence JSON and all scenario/configuration files
+remain unchanged.
+
 ## Phase 8B-2B cold-start acquisition boundary - 2026-10-02
 
 **COLD-START ACQUISITION-CONSISTENCY BOUNDARY / DEVELOPMENT CHARACTERIZATION /

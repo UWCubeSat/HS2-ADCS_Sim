@@ -20,6 +20,7 @@ from attitude_mekf import MEKF, ReplayEstimator, VectorSample, epoch, vector
 from attitude_mekf_prototype import independent_error, load_test_policy, magnetic_cycle_sample
 from gyro_sensor_model import GyroConfig, GyroModel, GyroSample
 from tam_sensor_model import TAMConfig, TAMModel, CleanlinessContext, profile_config as tam_profile
+from sun_sensor_model import SunConfig, SunModel, SunAvailability
 
 T = TypeVar("T")
 
@@ -60,8 +61,15 @@ class ShadowOptions:
     tam_model: TAMConfig | None = None  # Native controller TAM is untouched.
     tam_bias_test_only: bool = False  # 8B-2A explicit, single unchanged bias fixture; no actuator ownership.
     tam_bias_enable_ns: int = 0  # TEST-ONLY acquisition boundary; zero preserves cold-start experiment.
+    sun_model: SunConfig | None = None  # 8C-1 direct ideal shadow only; arrays stay isolated.
 
     def validate(self, step_ns: int):
+        if self.sun_model is not None:
+            if not isinstance(self.sun_model, SunConfig):
+                raise ValueError("explicit SunConfig required for modeled Sun")
+            self.sun_model.validate_live()
+            if not self.ideal_sun or self.gyro_model is not None or self.tam_model is not None:
+                raise ValueError("8C-1 live Sun requires explicit ideal Sun, existing ideal gyro and native TAM")
         if type(self.tam_bias_test_only) is not bool:
             raise ValueError("tam_bias_test_only requires an explicit bool")
         epoch(self.tam_bias_enable_ns)
@@ -150,6 +158,8 @@ class IdealLiveBridge(sysModel.SysModel):
         self.tam_model = TAMModel(self.options.tam_model) if self.options.tam_model is not None else None
         self.tam_initial_ideal = TAMModel(TAMConfig()) if self.options.tam_bias_enable_ns else None
         self.tam_history: list[dict] = []
+        self.sun_model = SunModel(self.options.sun_model) if self.options.sun_model is not None else None
+        self.sun_history: list[dict] = []
 
     def magnetic_acquisition(self, tick: int) -> VectorSample:
         """Invalid/missing native sensor data remain explicit rejected inputs."""
@@ -255,7 +265,23 @@ class IdealLiveBridge(sysModel.SysModel):
                     np.asarray(rbk.MRP2C(sigma)) @ self.sun_n, self.sun_n,
                     "TEST-ONLY ideal Sun direction from current truth; no CSS model",
                     valid=valid, invalid_reason="missing_sun_test_only")
+                if self.sun_model is not None:
+                    # Independent opt-in value producer. Direct mode retains the
+                    # legacy magnitude; MEKF normalizes at consumption. The old
+                    # drop fixture remains delivery invalidity, not an eclipse.
+                    modeled = self.sun_model.acquire(self.sun_n, np.asarray(rbk.MRP2C(sigma)),
+                        truth_epoch_ns=int(self.state.timeWritten()), acquisition_ns=tick,
+                        availability=SunAvailability(tick, True, "ASSUMED always-visible ideal fixture; no eclipse model"),
+                        source="Phase 7C synthetic inertial Sun reference + current C_BN; not ephemeris/CSS hardware")
+                    sample = replace(sample, measured=modeled.reconstruction.measurement_B,
+                        valid=valid and modeled.reconstruction.valid,
+                        invalid_reason=sample.invalid_reason if not valid or modeled.reconstruction.valid
+                            else ";".join(modeled.reconstruction.reasons),
+                        source="SunModel IDEAL_REGRESSION development direct-vector mode; not physical CSS reconstruction")
+                    self.sun_history.append(dict(sample=asdict(modeled), state_epoch_ns=int(self.state.timeWritten())))
                 delay = self.options.sun_delay_ns if tick >= self.options.delay_after_ns else 0
+                if self.sun_model is not None:
+                    self.sun_history[-1]["bridge_delivery_ns"] = tick+delay
                 self.pending.append((tick+delay, sample))
                 batch.source_status["sun"] = "acquired" if valid else "missing"
         remaining = []

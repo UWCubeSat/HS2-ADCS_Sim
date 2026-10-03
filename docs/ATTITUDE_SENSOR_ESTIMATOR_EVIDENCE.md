@@ -8,6 +8,57 @@ The documented candidate is one VN-100 Rugged supplying raw gyro/internal magnet
 
 A limited vendor-prior component study and estimator architecture decisions can begin in a later authorized task. A realistic flight estimator, credible control-pointing prediction and total payload pointing number remain blocked. This phase creates only the two evidence files.
 
+## Phase 8C-1 CSS / Sun-vector framework disposition - 2026-10-02
+
+**CSS / SUN-VECTOR MEASUREMENT FRAMEWORK / PARAMETRIC DEVELOPMENT MODEL /
+NOT INSTALLED HS-2 PERFORMANCE / NOT FLIGHT VALIDATED.** New software/math
+evidence only. Existing source decisions and companion evidence JSON are unchanged;
+no new external research or installed calibration evidence.
+
+| CLASSIFICATION / EXISTING SOURCE | DISPOSITION |
+|---|---|
+| CONFIRMED software/math; sun_sensor_model.py and validate_sun_sensor_model.py, 2026-10-02 | Separate Sun truth, channel responses and inferred B-frame vector; explicit C_BN and C_SB directions; ideal live inputs/state outputs match exactly; channel and reconstruction validity remain separate. |
+| ASSUMED / TEST-ONLY; same source/date | IDEAL_REGRESSION is a direct-vector development bridge, not physical CSS. TEST_ARRAY_GEOMETRY uses eight cube-corner normals only for algebra tests; no HS-2 hardware count is selected. All profiles runtime_usable_for_flight=false. |
+| ASSUMED / TEST-ONLY; same source/date | Generic cosine law, dimensionless normalized response, unit gains, zero offsets/noise, pi/2 half FOV, no clipping, zero model latency; numerical reconstruction singular-ratio floor 1e-10. These are not vendor/flight response, timing or quality values. |
+| VENDOR PRIOR; P08/P09/P12, H5 v1.0.2c, 2025-08-06 | Existing TensorCSS 120 deg full FOV and typical 5 deg angle error remain component statements; neither is adopted by the generic profile or promoted to reconstructed-vector sigma/accuracy. Compensation examples remain uncalibrated for HS-2. |
+| TBD/TBC; S05/S06/F03/P09/V01, original source revisions retained below | TensorCSS counts 2/3/6 versus four SLCD61N8 remain conflicting. Installed normals, deployed configuration, channel population/ADC map, mounting, per-channel calibration/thermal/irradiance response, filtering/scan timing, masks and reconstruction accuracy are unresolved. |
+
+The isolated model can accept explicit unavailable-Sun and occlusion inputs; it
+does not predict eclipse, albedo or self-shadowing. Array eligibility uses truth
+incidence in this development framework; flight channel selection is not solved.
+Sensor validity, reconstruction availability and attitude/acquisition quality
+are distinct. Rank or conditioning can reject even valid channel measurements.
+
+The Sun framework supplies the missing structural path into the
+[acquisition design basis](ACQUISITION_CRITERION_DESIGN.md#phase-8c-1-sun-measurement-contract-connection---2026-10-02);
+it does not supply a calibrated angular covariance or release any threshold.
+The most limiting input remains applicable installed array geometry plus
+per-channel/end-to-end calibration and timing, not the absence of a numeric
+software tolerance. See the [complete framework contract](ATTITUDE_ESTIMATOR_ARCHITECTURE.md#phase-8c-1-parametric-css--sun-vector-measurement-framework---2026-10-02).
+
+## Phase 8B-2C acquisition-design evidence disposition - 2026-10-02
+
+**ACQUISITION CRITERION DESIGN BASIS / NO THRESHOLD CHANGE /
+NO FLIGHT CRITERION SELECTED.** Existing source register and companion evidence
+JSON remain unchanged; no external source refresh or new installed measurements.
+Full error-source classification and source revisions are in the
+[design basis](ACQUISITION_CRITERION_DESIGN.md#physical-error-inputs-and-what-the-residual-sees).
+
+| CLASSIFICATION / SOURCE | DISPOSITION |
+|---|---|
+| CONFIRMED mathematical/software evidence; analyze_acquisition_criterion.py, 2026-10-02 | Joint active direction errors give delta_c=(delta_phi_m-delta_phi_s) dot (m cross s). A common rotation cancels exactly; pair consistency cannot establish absolute alignment or attitude accuracy. Eleven focused checks pass. |
+| ASSUMED / TEST-ONLY; Phase 7C config revision 2026-09-07, introduced at 1b79a50 on 2026-09-14 | 1e-8 cosine tolerance and 1e-6 minimum sine are inherited numerical fixtures. No installed-sensor error budget or flight rationale was found in their introduction/configuration and associated design records. Unchanged. |
+| VENDOR PRIOR; P04/P07, H4 hardware v7.0 (2023) | Existing VN-100 specifications/compensation capability are not installed mounting, hard/soft-iron, covariance/filtering or post-quiet contamination bounds. No vendor density was converted to sample noise. |
+| VENDOR PRIOR; P08/P09/P12, H5 v1.0.2c (2025-08-06) | TensorCSS typical 5 deg angular error is neither a Gaussian sigma nor a reconstructed-array uncertainty. FOV/response/compensation statements do not settle CSS selection/count/calibration conflicts. |
+| TBD/TBC installed applicability; F02/F03/S05/S06/P07/P09/V01 and magnetic test plan | Need relative/common alignment, TAM calibration and dynamic cleanliness, calibrated CSS geometry/channel reconstruction/validity, synchronization/reference uncertainty, observability and accepted false-accept/reject policy before a numeric flight criterion. |
+
+Sun error contributes at the same first order as TAM error. Current ideal Sun
+does not supply a physical uncertainty/availability model. Recommend a CSS/Sun
+measurement framework as the next software branch; equivalent installed
+end-to-end evidence could supply the necessary uncertainty without a detailed
+CSS simulator, but neither exists here. No claim that Sun error quantitatively
+dominates magnetic contamination is supported. Both evidence gaps remain open.
+
 ## Phase 8B-2B acquisition-boundary characterization - 2026-10-02
 
 **COLD-START ACQUISITION-CONSISTENCY BOUNDARY / DEVELOPMENT CHARACTERIZATION /
